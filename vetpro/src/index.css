@@ -1,0 +1,108 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: #f9fafb;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #94a3b8;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
+button:focus-visible,
+input:focus-visible {
+  outline: 2px solid #10b981;
+  outline-offset: 2px;
+}
+
+:root {
+  --vp-primary: #0ea5e9;
+  --vp-primary-strong: #0284c7;
+  --vp-accent: #10b981;
+  --vp-bg: #f7f9fc;
+  --vp-card: #ffffff;
+  --vp-border: #e2e8f0;
+  --vp-radius: 12px;
+  --vp-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+  --vp-transition: 160ms ease;
+}
+
+body {
+  background-color: var(--vp-bg);
+}
+
+button {
+  transition: transform var(--vp-transition), box-shadow var(--vp-transition),
+    opacity var(--vp-transition);
+}
+
+button:active {
+  transform: translateY(1px);
+}
+
+input,
+select,
+textarea {
+  border-radius: 10px;
+  transition: border-color var(--vp-transition), box-shadow var(--vp-transition);
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.15);
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  
+  #print-content,
+  #print-content * {
+    visibility: visible;
+  }
+  
+  #print-content {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: auto;
+    page-break-after: always;
+  }
+  
+  @page {
+    size: A4;
+    margin: 1cm;
+  }
+  
+  .no-print {
+    display: none !important;
+  }
+}

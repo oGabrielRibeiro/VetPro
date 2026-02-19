@@ -1,0 +1,149 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum ExamType {
+  RADIOGRAPHY
+  ULTRASOUND
+  LAB_RESULT
+  CLINICAL_PHOTO
+  DOCUMENT
+  OTHER
+}
+
+model User {
+  id       String  @id @default(uuid())
+  name     String
+  email    String  @unique
+  password String
+  crmv     String?
+  phone    String?
+  specialty String?
+  profilePhoto String?
+  signature    String?
+  clinicId String
+  clinic   Clinic  @relation(fields: [clinicId], references: [id])
+
+  consultations Consultation[]
+  patients      Patient[]
+}
+
+model Patient {
+  id         String   @id @default(uuid())
+  name       String
+  specie     String
+  breed      String?
+  age        Int?
+  weight     Float?
+  ownerName  String
+  ownerPhone String?
+  createdAt  DateTime @default(now())
+
+  clinicId String
+  clinic   Clinic @relation(fields: [clinicId], references: [id])
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  consultations Consultation[]
+}
+
+model Consultation {
+  id               String   @id @default(uuid())
+  numeroProntuario Int
+  recipeNumber     Int?
+  recipeYear       Int?
+  clinicId         String
+  clinic           Clinic   @relation(fields: [clinicId], references: [id])
+  createdAt        DateTime @default(now())
+
+  // -----------------------------
+  // RELAÇÕES
+  // -----------------------------
+  patientId String
+  patient   Patient @relation(fields: [patientId], references: [id])
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  // Consulta de retorno
+  previousConsultationId String?
+  previousConsultation   Consultation?  @relation("ConsultationReturn", fields: [previousConsultationId], references: [id])
+  returns                Consultation[] @relation("ConsultationReturn")
+
+  // -----------------------------
+  // IDENTIFICAÇÃO
+  // -----------------------------
+  consultationType String? // nova | retorno | emergencia
+
+  // -----------------------------
+  // PARÂMETROS VITAIS
+  // -----------------------------
+  weight          Float?
+  temperature     Float?
+  heartRate       Int?
+  respiratoryRate Int?
+
+  // -----------------------------
+  // CONTEÚDO CLÍNICO
+  // -----------------------------
+  chiefComplaint       String? // motivo da consulta
+  anamnesis            String? // histórico relatado
+  physicalExam         String? // exame físico
+  diagnosis            String? // diagnóstico
+  treatment            String? // tratamento
+  procedures           String? // procedimentos realizados
+  medications          String? // medicações prescritas
+  notes                String? // observações gerais
+  returnRecommendation String?
+
+  // -----------------------------
+  // CONTROLE CLÍNICO
+  // -----------------------------
+  vaccinationUpToDate Boolean?
+
+  // -----------------------------
+  // ASSINATURA
+  // -----------------------------
+  veterinarianName String?
+  veterinarianCrmv String?
+
+  files ConsultationFile[]
+
+  @@unique([userId, numeroProntuario])
+}
+
+model ConsultationFile {
+  id            String   @id @default(uuid())
+  filename      String
+  originalName  String
+  mimeType      String
+  size          Int
+  path          String
+  thumbnailPath String?
+  examType      ExamType @default(OTHER)
+  createdAt     DateTime @default(now())
+
+  consultationId String
+  consultation   Consultation @relation(fields: [consultationId], references: [id], onDelete: Cascade)
+}
+
+model Clinic {
+  id        String   @id @default(uuid())
+  name      String
+  cnpj      String?
+  address   String?
+  phone     String?
+  email     String?
+  logoUrl   String?
+  createdAt DateTime @default(now())
+
+  users         User[]
+  patients      Patient[]
+  consultations Consultation[]
+}

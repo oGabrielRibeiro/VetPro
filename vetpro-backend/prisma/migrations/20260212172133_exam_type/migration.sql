@@ -1,0 +1,5 @@
+-- CreateEnum
+CREATE TYPE "ExamType" AS ENUM ('RADIOGRAPHY', 'ULTRASOUND', 'LAB_RESULT', 'CLINICAL_PHOTO', 'DOCUMENT', 'OTHER');
+
+-- AlterTable
+ALTER TABLE "ConsultationFile" ADD COLUMN     "examType" "ExamType" NOT NULL DEFAULT 'OTHER';

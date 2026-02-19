@@ -1,0 +1,51 @@
+{
+  "name": "vetpro",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Sistema Profissional de Prontuários Veterinários",
+  "keywords": [
+    "veterinary",
+    "clinic",
+    "medical-records",
+    "pet-care"
+  ],
+  "author": "VetPro Team",
+  "dependencies": {
+    "axios": "^1.13.5",
+    "date-fns": "^2.30.0",
+    "framer-motion": "^10.16.4",
+    "react": "^18.2.0",
+    "react-compare-image": "^3.5.14",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^6.30.3",
+    "react-scripts": "^5.0.1"
+  },
+  "devDependencies": {
+    "autoprefixer": "^10.4.17",
+    "postcss": "^8.4.33",
+    "tailwindcss": "^3.4.1"
+  },
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject"
+  },
+  "eslintConfig": {
+    "extends": [
+      "react-app"
+    ]
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  }
+}
