@@ -1,1 +1,7 @@
 # Node\nnode_modules/\n**/node_modules/\n**/build/\n**/dist/\n**/.cache/\n**/coverage/\n**/.parcel-cache/\n**/.turbo/\n\n# Assets/uploads and certs\n**/uploads/\n**/certs/\n*.pem\n\n# Env\n.env\n.env.*\n!.env.example\n\n# Logs\n*.log\nnpm-debug.log*\nyarn-error.log*\n\n# Editor/OS\n.DS_Store\nThumbs.db\n.vscode/\n.idea/\n
+**/uploads/
+**/signatures/
+*.zip
+
+_*.txt
+
