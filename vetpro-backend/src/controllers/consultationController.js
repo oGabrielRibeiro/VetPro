@@ -334,6 +334,16 @@ async function chatAssist(req, res) {
       : text
         ? [{ role: "user", content: text }]
         : [];
+    const recordProfileRaw = req.body?.recordProfile;
+    const recordProfile =
+      recordProfileRaw && typeof recordProfileRaw === "object"
+        ? {
+            porte: String(recordProfileRaw.porte || "").trim().toLowerCase(),
+            specificFieldKeys: Array.isArray(recordProfileRaw.specificFieldKeys)
+              ? recordProfileRaw.specificFieldKeys
+              : []
+          }
+        : null;
 
     let patient = null;
     if (patientId) {
@@ -358,7 +368,8 @@ async function chatAssist(req, res) {
     const result = await generateRecordDraftFromChat({
       messages,
       mode,
-      patient
+      patient,
+      recordProfile
     });
 
     return res.json(result);

@@ -7,7 +7,9 @@
     "dev": "nodemon src/server.js",
     "start": "node src/server.js",
     "seed": "node src/scripts/seed.js",
-    "smoke:checklist": "node src/scripts/smoke-checklist.js"
+    "smoke:checklist": "node src/scripts/smoke-checklist.js",
+    "ai:evaluate": "node src/scripts/evaluate-chat-assist.js",
+    "ai:evaluate:mobile": "node src/scripts/evaluate-chat-assist-mobile.js"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",

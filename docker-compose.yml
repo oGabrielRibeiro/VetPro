@@ -26,6 +26,10 @@ services:
       HOST: 0.0.0.0
       JWT_SECRET: ${JWT_SECRET:-vetpro-dev-secret}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
+      OPENAI_FEWSHOT_EXAMPLES: ${OPENAI_FEWSHOT_EXAMPLES:-3}
+      DEEPGRAM_API_KEY: ${DEEPGRAM_API_KEY:-}
       DATABASE_URL: postgresql://${POSTGRES_USER:-vetpro}:${POSTGRES_PASSWORD:-vetpro123}@${POSTGRES_HOST:-postgres}:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-vetpro}
     depends_on:
       postgres:

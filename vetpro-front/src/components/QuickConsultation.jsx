@@ -79,6 +79,25 @@ const DEFAULT_SMALL_ANIMAL_DATA = {
   currentSupplements: "",
 };
 
+const SMALL_TEXT_FIELDS_FOR_NOT_INFORMED = [
+  "vaccinationProtocol",
+  "lastVaccines",
+  "dewormingStatus",
+  "ectoparasiteControl",
+  "diet",
+  "rationBrand",
+  "feedingFrequency",
+  "housing",
+  "lifestyle",
+  "contactWithAnimals",
+  "reproductiveStatusSmall",
+  "preventiveCare",
+  "behavior",
+  "allergyHistory",
+  "chronicDiseases",
+  "currentSupplements",
+];
+
 const DEFAULT_LARGE_ANIMAL_DATA = {
   farmName: "",
   productionSystem: "",
@@ -108,6 +127,8 @@ const DEFAULT_LARGE_ANIMAL_DATA = {
   physicalExamDetailed: "",
   requestedExamPanel: "",
 };
+
+const LARGE_TEXT_FIELDS_FOR_NOT_INFORMED = Object.keys(DEFAULT_LARGE_ANIMAL_DATA);
 
 function normalizeWords(value = "") {
   return String(value)
@@ -193,6 +214,7 @@ const QuickConsultation = ({
   const [aiRefineField, setAiRefineField] = useState("diagnosis");
   const [aiRefining, setAiRefining] = useState(false);
   const [aiConfidenceByField, setAiConfidenceByField] = useState({});
+  const [aiMissingFields, setAiMissingFields] = useState({ core: [], specific: [] });
 
   const keepConversationRecordingRef = useRef(false);
   const transcriptRef = useRef("");
@@ -289,6 +311,99 @@ const QuickConsultation = ({
     return transcriptSegments.map((item) => `[${item.stamp}] ${item.text}`).join("\n");
   };
 
+  const clinicalSignalTerms = [
+    "apatia",
+    "preguicos",
+    "letarg",
+    "vomit",
+    "diarre",
+    "dor",
+    "coce",
+    "prurid",
+    "apetite",
+    "perda de peso",
+    "ganho de peso",
+    "tosse",
+    "febre",
+    "poliuria",
+    "polidipsia",
+  ];
+
+  const splitConversationSentences = (text = "") =>
+    String(text || "")
+      .replace(/\r/g, " ")
+      .split(/[\n.!?]+/g)
+      .map((item) => item.replace(/\s+/g, " ").trim())
+      .filter(Boolean);
+
+  const splitDialogueByRoleLocal = (text = "") => {
+    const lines = String(text || "")
+      .replace(/\r/g, "")
+      .split(/\n+/g)
+      .map((line) => line.trim())
+      .filter(Boolean);
+
+    if (!lines.length) {
+      return { tutorText: "", vetText: "", turns: [] };
+    }
+
+    let lastRole = "Tutor";
+    const turns = lines.map((line) => {
+      const normalized = normalizeText(line);
+      let tutorScore = 0;
+      let vetScore = 0;
+
+      ["notei", "percebi", "ele", "ela", "anda", "parece", "apetite", "vomito", "diarreia", "preguic"].forEach((token) => {
+        if (normalized.includes(token)) tutorScore += 2;
+      });
+      ["entendi", "vamos", "no exame", "diagnostico", "conduta", "tratamento", "prescrev", "retorno", "reavaliar"].forEach((token) => {
+        if (normalized.includes(token)) vetScore += 2;
+      });
+
+      let role = lastRole;
+      if (tutorScore > vetScore) role = "Tutor";
+      else if (vetScore > tutorScore) role = "Medico";
+      lastRole = role;
+
+      return { role, text: line };
+    });
+
+    return {
+      tutorText: turns.filter((t) => t.role === "Tutor").map((t) => t.text).join(" ").trim(),
+      vetText: turns.filter((t) => t.role === "Medico").map((t) => t.text).join(" ").trim(),
+      turns,
+    };
+  };
+
+  const isSocialSentence = (sentence = "") => {
+    const normalized = normalizeText(sentence);
+    if (!normalized) return true;
+    const socialTerms = ["ola", "oi", "bom dia", "boa tarde", "boa noite", "como vai", "tudo bem"];
+    if (socialTerms.some((token) => normalized === token)) return true;
+    if (/^(dr|dra|doutor|doutora)\b/.test(normalized)) return true;
+    return false;
+  };
+
+  const extractClinicalComplaintSentence = (text = "") => {
+    const sentences = splitConversationSentences(text);
+    if (!sentences.length) return "";
+
+    const scored = sentences
+      .map((sentence) => {
+        const normalized = normalizeText(sentence);
+        let score = 0;
+        if (clinicalSignalTerms.some((token) => normalized.includes(token))) score += 3;
+        if (/\b(notei|relata|anda|parece|apresenta|mudanca|aumentou|diminuiu)\b/.test(normalized)) score += 2;
+        if (isSocialSentence(sentence)) score -= 4;
+        if (/\b(vamos|prevenir|check-?up)\b/.test(normalized) && score < 3) score -= 2;
+        return { sentence, score };
+      })
+      .sort((a, b) => b.score - a.score);
+
+    if (scored[0]?.score > 0) return scored[0].sentence;
+    return sentences.find((sentence) => !isSocialSentence(sentence)) || sentences[0] || "";
+  };
+
   const extractByKeywords = (sourceText, keywords) => {
     const normalized = normalizeText(sourceText);
     const stopTokens = [
@@ -334,22 +449,66 @@ const QuickConsultation = ({
   const parseTranscriptToSections = (text) => {
     const content = (text || "").trim();
     if (!content) return null;
+    const dialogue = splitDialogueByRoleLocal(content);
+    const tutorContext = dialogue.tutorText || content;
+    const vetContext = dialogue.vetText || content;
+    const complaintFallback = extractClinicalComplaintSentence(tutorContext || content);
 
     return {
       chiefComplaint:
-        extractByKeywords(content, ["queixa", "motivo da consulta", "motivo"]) ||
+        extractByKeywords(tutorContext, ["queixa", "motivo da consulta", "motivo"]) ||
+        complaintFallback ||
         content.slice(0, 220),
-      anamnesis: extractByKeywords(content, ["anamnese", "historico"]),
-      physicalExam: extractByKeywords(content, ["exame fisico"]),
-      diagnosis: extractByKeywords(content, ["diagnostico"]),
-      treatment: extractByKeywords(content, ["tratamento", "conduta"]),
-      medication: extractByKeywords(content, [
+      anamnesis: extractByKeywords(tutorContext, ["anamnese", "historico"]),
+      physicalExam: extractByKeywords(vetContext, ["exame fisico"]),
+      diagnosis: extractByKeywords(vetContext, ["diagnostico"]),
+      treatment: extractByKeywords(vetContext, ["tratamento", "conduta"]),
+      medication: extractByKeywords(vetContext, [
         "medicacao",
         "prescricao",
         "prescrever",
         "receita",
       ]),
     };
+  };
+
+  const buildEmergencyDraftFromText = (text = "") => {
+    const parsed = parseTranscriptToSections(text) || {};
+    const clean = String(text || "").trim();
+    const fallbackComplaint = extractClinicalComplaintSentence(clean) || clean.slice(0, 220);
+    return {
+      chiefComplaint: String(parsed.chiefComplaint || fallbackComplaint).trim(),
+      anamnesis: String(parsed.anamnesis || (fallbackComplaint ? `Tutor relata ${fallbackComplaint}.` : "")).trim(),
+      physicalExam: String(parsed.physicalExam || "").trim(),
+      diagnosis: String(parsed.diagnosis || "").trim(),
+      treatment: String(parsed.treatment || "").trim(),
+      medications: String(parsed.medication || "").trim(),
+      procedures: "",
+      examDetails: "",
+      notes: "",
+      returnRecommendation: ""
+    };
+  };
+
+  const isDraftEffectivelyEmpty = (draft) => {
+    if (!draft || typeof draft !== "object") return true;
+    const coreFields = [
+      "chiefComplaint",
+      "anamnesis",
+      "physicalExam",
+      "diagnosis",
+      "treatment",
+      "medications",
+      "procedures",
+      "examDetails",
+      "notes",
+      "returnRecommendation",
+    ];
+    const hasCoreValue = coreFields.some((key) => String(draft[key] || "").trim());
+    const specific = draft.specificFields && typeof draft.specificFields === "object"
+      ? Object.values(draft.specificFields).some((value) => String(value || "").trim())
+      : false;
+    return !hasCoreValue && !specific;
   };
 
   useEffect(() => {
@@ -386,6 +545,7 @@ const QuickConsultation = ({
     setAiRefineField("diagnosis");
     setAiRefining(false);
     setAiConfidenceByField({});
+    setAiMissingFields({ core: [], specific: [] });
     liveInterimRef.current = "";
     transcriptRef.current = "";
     keepConversationRecordingRef.current = false;
@@ -608,6 +768,7 @@ const QuickConsultation = ({
     transcriptRef.current = "";
     setAiMessages([]);
     setAiConfidenceByField({});
+    setAiMissingFields({ core: [], specific: [] });
   };
 
   const analyzeTranscript = () => {
@@ -673,6 +834,61 @@ const QuickConsultation = ({
     if (overwrite || !diagnosis) setDiagnosis(String(draft.diagnosis || ""));
     if (overwrite || !treatment) setTreatment(String(draft.treatment || ""));
 
+    const incomingSpecificFields =
+      draft.specificFields && typeof draft.specificFields === "object"
+        ? draft.specificFields
+        : {};
+
+    if (Object.keys(incomingSpecificFields).length > 0) {
+      if (isLargeAnimal) {
+        setLargeAnimalData((prev) => {
+          const next = { ...prev };
+          Object.entries(incomingSpecificFields).forEach(([key, value]) => {
+            if (!(key in next)) return;
+            const text = String(value || "").trim();
+            if (!text) return;
+            if (overwrite || !String(next[key] || "").trim()) {
+              next[key] = text;
+            }
+          });
+          return next;
+        });
+      } else {
+        setSmallAnimalData((prev) => {
+          const next = { ...prev };
+          Object.entries(incomingSpecificFields).forEach(([key, value]) => {
+            if (!(key in next)) return;
+            const text = String(value || "").trim();
+            if (!text) return;
+            if (overwrite || !String(next[key] || "").trim()) {
+              next[key] = text;
+            }
+          });
+          return next;
+        });
+      }
+    }
+
+    if (isLargeAnimal) {
+      setLargeAnimalData((prev) => {
+        const next = { ...prev };
+        for (const key of LARGE_TEXT_FIELDS_FOR_NOT_INFORMED) {
+          const current = String(next[key] || "").trim();
+          if (!current) next[key] = "Nao informado";
+        }
+        return next;
+      });
+    } else {
+      setSmallAnimalData((prev) => {
+        const next = { ...prev };
+        for (const key of SMALL_TEXT_FIELDS_FOR_NOT_INFORMED) {
+          const current = String(next[key] || "").trim();
+          if (!current) next[key] = "Nao informado";
+        }
+        return next;
+      });
+    }
+
     const meds = String(draft.medications || "").trim();
     const treatmentSignal = String(draft.treatment || "").trim();
     const medsSignal = `${meds} ${treatmentSignal}`.toLowerCase();
@@ -717,7 +933,7 @@ const QuickConsultation = ({
     }
   };
 
-  const generateDraftFromChat = async (overwrite = false) => {
+  const generateDraftFromChat = async (overwrite = false, detailLevel = "standard") => {
     const text = aiChatText.trim();
     if (!text) {
       showFeedback("error", "Escreva uma instrucao para gerar o rascunho com IA.");
@@ -726,43 +942,87 @@ const QuickConsultation = ({
 
     try {
       setAiGenerating(true);
+      setAiMissingFields({ core: [], specific: [] });
       const response = await api.post("/consultations/chat-assist", {
         patientId: patient?.id || null,
         mode: initialData?.consultationType === "retorno" ? "retorno" : "nova",
-        text
+        text,
+        recordProfile: {
+          porte: animalPorte,
+          specificFieldKeys: specificFields.map((item) => item.key),
+          detailLevel
+        }
       });
 
       const draft = response?.data?.draft || null;
       const provider = response?.data?.provider || "heuristic";
       setAiConfidenceByField(response?.data?.confidenceByField || {});
-      if (!draft) {
-        showFeedback("error", "Nao foi possivel gerar sugestao por IA.");
-        return;
+      setAiMissingFields(response?.data?.missingFields || { core: [], specific: [] });
+      if (!draft || isDraftEffectivelyEmpty(draft)) {
+        const emergencyDraft = buildEmergencyDraftFromText(text);
+        applyAiDraft(emergencyDraft, overwrite);
+        showFeedback(
+          "success",
+          "IA retornou rascunho incompleto. Aplicado preenchimento local de seguranca.",
+        );
+      } else {
+        applyAiDraft(draft, overwrite);
+        setAiMessages((prev) => [
+          ...prev,
+          { role: "user", content: text, createdAt: new Date().toISOString() },
+          {
+            role: "assistant",
+            content: `Rascunho gerado (${provider}).`,
+            createdAt: new Date().toISOString()
+          }
+        ]);
+        showFeedback(
+          "success",
+          detailLevel === "max"
+            ? `Rascunho detalhado aplicado com IA (${provider === "openai" ? "OpenAI" : "Local"}).`
+            : `Rascunho aplicado com IA (${provider === "openai" ? "OpenAI" : "Local"}).`,
+        );
       }
-
-      applyAiDraft(draft, overwrite);
-      setAiMessages((prev) => [
-        ...prev,
-        { role: "user", content: text, createdAt: new Date().toISOString() },
-        {
-          role: "assistant",
-          content: `Rascunho gerado (${provider}).`,
-          createdAt: new Date().toISOString()
-        }
-      ]);
-      showFeedback(
-        "success",
-        `Rascunho aplicado com IA (${provider === "openai" ? "OpenAI" : "Local"}).`,
-      );
     } catch (error) {
       console.error("Erro ao gerar rascunho por chat:", error);
-      showFeedback(
-        "error",
-        toUserFriendlyError(error, "Nao foi possivel gerar sugestao por chat."),
-      );
+      const emergencyDraft = buildEmergencyDraftFromText(text);
+      if (!isDraftEffectivelyEmpty(emergencyDraft)) {
+        applyAiDraft(emergencyDraft, overwrite);
+        showFeedback(
+          "success",
+          "Falha de comunicacao com IA. Aplicado preenchimento local com base no texto.",
+        );
+      } else {
+        showFeedback(
+          "error",
+          toUserFriendlyError(error, "Nao foi possivel gerar sugestao por chat."),
+        );
+      }
     } finally {
       setAiGenerating(false);
     }
+  };
+
+  const handleAutoFillWithAI = () => {
+    const hasCoreContent = [
+      chiefComplaint,
+      anamnesis,
+      physicalExam,
+      diagnosis,
+      treatment,
+      procedureDetails,
+      medicationDetails,
+      examDetails,
+      notes,
+      returnRecommendation,
+    ].some((value) => String(value || "").trim());
+    const hasSpecificContent = Object.values(specificData || {}).some((value) =>
+      String(value || "").trim()
+    );
+
+    // Se já houver conteúdo, preserva o que está preenchido; se estiver vazio, permite preencher tudo.
+    const overwrite = !(hasCoreContent || hasSpecificContent);
+    generateDraftFromChat(overwrite, "max");
   };
 
   const getFieldValueByKey = (fieldKey) => {
@@ -1613,47 +1873,60 @@ const QuickConsultation = ({
             placeholder="Ex: retorno de ave com febre, sem apetite, no exame apresentou..."
             className="w-full rounded-lg border border-violet-300 px-3 py-3 text-sm"
           />
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 gap-2">
             <button
               type="button"
-              onClick={() => generateDraftFromChat(false)}
+              onClick={handleAutoFillWithAI}
               disabled={aiGenerating}
-              className="min-h-[42px] rounded-lg bg-violet-600 px-3 py-2 text-sm font-bold text-white disabled:opacity-70"
+              className="min-h-[46px] rounded-lg bg-emerald-600 px-3 py-2 text-sm font-bold text-white disabled:opacity-70"
             >
-              {aiGenerating ? "Gerando..." : "Gerar IA (preencher vazios)"}
-            </button>
-            <button
-              type="button"
-              onClick={() => generateDraftFromChat(true)}
-              disabled={aiGenerating}
-              className="min-h-[42px] rounded-lg border border-violet-300 bg-white px-3 py-2 text-sm font-bold text-violet-800 disabled:opacity-70"
-            >
-              {aiGenerating ? "Aplicando..." : "Gerar IA (substituir campos)"}
+              {aiGenerating ? "Processando..." : "Preencher com IA (automatico)"}
             </button>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-            <select
-              value={aiRefineField}
-              onChange={(e) => setAiRefineField(e.target.value)}
-              className="rounded-lg border border-violet-300 bg-white px-3 py-2 text-sm"
-            >
-              <option value="chiefComplaint">Queixa principal</option>
-              <option value="anamnesis">Anamnese</option>
-              <option value="physicalExam">Exame fisico</option>
-              <option value="diagnosis">Diagnostico</option>
-              <option value="treatment">Tratamento</option>
-              <option value="medications">Medicacao</option>
-              <option value="notes">Observacoes</option>
-            </select>
-            <button
-              type="button"
-              onClick={refineSelectedField}
-              disabled={aiRefining}
-              className="min-h-[42px] rounded-lg border border-violet-300 bg-white px-3 py-2 text-sm font-bold text-violet-800 disabled:opacity-70"
-            >
-              {aiRefining ? "Refinando..." : "Refinar campo com IA"}
-            </button>
-          </div>
+          <details className="rounded-lg border border-violet-200 bg-white p-2">
+            <summary className="cursor-pointer text-xs font-semibold text-violet-900">
+              Opcoes avancadas de IA
+            </summary>
+            <div className="mt-2 grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <button
+                type="button"
+                onClick={() => generateDraftFromChat(false, "standard")}
+                disabled={aiGenerating}
+                className="min-h-[40px] rounded-lg bg-violet-600 px-3 py-2 text-sm font-bold text-white disabled:opacity-70"
+              >
+                {aiGenerating ? "Gerando..." : "Preencher vazios"}
+              </button>
+              <button
+                type="button"
+                onClick={() => generateDraftFromChat(true, "standard")}
+                disabled={aiGenerating}
+                className="min-h-[40px] rounded-lg border border-violet-300 bg-white px-3 py-2 text-sm font-bold text-violet-800 disabled:opacity-70"
+              >
+                {aiGenerating ? "Aplicando..." : "Substituir campos"}
+              </button>
+              <select
+                value={aiRefineField}
+                onChange={(e) => setAiRefineField(e.target.value)}
+                className="rounded-lg border border-violet-300 bg-white px-3 py-2 text-sm"
+              >
+                <option value="chiefComplaint">Queixa principal</option>
+                <option value="anamnesis">Anamnese</option>
+                <option value="physicalExam">Exame fisico</option>
+                <option value="diagnosis">Diagnostico</option>
+                <option value="treatment">Tratamento</option>
+                <option value="medications">Medicacao</option>
+                <option value="notes">Observacoes</option>
+              </select>
+              <button
+                type="button"
+                onClick={refineSelectedField}
+                disabled={aiRefining}
+                className="min-h-[40px] rounded-lg border border-violet-300 bg-white px-3 py-2 text-sm font-bold text-violet-800 disabled:opacity-70 sm:col-span-3"
+              >
+                {aiRefining ? "Refinando..." : "Refinar campo selecionado"}
+              </button>
+            </div>
+          </details>
           {aiMessages.length > 0 && (
             <div className="max-h-36 overflow-y-auto rounded-lg border border-violet-200 bg-white p-2 text-xs space-y-1">
               {aiMessages.slice(-10).map((msg, idx) => (
@@ -1676,6 +1949,32 @@ const QuickConsultation = ({
                   </span>
                 ))}
               </div>
+            </div>
+          )}
+          {(aiMissingFields.core.length > 0 || aiMissingFields.specific.length > 0) && (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-2 text-xs text-amber-900">
+              <p className="font-semibold">
+                Pendencias detectadas pela IA
+              </p>
+              {aiMissingFields.core.length > 0 && (
+                <p className="mt-1">
+                  Clinico: {aiMissingFields.core.join(", ")}
+                </p>
+              )}
+              {aiMissingFields.specific.length > 0 && (
+                <p className="mt-1">
+                  Ficha de porte: {aiMissingFields.specific.length} campo(s) sem evidencia no texto.
+                </p>
+              )}
+              {aiMissingFields.specific.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => scrollToSection("porte-section")}
+                  className="mt-2 rounded-md border border-amber-300 bg-white px-2 py-1 text-[11px] font-semibold text-amber-800"
+                >
+                  Ir para ficha de porte
+                </button>
+              )}
             </div>
           )}
         </div>
