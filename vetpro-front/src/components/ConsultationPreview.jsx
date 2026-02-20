@@ -4,6 +4,81 @@ import { useAuth } from "../contexts/AuthContext";
 import BeforeAfterSlider from "../components/BeforeAfterSlider";
 import AppIcon from "./AppIcon";
 
+const PORTE_NOTES_MARK_START = "[[PORTE_CLINICO]]";
+const PORTE_NOTES_MARK_END = "[[/PORTE_CLINICO]]";
+
+const PORTE_FIELD_LABELS = {
+  vaccinationStatus: "Vacinacao",
+  vaccinationProtocol: "Protocolo vacinal",
+  lastVaccines: "Ultimas vacinas aplicadas",
+  dewormingStatus: "Vermifugacao",
+  ectoparasiteControl: "Controle de ectoparasitas",
+  diet: "Dieta",
+  rationBrand: "Racao / marca",
+  feedingFrequency: "Frequencia alimentar",
+  waterIntakeSmall: "Ingestao de agua",
+  housing: "Ambiente",
+  lifestyle: "Estilo de vida",
+  contactWithAnimals: "Contato com outros animais",
+  reproductiveStatusSmall: "Estado reprodutivo",
+  preventiveCare: "Preventivos em uso",
+  behavior: "Comportamento",
+  allergyHistory: "Historico alergico",
+  chronicDiseases: "Doencas cronicas",
+  currentSupplements: "Suplementos em uso",
+  farmName: "Propriedade",
+  productionSystem: "Sistema de producao",
+  animalFunction: "Finalidade zootecnica",
+  batch: "Lote",
+  animalId: "Identificacao do animal",
+  bodyConditionScore: "Escore corporal",
+  reproductiveStatus: "Estado reprodutivo",
+  daysInMilk: "Dias em lactacao",
+  parity: "Numero de partos",
+  herdVaccination: "Vacinacao do rebanho",
+  herdDeworming: "Vermifugacao do rebanho",
+  forage: "Volumoso",
+  concentrate: "Concentrado",
+  waterIntake: "Consumo de agua",
+  mineralSupplementation: "Suplementacao mineral",
+  hoofStatus: "Casco e locomocao",
+  rumenMotility: "Motilidade ruminal",
+  fecesAndUrine: "Fezes e urina",
+  milkProduction: "Producao de leite",
+  historicalDiseases: "Historico sanitario",
+  propertyAndManagement: "Propriedade e manejo",
+  contactAnimals: "Contactantes",
+  animalIdentificationDetails: "Animal atendido - identificacao detalhada",
+  neonateAndReproduction: "Neonato / reproducao",
+  previousTreatmentHistory: "Tratamento anterior",
+  physicalExamDetailed: "Exame fisico detalhado",
+  requestedExamPanel: "Exames complementares solicitados",
+};
+
+function parsePorteDataFromNotes(notes = "") {
+  const text = String(notes || "");
+  const start = text.indexOf(PORTE_NOTES_MARK_START);
+  const end = text.indexOf(PORTE_NOTES_MARK_END);
+  if (start < 0 || end <= start) return null;
+
+  const raw = text
+    .slice(start + PORTE_NOTES_MARK_START.length, end)
+    .trim();
+  if (!raw) return null;
+
+  try {
+    const parsed = JSON.parse(raw);
+    const fields = parsed?.fields && typeof parsed.fields === "object" ? parsed.fields : null;
+    if (!fields) return null;
+    return {
+      porte: parsed?.porte === "grande" ? "grande" : "pequeno",
+      fields,
+    };
+  } catch {
+    return null;
+  }
+}
+
 const ConsultationPreview = ({
   consultation,
   patient,
@@ -50,6 +125,7 @@ const ConsultationPreview = ({
   const consultationTemplate =
     consultation.template ||
     (consultation.consultationType === "retorno" ? "return" : "general");
+  const porteData = parsePorteDataFromNotes(consultation.notes);
 
   const formatDateBR = (dateString) => {
     const date = new Date(dateString);
@@ -363,6 +439,24 @@ const ConsultationPreview = ({
                       <strong>Ambiente:</strong> {consultation.housing}
                     </div>
                   )}
+                </div>
+              </div>
+            )}
+
+            {porteData && (
+              <div>
+                <h3 className="font-bold text-gray-800 text-lg mb-2">
+                  FICHA COMPLEMENTAR ({porteData.porte === "grande" ? "GRANDE PORTE" : "PEQUENO PORTE"})
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 rounded-xl border border-gray-200 bg-gray-50 p-4">
+                  {Object.entries(porteData.fields)
+                    .filter(([, value]) => String(value || "").trim())
+                    .map(([key, value]) => (
+                      <div key={key}>
+                        <strong>{PORTE_FIELD_LABELS[key] || key}:</strong>{" "}
+                        <span className="whitespace-pre-line">{String(value)}</span>
+                      </div>
+                    ))}
                 </div>
               </div>
             )}

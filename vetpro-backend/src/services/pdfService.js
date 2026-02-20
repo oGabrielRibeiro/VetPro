@@ -2,6 +2,57 @@ const PDFDocument = require("pdfkit");
 const path = require("path");
 const fs = require("fs");
 
+const PORTE_NOTES_MARK_START = "[[PORTE_CLINICO]]";
+const PORTE_NOTES_MARK_END = "[[/PORTE_CLINICO]]";
+
+const PORTE_FIELD_LABELS = {
+  vaccinationStatus: "Vacinacao",
+  vaccinationProtocol: "Protocolo vacinal",
+  lastVaccines: "Ultimas vacinas aplicadas",
+  dewormingStatus: "Vermifugacao",
+  ectoparasiteControl: "Controle de ectoparasitas",
+  diet: "Dieta",
+  rationBrand: "Racao / marca",
+  feedingFrequency: "Frequencia alimentar",
+  waterIntakeSmall: "Ingestao de agua",
+  housing: "Ambiente",
+  lifestyle: "Estilo de vida",
+  contactWithAnimals: "Contato com outros animais",
+  reproductiveStatusSmall: "Estado reprodutivo",
+  preventiveCare: "Preventivos em uso",
+  behavior: "Comportamento",
+  allergyHistory: "Historico alergico",
+  chronicDiseases: "Doencas cronicas",
+  currentSupplements: "Suplementos em uso",
+  farmName: "Propriedade",
+  productionSystem: "Sistema de producao",
+  animalFunction: "Finalidade zootecnica",
+  batch: "Lote",
+  animalId: "Identificacao do animal",
+  bodyConditionScore: "Escore corporal",
+  reproductiveStatus: "Estado reprodutivo",
+  daysInMilk: "Dias em lactacao",
+  parity: "Numero de partos",
+  herdVaccination: "Vacinacao do rebanho",
+  herdDeworming: "Vermifugacao do rebanho",
+  forage: "Volumoso",
+  concentrate: "Concentrado",
+  waterIntake: "Consumo de agua",
+  mineralSupplementation: "Suplementacao mineral",
+  hoofStatus: "Casco e locomocao",
+  rumenMotility: "Motilidade ruminal",
+  fecesAndUrine: "Fezes e urina",
+  milkProduction: "Producao de leite",
+  historicalDiseases: "Historico sanitario",
+  propertyAndManagement: "Propriedade e manejo",
+  contactAnimals: "Contactantes",
+  animalIdentificationDetails: "Animal atendido - identificacao detalhada",
+  neonateAndReproduction: "Neonato / reproducao",
+  previousTreatmentHistory: "Tratamento anterior",
+  physicalExamDetailed: "Exame fisico detalhado",
+  requestedExamPanel: "Exames complementares solicitados",
+};
+
 function safe(value, fallback = "-") {
   if (value == null || value === "") return fallback;
   return String(value);
@@ -44,6 +95,30 @@ function drawKeyValue(doc, label, value) {
     .font("Helvetica")
     .fillColor("#1f2937")
     .text(safe(value));
+}
+
+function parsePorteDataFromNotes(notes = "") {
+  const text = String(notes || "");
+  const start = text.indexOf(PORTE_NOTES_MARK_START);
+  const end = text.indexOf(PORTE_NOTES_MARK_END);
+  if (start < 0 || end <= start) return null;
+
+  const raw = text
+    .slice(start + PORTE_NOTES_MARK_START.length, end)
+    .trim();
+  if (!raw) return null;
+
+  try {
+    const parsed = JSON.parse(raw);
+    const fields = parsed?.fields && typeof parsed.fields === "object" ? parsed.fields : null;
+    if (!fields) return null;
+    return {
+      porte: parsed?.porte === "grande" ? "grande" : "pequeno",
+      fields,
+    };
+  } catch {
+    return null;
+  }
 }
 
 function resolveClinicLogoPath(clinic = {}) {
@@ -335,6 +410,19 @@ function generateConsultationPDF(consultation, res) {
   drawKeyValue(doc, "Medicacoes", consultation.medications);
   drawKeyValue(doc, "Observacoes", consultation.notes);
   drawKeyValue(doc, "Recomendacao de retorno", consultation.returnRecommendation);
+  const porteData = parsePorteDataFromNotes(consultation.notes);
+  if (porteData) {
+    drawSectionTitle(
+      doc,
+      `Ficha complementar - ${porteData.porte === "grande" ? "grande porte" : "pequeno porte"}`,
+      accent,
+    );
+    Object.entries(porteData.fields)
+      .filter(([, value]) => String(value || "").trim())
+      .forEach(([key, value]) => {
+        drawKeyValue(doc, PORTE_FIELD_LABELS[key] || key, value);
+      });
+  }
 
   doc.moveDown(1.5);
   const signaturePath = path.join(__dirname, `../assets/signatures/${consultation.userId}.png`);

@@ -4,6 +4,144 @@ import VoiceTextarea from "./VoiceTextarea";
 import FeedbackBanner from "./FeedbackBanner";
 import { toUserFriendlyError } from "../utils/errorMessages";
 
+const PORTE_NOTES_MARK_START = "[[PORTE_CLINICO]]";
+const PORTE_NOTES_MARK_END = "[[/PORTE_CLINICO]]";
+
+const SMALL_ANIMAL_FIELDS = [
+  { key: "vaccinationStatus", label: "Vacinacao" },
+  { key: "vaccinationProtocol", label: "Protocolo vacinal" },
+  { key: "lastVaccines", label: "Ultimas vacinas aplicadas" },
+  { key: "dewormingStatus", label: "Vermifugacao" },
+  { key: "ectoparasiteControl", label: "Controle de ectoparasitas" },
+  { key: "diet", label: "Dieta" },
+  { key: "rationBrand", label: "Racao / marca" },
+  { key: "feedingFrequency", label: "Frequencia alimentar" },
+  { key: "waterIntakeSmall", label: "Ingestao de agua" },
+  { key: "housing", label: "Ambiente" },
+  { key: "lifestyle", label: "Estilo de vida" },
+  { key: "contactWithAnimals", label: "Contato com outros animais" },
+  { key: "reproductiveStatusSmall", label: "Estado reprodutivo" },
+  { key: "preventiveCare", label: "Preventivos em uso" },
+  { key: "behavior", label: "Comportamento" },
+  { key: "allergyHistory", label: "Historico alergico" },
+  { key: "chronicDiseases", label: "Doencas cronicas" },
+  { key: "currentSupplements", label: "Suplementos em uso" },
+];
+
+const LARGE_ANIMAL_FIELDS = [
+  { key: "farmName", label: "Propriedade" },
+  { key: "productionSystem", label: "Sistema de producao" },
+  { key: "animalFunction", label: "Finalidade zootecnica" },
+  { key: "batch", label: "Lote" },
+  { key: "animalId", label: "Identificacao do animal" },
+  { key: "bodyConditionScore", label: "Escore corporal" },
+  { key: "reproductiveStatus", label: "Estado reprodutivo" },
+  { key: "daysInMilk", label: "Dias em lactacao" },
+  { key: "parity", label: "Numero de partos" },
+  { key: "herdVaccination", label: "Vacinacao do rebanho" },
+  { key: "herdDeworming", label: "Vermifugacao do rebanho" },
+  { key: "forage", label: "Volumoso" },
+  { key: "concentrate", label: "Concentrado" },
+  { key: "waterIntake", label: "Consumo de agua" },
+  { key: "mineralSupplementation", label: "Suplementacao mineral" },
+  { key: "hoofStatus", label: "Casco e locomocao" },
+  { key: "rumenMotility", label: "Motilidade ruminal" },
+  { key: "fecesAndUrine", label: "Fezes e urina" },
+  { key: "milkProduction", label: "Producao de leite" },
+  { key: "historicalDiseases", label: "Historico sanitario" },
+  { key: "propertyAndManagement", label: "Propriedade e manejo" },
+  { key: "contactAnimals", label: "Contactantes" },
+  { key: "animalIdentificationDetails", label: "Animal atendido - identificacao detalhada" },
+  { key: "neonateAndReproduction", label: "Neonato / reproducao" },
+  { key: "previousTreatmentHistory", label: "Tratamento anterior" },
+  { key: "physicalExamDetailed", label: "Exame fisico detalhado" },
+  { key: "requestedExamPanel", label: "Exames complementares solicitados" },
+];
+
+const DEFAULT_SMALL_ANIMAL_DATA = {
+  vaccinationStatus: "",
+  vaccinationProtocol: "",
+  lastVaccines: "",
+  dewormingStatus: "",
+  ectoparasiteControl: "",
+  diet: "",
+  rationBrand: "",
+  feedingFrequency: "",
+  waterIntakeSmall: "",
+  housing: "",
+  lifestyle: "",
+  contactWithAnimals: "",
+  reproductiveStatusSmall: "",
+  preventiveCare: "",
+  behavior: "",
+  allergyHistory: "",
+  chronicDiseases: "",
+  currentSupplements: "",
+};
+
+const DEFAULT_LARGE_ANIMAL_DATA = {
+  farmName: "",
+  productionSystem: "",
+  animalFunction: "",
+  batch: "",
+  animalId: "",
+  bodyConditionScore: "",
+  reproductiveStatus: "",
+  daysInMilk: "",
+  parity: "",
+  herdVaccination: "",
+  herdDeworming: "",
+  forage: "",
+  concentrate: "",
+  waterIntake: "",
+  mineralSupplementation: "",
+  hoofStatus: "",
+  rumenMotility: "",
+  fecesAndUrine: "",
+  milkProduction: "",
+  historicalDiseases: "",
+  propertyAndManagement: "",
+  contactAnimals: "",
+  animalIdentificationDetails: "",
+  neonateAndReproduction: "",
+  previousTreatmentHistory: "",
+  physicalExamDetailed: "",
+  requestedExamPanel: "",
+};
+
+function normalizeWords(value = "") {
+  return String(value)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
+function classifyAnimalPorte(patient) {
+  const source = normalizeWords(
+    `${patient?.species || patient?.specie || ""} ${patient?.subcategory || ""} ${patient?.breed || ""}`,
+  );
+
+  const largeSignals = [
+    "equino",
+    "bovino",
+    "caprino",
+    "ovino",
+    "suino",
+    "asinino",
+    "muar",
+    "bufalo",
+    "fazenda",
+    "rebanho",
+  ];
+  const smallSignals = ["canino", "felino", "cao", "gato", "coelho", "hamster", "pet"];
+
+  if (largeSignals.some((token) => source.includes(token))) return "grande";
+  if (smallSignals.some((token) => source.includes(token))) return "pequeno";
+  if (source.includes("ave")) return "pequeno";
+  return "pequeno";
+}
+
 const QuickConsultation = ({
   patient,
   onSave,
@@ -36,6 +174,8 @@ const QuickConsultation = ({
   const [returnDate, setReturnDate] = useState("");
   const [openReturnWithoutDate, setOpenReturnWithoutDate] = useState(false);
   const [returnRecommendation, setReturnRecommendation] = useState("");
+  const [smallAnimalData, setSmallAnimalData] = useState(DEFAULT_SMALL_ANIMAL_DATA);
+  const [largeAnimalData, setLargeAnimalData] = useState(DEFAULT_LARGE_ANIMAL_DATA);
   const [saving, setSaving] = useState(false);
 
   const [conversationTranscript, setConversationTranscript] = useState("");
@@ -70,9 +210,41 @@ const QuickConsultation = ({
     if (!patient?.id) return null;
     return `vetpro_draft_quick_${patient.id}_${initialData?.id || "new"}`;
   }, [patient?.id, initialData?.id]);
+  const animalPorte = useMemo(() => classifyAnimalPorte(patient), [patient]);
+  const isLargeAnimal = animalPorte === "grande";
+  const isSmallAnimal = !isLargeAnimal;
+  const specificFields = isLargeAnimal ? LARGE_ANIMAL_FIELDS : SMALL_ANIMAL_FIELDS;
+  const specificData = isLargeAnimal ? largeAnimalData : smallAnimalData;
+  const specificCompletion = useMemo(() => {
+    const total = specificFields.length || 1;
+    const filled = specificFields.filter((field) =>
+      String(specificData[field.key] || "").trim(),
+    ).length;
+    return {
+      filled,
+      total,
+      percent: Math.round((filled / total) * 100),
+    };
+  }, [specificData, specificFields]);
 
   const showFeedback = (type, message) => {
     setFeedback({ type, message });
+  };
+
+  const scrollToSection = (sectionId) => {
+    if (typeof window === "undefined") return;
+    document.getElementById(sectionId)?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  };
+
+  const updateSmallAnimalField = (key, value) => {
+    setSmallAnimalData((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const updateLargeAnimalField = (key, value) => {
+    setLargeAnimalData((prev) => ({ ...prev, [key]: value }));
   };
 
   useEffect(() => {
@@ -201,6 +373,8 @@ const QuickConsultation = ({
     setReturnDate("");
     setOpenReturnWithoutDate(false);
     setReturnRecommendation("");
+    setSmallAnimalData(DEFAULT_SMALL_ANIMAL_DATA);
+    setLargeAnimalData(DEFAULT_LARGE_ANIMAL_DATA);
     setConversationTranscript("");
     setTranscriptSegments([]);
     setConversationStartedAt(null);
@@ -255,6 +429,14 @@ const QuickConsultation = ({
       setReturnDate(draft.returnDate || "");
       setOpenReturnWithoutDate(Boolean(draft.openReturnWithoutDate));
       setReturnRecommendation(draft.returnRecommendation || "");
+      setSmallAnimalData({
+        ...DEFAULT_SMALL_ANIMAL_DATA,
+        ...(draft.smallAnimalData || {}),
+      });
+      setLargeAnimalData({
+        ...DEFAULT_LARGE_ANIMAL_DATA,
+        ...(draft.largeAnimalData || {}),
+      });
       setConversationTranscript(draft.conversationTranscript || "");
       setTranscriptSegments(draft.transcriptSegments || []);
       setConversationStartedAt(draft.conversationStartedAt || null);
@@ -292,6 +474,8 @@ const QuickConsultation = ({
       returnDate,
       openReturnWithoutDate,
       returnRecommendation,
+      smallAnimalData,
+      largeAnimalData,
       conversationTranscript,
       transcriptSegments,
       conversationStartedAt,
@@ -329,6 +513,8 @@ const QuickConsultation = ({
     returnDate,
     openReturnWithoutDate,
     returnRecommendation,
+    smallAnimalData,
+    largeAnimalData,
     consultationType,
     conversationTranscript,
     transcriptSegments,
@@ -677,6 +863,28 @@ const QuickConsultation = ({
       : conversationTranscript.trim()
         ? `Transcricao da conversa:\n${conversationTranscript.trim()}`
         : "";
+    const filledSpecificItems = specificFields
+      .map((field) => ({
+        label: field.label,
+        key: field.key,
+        value: String(specificData[field.key] || "").trim(),
+      }))
+      .filter((item) => item.value);
+    const summaryTitle = isLargeAnimal
+      ? "Ficha detalhada - grande porte"
+      : "Ficha complementar - pequeno porte";
+    const specificSummary = filledSpecificItems.length
+      ? [summaryTitle, ...filledSpecificItems.map((item) => `${item.label}: ${item.value}`)].join("\n")
+      : "";
+    const structuredPorteBlock = filledSpecificItems.length
+      ? `${PORTE_NOTES_MARK_START}\n${JSON.stringify({
+          porte: animalPorte,
+          fields: filledSpecificItems.reduce((acc, item) => {
+            acc[item.key] = item.value;
+            return acc;
+          }, {}),
+        })}\n${PORTE_NOTES_MARK_END}`
+      : "";
 
     return {
     patientId: patient.id,
@@ -705,10 +913,12 @@ const QuickConsultation = ({
       notes,
       `Exame solicitado: ${examRequested === "sim" ? "Sim" : "Nao"}`,
       examRequested === "sim" && examDetails ? `Detalhes do exame: ${examDetails}` : "",
+      specificSummary,
       transcriptBlock,
+      structuredPorteBlock,
     ]
       .filter(Boolean)
-      .join("\n"),
+      .join("\n\n"),
     returnRecommendation,
     returnPlan: returnRecommended
       ? {
@@ -723,6 +933,511 @@ const QuickConsultation = ({
         },
     };
   };
+
+  const renderSmallAnimalSection = () => (
+    <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 sm:p-5 space-y-3">
+      <h2 className="text-sm font-bold text-blue-900">Prontuario de pequeno porte</h2>
+      <p className="text-xs text-blue-800">
+        Campos detalhados para animais de companhia, rotina domiciliar e preventivos.
+      </p>
+      <details open className="rounded-lg border border-blue-200 bg-white p-3">
+        <summary className="cursor-pointer text-sm font-semibold text-blue-900">
+          Preventivos e historico sanitario
+        </summary>
+        <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700">Vacinacao</label>
+            <select
+              value={smallAnimalData.vaccinationStatus}
+              onChange={(e) => updateSmallAnimalField("vaccinationStatus", e.target.value)}
+              className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm"
+            >
+              <option value="">Selecione</option>
+              <option value="Em dia">Em dia</option>
+              <option value="Atrasada">Atrasada</option>
+              <option value="Desconhecida">Desconhecida</option>
+            </select>
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700">Protocolo vacinal</label>
+            <input
+              type="text"
+              value={smallAnimalData.vaccinationProtocol}
+              onChange={(e) => updateSmallAnimalField("vaccinationProtocol", e.target.value)}
+              className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm"
+              placeholder="V8/V10, antirrabica, giardia, etc."
+            />
+          </div>
+          <div className="sm:col-span-2">
+            <label className="mb-1 block text-sm font-medium text-gray-700">Ultimas vacinas aplicadas</label>
+            <input
+              type="text"
+              value={smallAnimalData.lastVaccines}
+              onChange={(e) => updateSmallAnimalField("lastVaccines", e.target.value)}
+              className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm"
+              placeholder="Vacina e data aproximada"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700">Vermifugacao</label>
+            <input
+              type="text"
+              value={smallAnimalData.dewormingStatus}
+              onChange={(e) => updateSmallAnimalField("dewormingStatus", e.target.value)}
+              className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm"
+              placeholder="Produto e data"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700">Controle de ectoparasitas</label>
+            <input
+              type="text"
+              value={smallAnimalData.ectoparasiteControl}
+              onChange={(e) => updateSmallAnimalField("ectoparasiteControl", e.target.value)}
+              className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm"
+              placeholder="Pulgas/carrapatos (produto e frequencia)"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700">Doencas cronicas</label>
+            <input
+              type="text"
+              value={smallAnimalData.chronicDiseases}
+              onChange={(e) => updateSmallAnimalField("chronicDiseases", e.target.value)}
+              className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm"
+              placeholder="Dermatite, endocrinopatia, cardiopatia..."
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700">Historico alergico</label>
+            <input
+              type="text"
+              value={smallAnimalData.allergyHistory}
+              onChange={(e) => updateSmallAnimalField("allergyHistory", e.target.value)}
+              className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm"
+              placeholder="Reacao alimentar, medicamentosa, ambiental"
+            />
+          </div>
+          <div className="sm:col-span-2">
+            <label className="mb-1 block text-sm font-medium text-gray-700">Preventivos em uso</label>
+            <input
+              type="text"
+              value={smallAnimalData.preventiveCare}
+              onChange={(e) => updateSmallAnimalField("preventiveCare", e.target.value)}
+              className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm"
+              placeholder="Protetor articular, dental, cardiaco, renal, etc."
+            />
+          </div>
+        </div>
+      </details>
+
+      <details open className="rounded-lg border border-blue-200 bg-white p-3">
+        <summary className="cursor-pointer text-sm font-semibold text-blue-900">
+          Manejo, alimentacao e comportamento
+        </summary>
+        <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700">Dieta</label>
+            <input
+              type="text"
+              value={smallAnimalData.diet}
+              onChange={(e) => updateSmallAnimalField("diet", e.target.value)}
+              className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm"
+              placeholder="Natural, comercial, mista"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700">Racao / marca</label>
+            <input
+              type="text"
+              value={smallAnimalData.rationBrand}
+              onChange={(e) => updateSmallAnimalField("rationBrand", e.target.value)}
+              className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm"
+              placeholder="Marca e linha da dieta"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700">Frequencia alimentar</label>
+            <input
+              type="text"
+              value={smallAnimalData.feedingFrequency}
+              onChange={(e) => updateSmallAnimalField("feedingFrequency", e.target.value)}
+              className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm"
+              placeholder="Numero de refeicoes por dia"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700">Ingestao de agua</label>
+            <select
+              value={smallAnimalData.waterIntakeSmall}
+              onChange={(e) => updateSmallAnimalField("waterIntakeSmall", e.target.value)}
+              className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm"
+            >
+              <option value="">Selecione</option>
+              <option value="Normal">Normal</option>
+              <option value="Aumentada">Aumentada</option>
+              <option value="Diminuida">Diminuida</option>
+            </select>
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700">Ambiente</label>
+            <input
+              type="text"
+              value={smallAnimalData.housing}
+              onChange={(e) => updateSmallAnimalField("housing", e.target.value)}
+              className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm"
+              placeholder="Apartamento, casa, quintal, acesso externo"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700">Estilo de vida</label>
+            <input
+              type="text"
+              value={smallAnimalData.lifestyle}
+              onChange={(e) => updateSmallAnimalField("lifestyle", e.target.value)}
+              className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm"
+              placeholder="Sedentario, ativo, enriquecimento ambiental"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700">Contato com outros animais</label>
+            <input
+              type="text"
+              value={smallAnimalData.contactWithAnimals}
+              onChange={(e) => updateSmallAnimalField("contactWithAnimals", e.target.value)}
+              className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700">Estado reprodutivo</label>
+            <input
+              type="text"
+              value={smallAnimalData.reproductiveStatusSmall}
+              onChange={(e) => updateSmallAnimalField("reproductiveStatusSmall", e.target.value)}
+              className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm"
+              placeholder="Castrado(a), inteiro(a), cio, gestacao"
+            />
+          </div>
+          <div className="sm:col-span-2">
+            <label className="mb-1 block text-sm font-medium text-gray-700">Comportamento</label>
+            <textarea
+              value={smallAnimalData.behavior}
+              onChange={(e) => updateSmallAnimalField("behavior", e.target.value)}
+              className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm min-h-[82px]"
+              placeholder="Alteracao de comportamento, ansiedade, agressividade, vocalizacao, apatia"
+            />
+          </div>
+          <div className="sm:col-span-2">
+            <label className="mb-1 block text-sm font-medium text-gray-700">Suplementos em uso</label>
+            <input
+              type="text"
+              value={smallAnimalData.currentSupplements}
+              onChange={(e) => updateSmallAnimalField("currentSupplements", e.target.value)}
+              className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm"
+              placeholder="Omega 3, condroprotetor, probiotico, vitaminas"
+            />
+          </div>
+        </div>
+      </details>
+    </div>
+  );
+
+  const renderLargeAnimalSection = () => (
+    <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 sm:p-5 space-y-4">
+      <h2 className="text-sm font-bold text-amber-900">Prontuario de grande porte (detalhado)</h2>
+      <p className="text-xs text-amber-800">
+        Modelo detalhado para rotina de campo, rebanho e medicina de producao.
+      </p>
+      <details open className="rounded-lg border border-amber-200 bg-white p-3">
+        <summary className="cursor-pointer text-sm font-semibold text-amber-900">
+          Ficha completa de grande porte
+        </summary>
+        <div className="mt-3 space-y-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+          <label className="mb-1 block text-sm font-medium text-gray-700">Propriedade</label>
+          <input
+            type="text"
+            value={largeAnimalData.farmName}
+            onChange={(e) => updateLargeAnimalField("farmName", e.target.value)}
+            className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm"
+            placeholder="Nome da fazenda/sitio"
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-sm font-medium text-gray-700">Sistema de producao</label>
+          <select
+            value={largeAnimalData.productionSystem}
+            onChange={(e) => updateLargeAnimalField("productionSystem", e.target.value)}
+            className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm"
+          >
+            <option value="">Selecione</option>
+            <option value="Leite">Leite</option>
+            <option value="Corte">Corte</option>
+            <option value="Misto">Misto</option>
+            <option value="Esporte/Trabalho">Esporte/Trabalho</option>
+          </select>
+        </div>
+        <div>
+          <label className="mb-1 block text-sm font-medium text-gray-700">Finalidade zootecnica</label>
+          <input
+            type="text"
+            value={largeAnimalData.animalFunction}
+            onChange={(e) => updateLargeAnimalField("animalFunction", e.target.value)}
+            className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm"
+            placeholder="Lactacao, reproducao, engorda, tracao"
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-sm font-medium text-gray-700">Lote / grupo</label>
+          <input
+            type="text"
+            value={largeAnimalData.batch}
+            onChange={(e) => updateLargeAnimalField("batch", e.target.value)}
+            className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm"
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-sm font-medium text-gray-700">Identificacao do animal</label>
+          <input
+            type="text"
+            value={largeAnimalData.animalId}
+            onChange={(e) => updateLargeAnimalField("animalId", e.target.value)}
+            className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm"
+            placeholder="Brinco, chip, tatuagem"
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-sm font-medium text-gray-700">Escore corporal (1-5)</label>
+          <input
+            type="text"
+            value={largeAnimalData.bodyConditionScore}
+            onChange={(e) => updateLargeAnimalField("bodyConditionScore", e.target.value)}
+            className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm"
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div>
+          <label className="mb-1 block text-sm font-medium text-gray-700">Estado reprodutivo</label>
+          <input
+            type="text"
+            value={largeAnimalData.reproductiveStatus}
+            onChange={(e) => updateLargeAnimalField("reproductiveStatus", e.target.value)}
+            className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm"
+            placeholder="Vazia, prenhe, pos-parto"
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-sm font-medium text-gray-700">Dias em lactacao</label>
+          <input
+            type="text"
+            value={largeAnimalData.daysInMilk}
+            onChange={(e) => updateLargeAnimalField("daysInMilk", e.target.value)}
+            className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm"
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-sm font-medium text-gray-700">Numero de partos</label>
+          <input
+            type="text"
+            value={largeAnimalData.parity}
+            onChange={(e) => updateLargeAnimalField("parity", e.target.value)}
+            className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm"
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+          <label className="mb-1 block text-sm font-medium text-gray-700">Vacinacao do rebanho</label>
+          <input
+            type="text"
+            value={largeAnimalData.herdVaccination}
+            onChange={(e) => updateLargeAnimalField("herdVaccination", e.target.value)}
+            className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm"
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-sm font-medium text-gray-700">Vermifugacao do rebanho</label>
+          <input
+            type="text"
+            value={largeAnimalData.herdDeworming}
+            onChange={(e) => updateLargeAnimalField("herdDeworming", e.target.value)}
+            className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm"
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+          <label className="mb-1 block text-sm font-medium text-gray-700">Volumoso</label>
+          <input
+            type="text"
+            value={largeAnimalData.forage}
+            onChange={(e) => updateLargeAnimalField("forage", e.target.value)}
+            className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm"
+            placeholder="Silagem, feno, pasto"
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-sm font-medium text-gray-700">Concentrado</label>
+          <input
+            type="text"
+            value={largeAnimalData.concentrate}
+            onChange={(e) => updateLargeAnimalField("concentrate", e.target.value)}
+            className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm"
+            placeholder="Kg/dia e composicao"
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-sm font-medium text-gray-700">Consumo de agua</label>
+          <input
+            type="text"
+            value={largeAnimalData.waterIntake}
+            onChange={(e) => updateLargeAnimalField("waterIntake", e.target.value)}
+            className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm"
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-sm font-medium text-gray-700">Suplementacao mineral</label>
+          <input
+            type="text"
+            value={largeAnimalData.mineralSupplementation}
+            onChange={(e) => updateLargeAnimalField("mineralSupplementation", e.target.value)}
+            className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm"
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+          <label className="mb-1 block text-sm font-medium text-gray-700">Casco e locomocao</label>
+          <input
+            type="text"
+            value={largeAnimalData.hoofStatus}
+            onChange={(e) => updateLargeAnimalField("hoofStatus", e.target.value)}
+            className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm"
+            placeholder="Claudicacao, casqueamento, aprumos"
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-sm font-medium text-gray-700">Motilidade ruminal</label>
+          <input
+            type="text"
+            value={largeAnimalData.rumenMotility}
+            onChange={(e) => updateLargeAnimalField("rumenMotility", e.target.value)}
+            className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm"
+            placeholder="Contracoes/2 min, timpanismo"
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-sm font-medium text-gray-700">Fezes e urina</label>
+          <input
+            type="text"
+            value={largeAnimalData.fecesAndUrine}
+            onChange={(e) => updateLargeAnimalField("fecesAndUrine", e.target.value)}
+            className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm"
+            placeholder="Consistencia, cor, volume"
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-sm font-medium text-gray-700">Producao de leite</label>
+          <input
+            type="text"
+            value={largeAnimalData.milkProduction}
+            onChange={(e) => updateLargeAnimalField("milkProduction", e.target.value)}
+            className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm"
+            placeholder="Litros/dia, queda de producao"
+          />
+        </div>
+      </div>
+
+      <div>
+        <label className="mb-1 block text-sm font-medium text-gray-700">Historico sanitario e ocorrencias do lote</label>
+        <textarea
+          value={largeAnimalData.historicalDiseases}
+          onChange={(e) => updateLargeAnimalField("historicalDiseases", e.target.value)}
+          className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm min-h-[88px]"
+          placeholder="Mastite, metrite, pneumonia, surtos recentes, tratamentos anteriores"
+        />
+      </div>
+
+      <div>
+        <label className="mb-1 block text-sm font-medium text-gray-700">Propriedade e manejo (modelo da ficha)</label>
+        <textarea
+          value={largeAnimalData.propertyAndManagement}
+          onChange={(e) => updateLargeAnimalField("propertyAndManagement", e.target.value)}
+          className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm min-h-[100px]"
+          placeholder="Responsavel local, proprietario, contato, endereco, tipo de criacao (leite/corte/ambos/confinado/semi-extensivo/extensivo), tipo de alimentacao e sal mineral."
+        />
+      </div>
+
+      <div>
+        <label className="mb-1 block text-sm font-medium text-gray-700">Contactantes</label>
+        <input
+          type="text"
+          value={largeAnimalData.contactAnimals}
+          onChange={(e) => updateLargeAnimalField("contactAnimals", e.target.value)}
+          className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm"
+          placeholder="Bovinos, equinos, ovinos, caprinos, caninos, outros"
+        />
+      </div>
+
+      <div>
+        <label className="mb-1 block text-sm font-medium text-gray-700">Animal atendido - identificacao detalhada</label>
+        <textarea
+          value={largeAnimalData.animalIdentificationDetails}
+          onChange={(e) => updateLargeAnimalField("animalIdentificationDetails", e.target.value)}
+          className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm min-h-[90px]"
+          placeholder="Sexo, idade (m, neonato, bezerro, garrote, adulto), pelagem, tatuagem/brinco/registro genealogico."
+        />
+      </div>
+
+      <div>
+        <label className="mb-1 block text-sm font-medium text-gray-700">Neonato / reproducao</label>
+        <textarea
+          value={largeAnimalData.neonateAndReproduction}
+          onChange={(e) => updateLargeAnimalField("neonateAndReproduction", e.target.value)}
+          className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm min-h-[90px]"
+          placeholder="Monta natural/inseminacao, parto normal/distocico/cesarea, colostragem, cura de umbigo, brix, prenhez e dados reprodutivos."
+        />
+      </div>
+
+      <div>
+        <label className="mb-1 block text-sm font-medium text-gray-700">Tratamento anterior</label>
+        <textarea
+          value={largeAnimalData.previousTreatmentHistory}
+          onChange={(e) => updateLargeAnimalField("previousTreatmentHistory", e.target.value)}
+          className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm min-h-[90px]"
+          placeholder="Vacinas (tipo e datas), antiparasitario interno/externo, apetite e ingestao de agua."
+        />
+      </div>
+
+      <div>
+        <label className="mb-1 block text-sm font-medium text-gray-700">Exame fisico detalhado</label>
+        <textarea
+          value={largeAnimalData.physicalExamDetailed}
+          onChange={(e) => updateLargeAnimalField("physicalExamDetailed", e.target.value)}
+          className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm min-h-[120px]"
+          placeholder="Estado geral, ECC, postura, FC, FR, TC, FMRu, pH, linfonodos, mucosas, TPC, pele/pelos, parametros normais e avaliacao de achados."
+        />
+      </div>
+
+      <div>
+        <label className="mb-1 block text-sm font-medium text-gray-700">Exames complementares solicitados</label>
+        <textarea
+          value={largeAnimalData.requestedExamPanel}
+          onChange={(e) => updateLargeAnimalField("requestedExamPanel", e.target.value)}
+          className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm min-h-[88px]"
+          placeholder="Exames laboratoriais, exames de imagem, outros, necropsia e justificativas."
+        />
+      </div>
+      </div>
+      </details>
+    </div>
+  );
 
   const saveConsultationWithPrescription = async (download) => {
     if (!patient?.id) {
@@ -846,6 +1561,39 @@ const QuickConsultation = ({
         </div>
       </div>
 
+      <div className="md:hidden sticky top-0 z-20 -mx-1 rounded-xl border border-gray-200 bg-white/95 px-2 py-2 backdrop-blur">
+        <div className="flex gap-2 overflow-x-auto">
+          <button
+            type="button"
+            onClick={() => scrollToSection("assistant-section")}
+            className="shrink-0 rounded-full border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700"
+          >
+            Assistente
+          </button>
+          <button
+            type="button"
+            onClick={() => scrollToSection("porte-section")}
+            className="shrink-0 rounded-full border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700"
+          >
+            Porte
+          </button>
+          <button
+            type="button"
+            onClick={() => scrollToSection("clinical-section")}
+            className="shrink-0 rounded-full border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700"
+          >
+            Clinico
+          </button>
+          <button
+            type="button"
+            onClick={() => scrollToSection("followup-section")}
+            className="shrink-0 rounded-full border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700"
+          >
+            Retorno
+          </button>
+        </div>
+      </div>
+
       <FeedbackBanner
         type={feedback?.type || "error"}
         message={feedback?.message}
@@ -853,7 +1601,7 @@ const QuickConsultation = ({
       />
 
       {!fieldMode && (
-        <div className="rounded-xl border border-violet-200 bg-violet-50 p-4 space-y-3">
+        <div id="assistant-section" className="rounded-xl border border-violet-200 bg-violet-50 p-4 space-y-3">
           <h2 className="text-sm font-bold text-violet-900">Assistente IA por chat</h2>
           <p className="text-xs text-violet-800">
             Descreva em linguagem livre o caso e a IA monta um rascunho estruturado.
@@ -934,7 +1682,7 @@ const QuickConsultation = ({
       )}
 
       {fieldMode && (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 space-y-3">
+        <div id="assistant-section" className="rounded-xl border border-amber-200 bg-amber-50 p-4 space-y-3">
           <h2 className="text-sm font-bold text-amber-900">
             Modo Campo: Assistente de conversa
           </h2>
@@ -1053,7 +1801,30 @@ const QuickConsultation = ({
         </div>
       )}
 
-      <div className="rounded-xl border border-gray-200 bg-white p-4 sm:p-6 space-y-4">
+      <div id="porte-section" className="rounded-xl border border-gray-200 bg-white p-4 sm:p-6 space-y-4">
+        <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
+          Classificacao do prontuario por porte
+        </h2>
+        <p className="text-sm text-gray-700">
+          Porte detectado para este paciente:{" "}
+          <strong>{isLargeAnimal ? "Grande porte" : "Pequeno porte"}</strong>
+        </p>
+        <div>
+          <div className="mb-1 flex items-center justify-between text-xs text-gray-600">
+            <span>Preenchimento da ficha de porte</span>
+            <strong>{specificCompletion.filled}/{specificCompletion.total}</strong>
+          </div>
+          <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200">
+            <div
+              className="h-full rounded-full bg-emerald-500 transition-all duration-300"
+              style={{ width: `${Math.max(8, specificCompletion.percent)}%` }}
+            />
+          </div>
+        </div>
+        {isSmallAnimal ? renderSmallAnimalSection() : renderLargeAnimalSection()}
+      </div>
+
+      <div id="clinical-section" className="rounded-xl border border-gray-200 bg-white p-4 sm:p-6 space-y-4">
         <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Parametros vitais</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
@@ -1220,7 +1991,7 @@ const QuickConsultation = ({
           placeholder="Observacoes gerais"
         />
 
-        <div className="rounded-xl border border-gray-200 p-3 space-y-3">
+        <div id="followup-section" className="rounded-xl border border-gray-200 p-3 space-y-3">
           <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
             <input
               type="checkbox"
