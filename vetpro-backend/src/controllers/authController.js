@@ -1,4 +1,6 @@
 const bcrypt = require("bcrypt");
+const fs = require("fs");
+const path = require("path");
 const jwt = require("jsonwebtoken");
 const prisma = require("../lib/prisma");
 
@@ -270,4 +272,88 @@ async function updateProfile(req, res) {
   }
 }
 
-module.exports = { register, login, me, updateProfile };
+function resolveLocalPath(filePath) {
+  if (!filePath) return null;
+  const cleaned = String(filePath).replace(/^\/+/, "");
+  return path.resolve(process.cwd(), cleaned);
+}
+
+async function deleteAccount(req, res) {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: "Sessao invalida." });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      include: { clinic: true },
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: "Usuario nao encontrado." });
+    }
+
+    const consultationFiles = await prisma.consultationFile.findMany({
+      where: { consultation: { userId } },
+      select: { path: true, thumbnailPath: true },
+    });
+
+    const clinicLogoPath = user.clinic?.logoUrl || null;
+
+    const clinicId = user.clinicId;
+    let shouldDeleteClinic = false;
+
+    await prisma.$transaction(async (tx) => {
+      await tx.consultationFile.deleteMany({
+        where: { consultation: { userId } },
+      });
+      await tx.consultation.deleteMany({ where: { userId } });
+      await tx.patient.deleteMany({ where: { userId } });
+      await tx.user.delete({ where: { id: userId } });
+
+      const remaining = await tx.user.count({ where: { clinicId } });
+      if (remaining === 0) {
+        await tx.clinic.delete({ where: { id: clinicId } });
+        shouldDeleteClinic = true;
+      }
+    });
+
+    const filesToDelete = consultationFiles.flatMap((file) => [
+      file.path,
+      file.thumbnailPath,
+    ]);
+
+    for (const filePath of filesToDelete) {
+      const resolved = resolveLocalPath(filePath);
+      if (!resolved) continue;
+      try {
+        if (fs.existsSync(resolved)) {
+          fs.unlinkSync(resolved);
+        }
+      } catch (err) {
+        console.warn("Falha ao remover arquivo:", resolved, err?.message || err);
+      }
+    }
+
+    if (shouldDeleteClinic && clinicLogoPath) {
+      const resolvedLogo = resolveLocalPath(clinicLogoPath);
+      try {
+        if (resolvedLogo && fs.existsSync(resolvedLogo)) {
+          fs.unlinkSync(resolvedLogo);
+        }
+      } catch (err) {
+        console.warn("Falha ao remover logo da clinica:", err?.message || err);
+      }
+    }
+
+    return res.json({ message: "Conta excluida com sucesso." });
+  } catch (err) {
+    console.error("deleteAccount error:", err);
+    return res
+      .status(500)
+      .json({ error: "Nao foi possivel excluir sua conta. Tente novamente." });
+  }
+}
+
+module.exports = { register, login, me, updateProfile, deleteAccount };

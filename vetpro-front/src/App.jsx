@@ -381,6 +381,19 @@ const MainApp = () => {
     }
   };
 
+  const handleDeleteAccount = async () => {
+    await api.delete("/auth/account");
+    try {
+      localStorage.removeItem("vetpro_patients");
+      localStorage.removeItem("vetpro_consultations");
+      localStorage.removeItem("vetpro_appointments");
+      localStorage.removeItem("vetpro_field_mode");
+    } catch {
+      // ignore storage errors
+    }
+    logout("Conta excluida com sucesso.");
+  };
+
   const handleViewConsultation = async (consultationId) => {
     try {
       const response = await api.get(`/consultations/${consultationId}`);
@@ -1024,6 +1037,7 @@ const MainApp = () => {
               return merged;
             }}
             onCancel={() => setCurrentView("dashboard")}
+            onDeleteAccount={handleDeleteAccount}
           />
         );
 
@@ -1441,7 +1455,7 @@ export default App;
 
 
 
-  const renderProfileBubble = (profileUser) => {
+function renderProfileBubble(profileUser) {
     const initial = (profileUser?.name || "U").charAt(0).toUpperCase();
     if (profileUser?.profilePhoto) {
       return (
@@ -1455,4 +1469,4 @@ export default App;
         {initial}
       </span>
     );
-  };
+}

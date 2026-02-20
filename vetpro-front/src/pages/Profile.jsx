@@ -61,9 +61,12 @@ function buildInitialForm(profile = {}) {
   };
 }
 
-const Profile = ({ profile, onSave, onCancel }) => {
+const Profile = ({ profile, onSave, onCancel, onDeleteAccount }) => {
   const [form, setForm] = useState(buildInitialForm(profile));
   const [formError, setFormError] = useState("");
+  const [deleteError, setDeleteError] = useState("");
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   useEffect(() => {
     setForm(buildInitialForm(profile));
@@ -142,6 +145,21 @@ const Profile = ({ profile, onSave, onCancel }) => {
     });
   };
 
+  const handleDeleteAccount = async () => {
+    setDeleteError("");
+    setDeleteLoading(true);
+    try {
+      await onDeleteAccount?.();
+      setShowDeleteModal(false);
+    } catch (err) {
+      setDeleteError(
+        "Nao foi possivel excluir sua conta. Tente novamente mais tarde.",
+      );
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
   return (
     <div className="max-w-4xl mx-auto">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 sm:mb-8">
@@ -169,6 +187,12 @@ const Profile = ({ profile, onSave, onCancel }) => {
         type="error"
         message={formError}
         onClose={() => setFormError("")}
+      />
+      <FeedbackBanner
+        className="mb-4"
+        type="error"
+        message={deleteError}
+        onClose={() => setDeleteError("")}
       />
 
       <form onSubmit={handleSubmit} className="space-y-6">
@@ -514,7 +538,73 @@ const Profile = ({ profile, onSave, onCancel }) => {
             </div>
           </div>
         </div>
+
+        {/* Danger Zone */}
+        <div className="bg-white rounded-xl border border-red-200 shadow-sm overflow-hidden">
+          <div className="bg-red-50 px-4 sm:px-6 py-3 sm:py-4 border-b border-red-200">
+            <h2 className="font-bold text-lg text-red-700">Zona de Risco</h2>
+          </div>
+          <div className="p-4 sm:p-6 space-y-4">
+            <div className="rounded-xl border border-red-200 bg-red-50/60 p-4">
+              <p className="text-sm text-red-700 font-semibold mb-1">
+                Exclusao permanente
+              </p>
+              <p className="text-sm text-gray-700">
+                Ao excluir sua conta, todos os dados vinculados a voce serao
+                removidos permanentemente.
+              </p>
+            </div>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <p className="text-xs text-gray-600">
+                Esta acao nao pode ser desfeita.
+              </p>
+              <button
+                type="button"
+                onClick={() => setShowDeleteModal(true)}
+                className="bg-red-600 text-white font-bold py-2.5 px-5 rounded-xl hover:bg-red-700 transition-colors text-sm"
+              >
+                Excluir minha conta
+              </button>
+            </div>
+          </div>
+        </div>
       </form>
+
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-xl">
+            <h2 className="text-lg font-bold text-gray-800">
+              Confirmar exclusao
+            </h2>
+            <p className="mt-2 text-sm text-gray-600">
+              Tem certeza que deseja excluir sua conta? Esta acao e irreversivel
+              e apaga todos os seus dados.
+            </p>
+            <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+              Dica: se quiser apenas sair, use o botao "Sair" no menu.
+            </div>
+
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setShowDeleteModal(false)}
+                className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                disabled={deleteLoading}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteAccount}
+                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-70"
+                disabled={deleteLoading}
+              >
+                {deleteLoading ? "Excluindo..." : "Excluir conta"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

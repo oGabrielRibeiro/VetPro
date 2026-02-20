@@ -22,6 +22,18 @@ export function register() {
   }
 }
 
+export function unregister() {
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.ready
+      .then((registration) => {
+        registration.unregister();
+      })
+      .catch(() => {
+        // ignore unregister errors
+      });
+  }
+}
+
 function registerValidSW(swUrl) {
   navigator.serviceWorker
     .register(swUrl)
