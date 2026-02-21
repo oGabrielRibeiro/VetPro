@@ -128,6 +128,57 @@ function classifySentencesHeuristic(text = "") {
   return buckets;
 }
 
+function countClinicalSignals(text = "") {
+  const normalized = normalizeText(text);
+  if (!normalized) return 0;
+
+  const tokens = [
+    "queixa", "anamnese", "exame", "diagnost", "suspeita", "conduta",
+    "tratamento", "prescre", "medic", "retorno", "febre", "mucosa",
+    "tpc", "fc", "fr", "dor", "vomit", "diarre", "claudic", "colica"
+  ];
+
+  return tokens.reduce((sum, token) => (normalized.includes(token) ? sum + 1 : sum), 0);
+}
+
+function assessRoleReliability(segments = [], tutorContent = "", medicoContent = "") {
+  const safeSegments = Array.isArray(segments) ? segments : [];
+  if (!safeSegments.length) {
+    return {
+      reliable: false,
+      score: 0,
+      reason: "no_segments"
+    };
+  }
+
+  const tutorTurns = safeSegments.filter((segment) => segment?.speaker === "Tutor").length;
+  const medicoTurns = safeSegments.filter((segment) => segment?.speaker === "Medico").length;
+  const totalTurns = Math.max(1, safeSegments.length);
+
+  if (!tutorTurns || !medicoTurns) {
+    return {
+      reliable: false,
+      score: 0.2,
+      reason: "single_speaker_detected"
+    };
+  }
+
+  const tutorSignals = countClinicalSignals(tutorContent);
+  const medicoSignals = countClinicalSignals(medicoContent);
+  const turnBalance = 1 - Math.abs(tutorTurns - medicoTurns) / totalTurns;
+  const signalBalance = 1 - Math.abs(tutorSignals - medicoSignals) / Math.max(1, tutorSignals + medicoSignals);
+  const coverage = Math.min(1, (tutorSignals + medicoSignals) / 8);
+
+  const score = Number((turnBalance * 0.35 + signalBalance * 0.25 + coverage * 0.4).toFixed(2));
+  const reliable = score >= 0.5;
+
+  return {
+    reliable,
+    score,
+    reason: reliable ? "ok" : "low_confidence_role_split"
+  };
+}
+
 function detectSpeakerFromSentence(sentence = "", lastSpeaker = "Tutor") {
   const normalized = normalizeText(sentence);
   if (!normalized) return lastSpeaker || "Tutor";
@@ -415,8 +466,11 @@ function parseClinicalFieldsFromSegments(segments = [], transcript = "") {
     };
   }
 
-  const tutorOrFull = tutorContent || fullContent;
-  const medicoOrFull = medicoContent || fullContent;
+  const roleReliability = assessRoleReliability(safeSegments, tutorContent, medicoContent);
+  const shouldUseFullAsPrimary = !roleReliability.reliable;
+
+  const tutorOrFull = shouldUseFullAsPrimary ? fullContent : (tutorContent || fullContent);
+  const medicoOrFull = shouldUseFullAsPrimary ? fullContent : (medicoContent || fullContent);
   const classified = classifySentencesHeuristic(fullContent);
 
   const chiefComplaintFallback = dedupeAndJoin(classified.complaint).slice(0, 260);
@@ -461,7 +515,8 @@ function parseClinicalFieldsFromSegments(segments = [], transcript = "") {
     context: {
       tutorContent,
       medicoContent,
-      fullContent
+      fullContent,
+      roleReliability
     }
   };
 }
@@ -506,15 +561,106 @@ function buildParsedConfidence(parsed, context, provider) {
   };
 }
 
-function formatSpeakerLabel(speakerId) {
-  if (speakerId === null || speakerId === undefined) return "Tutor";
+function normalizeSpeakerId(speakerId) {
+  if (speakerId === null || speakerId === undefined) return "spk_0";
   const numeric = Number(speakerId);
-  if (Number.isNaN(numeric)) return "Tutor";
-  return numeric % 2 === 0 ? "Tutor" : "Medico";
+  if (!Number.isNaN(numeric)) return `spk_${numeric}`;
+  const raw = String(speakerId || "").trim().toLowerCase();
+  return raw ? `spk_${raw.replace(/[^a-z0-9_-]/g, "")}` : "spk_0";
+}
+
+function scoreSpeakerRole(text = "") {
+  const normalized = normalizeText(text);
+  if (!normalized) return { tutor: 0, medico: 0 };
+
+  let tutor = 0;
+  let medico = 0;
+
+  const tutorTokens = [
+    "notei", "percebi", "ele", "ela", "meu", "minha", "em casa", "anda",
+    "apetite", "vomito", "diarreia", "nao come", "nao bebe", "proprietario", "tutor"
+  ];
+  const medicoTokens = [
+    "entendi", "vamos", "no exame", "ao exame", "suspeita", "diagnost",
+    "conduta", "tratamento", "prescrev", "retorno", "solicitei", "pedi",
+    "fc", "fr", "tpc", "ausculta", "palpacao"
+  ];
+
+  tutorTokens.forEach((token) => {
+    if (normalized.includes(token)) tutor += 2;
+  });
+  medicoTokens.forEach((token) => {
+    if (normalized.includes(token)) medico += 2;
+  });
+
+  if (/\b(dr|dra|doutor|doutora)\b/.test(normalized) && /\b(ele|ela|nao|não)\b/.test(normalized)) {
+    tutor += 2;
+  }
+  if (/\b(prescrev|solicit|diagnost|conduta)\b/.test(normalized)) {
+    medico += 2;
+  }
+
+  return { tutor, medico };
+}
+
+function resolveRolesFromDiarizedTurns(turns = []) {
+  const safeTurns = Array.isArray(turns) ? turns : [];
+  if (!safeTurns.length) return [];
+
+  const bySpeaker = {};
+  for (const turn of safeTurns) {
+    const speakerId = turn.speakerId || "spk_0";
+    const score = scoreSpeakerRole(turn.text || "");
+    if (!bySpeaker[speakerId]) {
+      bySpeaker[speakerId] = { tutor: 0, medico: 0 };
+    }
+    bySpeaker[speakerId].tutor += score.tutor;
+    bySpeaker[speakerId].medico += score.medico;
+  }
+
+  const speakers = Object.keys(bySpeaker);
+  const roleBySpeaker = {};
+
+  if (speakers.length === 2) {
+    const [a, b] = speakers;
+    const aDiff = bySpeaker[a].tutor - bySpeaker[a].medico;
+    const bDiff = bySpeaker[b].tutor - bySpeaker[b].medico;
+
+    if (aDiff === bDiff) {
+      roleBySpeaker[a] = "Tutor";
+      roleBySpeaker[b] = "Medico";
+    } else if (aDiff > bDiff) {
+      roleBySpeaker[a] = "Tutor";
+      roleBySpeaker[b] = "Medico";
+    } else {
+      roleBySpeaker[a] = "Medico";
+      roleBySpeaker[b] = "Tutor";
+    }
+  } else {
+    speakers.forEach((speakerId, index) => {
+      const score = bySpeaker[speakerId];
+      if (score.tutor > score.medico) roleBySpeaker[speakerId] = "Tutor";
+      else if (score.medico > score.tutor) roleBySpeaker[speakerId] = "Medico";
+      else roleBySpeaker[speakerId] = index === 0 ? "Tutor" : "Medico";
+    });
+  }
+
+  let lastSpeaker = "Tutor";
+  return safeTurns.map((turn) => {
+    const explicit = roleBySpeaker[turn.speakerId || "spk_0"];
+    const inferred = detectSpeakerFromSentence(turn.text || "", lastSpeaker);
+    const finalSpeaker = explicit || inferred || lastSpeaker;
+    lastSpeaker = finalSpeaker;
+    return {
+      stamp: turn.stamp || "00:00",
+      speaker: finalSpeaker,
+      text: String(turn.text || "").trim()
+    };
+  });
 }
 
 function buildTurnsFromDeepgramWords(words = []) {
-  const turns = [];
+  const rawTurns = [];
   let current = null;
 
   for (const word of words) {
@@ -522,17 +668,17 @@ function buildTurnsFromDeepgramWords(words = []) {
     const text = String(rawWord).trim();
     if (!text) continue;
 
-    const speaker = formatSpeakerLabel(word?.speaker);
+    const speakerId = normalizeSpeakerId(word?.speaker);
     const stamp = `${String(Math.floor((word?.start || 0) / 60)).padStart(2, "0")}:${String(
       Math.floor((word?.start || 0) % 60)
     ).padStart(2, "0")}`;
 
-    if (!current || current.speaker !== speaker) {
+    if (!current || current.speakerId !== speakerId) {
       if (current?.text?.trim()) {
-        turns.push(current);
+        rawTurns.push(current);
       }
       current = {
-        speaker,
+        speakerId,
         stamp,
         text
       };
@@ -543,10 +689,10 @@ function buildTurnsFromDeepgramWords(words = []) {
   }
 
   if (current?.text?.trim()) {
-    turns.push(current);
+    rawTurns.push(current);
   }
 
-  return turns;
+  return resolveRolesFromDiarizedTurns(rawTurns);
 }
 
 async function diarizeWithDeepgram(audioBuffer, mimeType = "audio/webm") {
@@ -555,8 +701,9 @@ async function diarizeWithDeepgram(audioBuffer, mimeType = "audio/webm") {
     return null;
   }
 
+  const model = process.env.DEEPGRAM_MODEL || "nova-3";
   const response = await fetch(
-    "https://api.deepgram.com/v1/listen?model=nova-2&diarize=true&punctuate=true&language=pt-BR",
+    `https://api.deepgram.com/v1/listen?model=${encodeURIComponent(model)}&diarize=true&punctuate=true&language=pt-BR`,
     {
       method: "POST",
       headers: {

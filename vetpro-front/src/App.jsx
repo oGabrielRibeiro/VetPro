@@ -40,6 +40,7 @@ const MainApp = () => {
   const [selectedConsultationPatientId, setSelectedConsultationPatientId] =
     useState("");
   const [returnSourceConsultation, setReturnSourceConsultation] = useState(null);
+  const [fieldModeDraftInitialData, setFieldModeDraftInitialData] = useState(null);
   const [showPatientPicker, setShowPatientPicker] = useState(false);
   const [fieldMode, setFieldMode] = useState(
     () => localStorage.getItem("vetpro_field_mode") === "true",
@@ -313,6 +314,7 @@ const MainApp = () => {
       }
 
       await fetchConsultations();
+      await fetchPatients();
       return savedConsultation;
     } catch (error) {
       console.error("Erro ao salvar consulta:", error);
@@ -500,6 +502,7 @@ const MainApp = () => {
       return;
     }
 
+    setFieldModeDraftInitialData(null);
     setReturnSourceConsultation(null);
     setCurrentView(fieldMode ? "new-consultation-field" : "new-consultation-quick");
   };
@@ -510,6 +513,7 @@ const MainApp = () => {
     );
     if (!selected) return;
     setCurrentConsultationPatient(selected);
+    setFieldModeDraftInitialData(null);
     setReturnSourceConsultation(null);
     setShowPatientPicker(false);
     setCurrentView(fieldMode ? "new-consultation-field" : "new-consultation-quick");
@@ -558,37 +562,45 @@ const MainApp = () => {
           />
         );
 
-      case "new-consultation-quick":
+      case "new-consultation-quick": {
+        const quickInitialData = fieldModeDraftInitialData
+          ? fieldModeDraftInitialData
+          : returnSourceConsultation
+            ? {
+                consultationType: "retorno",
+                previousConsultationId: returnSourceConsultation.id,
+                weight: returnSourceConsultation.weight,
+                chiefComplaint: "",
+                diagnosis: returnSourceConsultation.diagnosis || "",
+                treatment: returnSourceConsultation.treatment || "",
+              }
+            : null;
         return (
           <QuickConsultation
             patient={currentConsultationPatient}
             onSave={handleAddConsultation}
             fieldMode={fieldMode}
-            initialData={
-              returnSourceConsultation
-                ? {
-                    consultationType: "retorno",
-                    previousConsultationId: returnSourceConsultation.id,
-                    weight: returnSourceConsultation.weight,
-                    chiefComplaint: "",
-                    diagnosis: returnSourceConsultation.diagnosis || "",
-                    treatment: returnSourceConsultation.treatment || "",
-                  }
-                : null
-            }
+            initialData={quickInitialData}
             onBack={() => {
+              setFieldModeDraftInitialData(null);
               setReturnSourceConsultation(null);
               setCurrentView("patient-consultations");
             }}
           />
         );
+      }
       case "new-consultation-field":
         return (
           <FieldModeConsultation
             patient={currentConsultationPatient}
             onSave={handleAddConsultation}
             onSwitchToManual={() => setCurrentView("new-consultation-quick")}
+            onContinueToManual={(draftInitialData) => {
+              setFieldModeDraftInitialData(draftInitialData || null);
+              setCurrentView("new-consultation-quick");
+            }}
             onBack={() => {
+              setFieldModeDraftInitialData(null);
               setReturnSourceConsultation(null);
               setCurrentView("patient-consultations");
             }}
@@ -619,12 +631,11 @@ const MainApp = () => {
                   const form = e.target;
                   const name = form.name.value.trim();
                   const species = form.species.value;
-                  const breed = form.breed.value.trim();
-                  const age = form.age.value.trim();
+                  const sex = form.sex.value;
                   const ownerName = form.ownerName.value.trim();
 
                   // Validacao basica
-                  if (!name || !species || !breed || !age || !ownerName) {
+                  if (!name || !species || !sex || !ownerName) {
                     showActionError(
                       "Preencha os campos obrigatorios para salvar o paciente.",
                     );
@@ -635,10 +646,26 @@ const MainApp = () => {
                     name,
                     species,
                     subcategory: form.subcategory?.value || "",
-                    breed,
-                    age,
+                    breed: form.breed?.value?.trim() || "",
+                    sex,
+                    age: form.age?.value || "",
+                    birthDate: form.birthDate?.value || "",
+                    weight: form.weight?.value || "",
+                    color: form.color?.value?.trim() || "",
+                    microchip: form.microchip?.value?.trim() || "",
+                    status: form.status?.value || "ativo",
+                    porte: form.porte?.value || "",
                     ownerName,
                     ownerPhone: form.ownerPhone?.value || "",
+                    ownerAltPhone: form.ownerAltPhone?.value || "",
+                    ownerEmail: form.ownerEmail?.value || "",
+                    ownerCpf: form.ownerCpf?.value || "",
+                    ownerAddress: form.ownerAddress?.value || "",
+                    ownerNotes: form.ownerNotes?.value || "",
+                    emergencyFlag: Boolean(form.emergencyFlag?.checked),
+                    responsibleVet: form.responsibleVet?.value?.trim() || "",
+                    originClinic: form.originClinic?.value?.trim() || "",
+                    anestheticRiskScore: form.anestheticRiskScore?.value || "",
                     createdAt:
                       editingPatient?.createdAt || new Date().toISOString(),
                   };
@@ -679,33 +706,130 @@ const MainApp = () => {
                     <option value="Ave">Ave</option>
                     <option value="Reptil">Reptil</option>
                     <option value="Peixe">Peixe</option>
+                    <option value="Anfibio">Anfibio</option>
+                    <option value="Outro">Outro</option>
                   </select>
                 </div>
 
                 <div>
                   <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
-                    Raca <span className="text-red-500">*</span>
+                    Subcategoria
                   </label>
+                  <input
+                    type="text"
+                    name="subcategory"
+                    defaultValue={editingPatient?.subcategory || ""}
+                    className="w-full px-3 py-2 sm:px-4 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
+                    placeholder="Canino, Felino, Equino, Bovino..."
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+                      Sexo <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      name="sex"
+                      defaultValue={editingPatient?.sex || ""}
+                      className="w-full px-3 py-2 sm:px-4 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
+                      required
+                    >
+                      <option value="">Selecione</option>
+                      <option value="M">Macho</option>
+                      <option value="F">Femea</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+                      Status
+                    </label>
+                    <select
+                      name="status"
+                      defaultValue={editingPatient?.status || "ativo"}
+                      className="w-full px-3 py-2 sm:px-4 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
+                    >
+                      <option value="ativo">Ativo</option>
+                      <option value="obito">Obito</option>
+                      <option value="transferido">Transferido</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Raca</label>
                   <input
                     type="text"
                     name="breed"
                     defaultValue={editingPatient?.breed || ""}
                     className="w-full px-3 py-2 sm:px-4 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
-                    required
+                    placeholder="Labrador, Quarto de Milha, Girolando..."
                   />
                 </div>
 
-                <div>
-                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
-                    Idade <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    name="age"
-                    defaultValue={editingPatient?.age || ""}
-                    className="w-full px-3 py-2 sm:px-4 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
-                    required
-                  />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Nascimento</label>
+                    <input
+                      type="date"
+                      name="birthDate"
+                      defaultValue={editingPatient?.birthDate ? String(editingPatient.birthDate).slice(0, 10) : ""}
+                      className="w-full px-3 py-2 sm:px-4 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Idade (anos)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="60"
+                      step="1"
+                      name="age"
+                      defaultValue={editingPatient?.age || ""}
+                      className="w-full px-3 py-2 sm:px-4 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Peso (kg)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      name="weight"
+                      defaultValue={editingPatient?.weight || ""}
+                      className="w-full px-3 py-2 sm:px-4 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Porte</label>
+                    <select
+                      name="porte"
+                      defaultValue={editingPatient?.porte || ""}
+                      className="w-full px-3 py-2 sm:px-4 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
+                    >
+                      <option value="">Nao definido</option>
+                      <option value="pequeno">Pequeno porte</option>
+                      <option value="grande">Grande porte</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Cor</label>
+                    <input
+                      type="text"
+                      name="color"
+                      defaultValue={editingPatient?.color || ""}
+                      className="w-full px-3 py-2 sm:px-4 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Microchip</label>
+                    <input
+                      type="text"
+                      name="microchip"
+                      defaultValue={editingPatient?.microchip || ""}
+                      className="w-full px-3 py-2 sm:px-4 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
+                    />
+                  </div>
                 </div>
 
                 <div>
@@ -723,7 +847,7 @@ const MainApp = () => {
 
                 <div>
                   <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
-                    Telefone do Tutor <span className="text-red-500">*</span>
+                    Telefone do Tutor
                   </label>
                   <input
                     type="text"
@@ -731,13 +855,39 @@ const MainApp = () => {
                     defaultValue={editingPatient?.ownerPhone || ""}
                     className="w-full px-3 py-2 sm:px-4 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
                     placeholder="(00) 00000-0000"
-                    required
                   />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+                      Telefone alternativo
+                    </label>
+                    <input
+                      type="text"
+                      name="ownerAltPhone"
+                      defaultValue={editingPatient?.ownerAltPhone || ""}
+                      className="w-full px-3 py-2 sm:px-4 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
+                      placeholder="(00) 00000-0000"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+                      CPF do Tutor
+                    </label>
+                    <input
+                      type="text"
+                      name="ownerCpf"
+                      defaultValue={editingPatient?.ownerCpf || ""}
+                      className="w-full px-3 py-2 sm:px-4 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
+                      placeholder="Somente numeros (11 digitos)"
+                    />
+                  </div>
                 </div>
 
                 <div>
                   <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
-                    Email do Tutor (opcional)
+                    Email do Tutor
                   </label>
                   <input
                     type="email"
@@ -746,9 +896,78 @@ const MainApp = () => {
                     className="w-full px-3 py-2 sm:px-4 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
                     placeholder="tutor@email.com"
                   />
-                  <p className="mt-1 text-[11px] text-gray-500">
-                    Campo ainda não persistido no backend atual.
+                </div>
+
+                <div>
+                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+                    Endereco do Tutor
+                  </label>
+                  <input
+                    type="text"
+                    name="ownerAddress"
+                    defaultValue={editingPatient?.ownerAddress || ""}
+                    className="w-full px-3 py-2 sm:px-4 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
+                    placeholder="Rua, numero, bairro, cidade"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+                    Observacoes do Tutor
+                  </label>
+                  <textarea
+                    name="ownerNotes"
+                    defaultValue={editingPatient?.ownerNotes || ""}
+                    className="w-full min-h-[84px] px-3 py-2 sm:px-4 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
+                    placeholder="Alergias conhecidas, preferencia de contato, observacoes gerais..."
+                  />
+                </div>
+
+                <div className="rounded-lg border border-gray-200 p-3 space-y-3">
+                  <p className="text-xs sm:text-sm font-semibold text-gray-700">
+                    Extras profissionais
                   </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Veterinario responsavel</label>
+                      <input
+                        type="text"
+                        name="responsibleVet"
+                        defaultValue={editingPatient?.responsibleVet || ""}
+                        className="w-full px-3 py-2 sm:px-4 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Clinica de origem</label>
+                      <input
+                        type="text"
+                        name="originClinic"
+                        defaultValue={editingPatient?.originClinic || ""}
+                        className="w-full px-3 py-2 sm:px-4 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Risco anestesico (0-5)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="5"
+                        step="1"
+                        name="anestheticRiskScore"
+                        defaultValue={editingPatient?.anestheticRiskScore ?? ""}
+                        className="w-full px-3 py-2 sm:px-4 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
+                      />
+                    </div>
+                    <label className="inline-flex items-center gap-2 text-xs sm:text-sm font-medium text-gray-700">
+                      <input
+                        type="checkbox"
+                        name="emergencyFlag"
+                        defaultChecked={Boolean(editingPatient?.emergencyFlag)}
+                        className="h-4 w-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                      />
+                      Paciente com alerta de emergencia
+                    </label>
+                  </div>
                 </div>
 
                 <div className="flex flex-col sm:flex-row sm:justify-between space-y-2 sm:space-y-0 sm:space-x-3 pt-3 sm:pt-4 border-t border-gray-200">
@@ -1297,7 +1516,7 @@ const MainApp = () => {
 
       {/* Mobile top bar */}
       {isMobile && (
-        <header className="fixed top-0 left-0 right-0 z-40 bg-white/95 backdrop-blur border-b border-gray-200 px-4 py-3 flex items-center justify-between">
+        <header className="fixed top-0 left-0 right-0 z-40 bg-white/95 backdrop-blur border-b border-gray-200 px-3 sm:px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))] flex items-center justify-between gap-2">
           <div className="flex items-center space-x-2">
             <span className="h-8 w-8 rounded-full bg-emerald-100 text-emerald-700 grid place-items-center text-sm font-bold">
               {user?.name?.charAt(0)?.toUpperCase() || "V"}
@@ -1323,8 +1542,8 @@ const MainApp = () => {
 
       {/* Main Content */}
       <div
-        className={`flex-1 overflow-auto px-3 pb-28 md:px-6 md:pb-6 ${
-          isMobile ? "pt-20" : "pt-6"
+        className={`flex-1 overflow-auto px-2 sm:px-3 pb-[7.5rem] md:px-6 md:pb-6 ${
+          isMobile ? "pt-24" : "pt-6"
         }`}
       >
         {!isMobile && (
@@ -1431,7 +1650,7 @@ const MainApp = () => {
                     : "text-gray-500"
                 }`}
               >
-                {item.id === "profile" ? renderProfileBubble(user) : <AppIcon name={item.icon} />}
+                {item.id === "profile" ? renderProfileBubble(user) : <AppIcon name={item.icon} variant="colorful" />}
                 <span className="text-[10px] font-medium">{item.label}</span>
               </button>
             ))}

@@ -136,28 +136,28 @@ const Reports = ({ consultations, patients, dateRange, onDateRangeChange, onRese
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 sm:mb-8">
         <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-800">Relatorios e Estatisticas</h1>
 
-        <div className="mt-4 sm:mt-0 flex flex-col sm:flex-row sm:items-center space-y-3 sm:space-y-0 sm:space-x-4">
-          <div className="flex items-center space-x-2">
+        <div className="mt-4 sm:mt-0 w-full sm:w-auto flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2">
             <label className="text-xs sm:text-sm font-medium text-gray-700 whitespace-nowrap">Periodo:</label>
-            <div className="flex space-x-2">
+            <div className="grid grid-cols-2 sm:flex gap-2">
               <input
                 type="date"
                 value={dateRange.startDate}
                 onChange={(e) => onDateRangeChange("startDate", e.target.value)}
-                className="px-2 py-1 border border-gray-300 rounded text-xs sm:text-sm"
+                className="w-full px-2 py-1.5 border border-gray-300 rounded text-xs sm:text-sm"
               />
-              <span className="text-gray-500">ate</span>
+              <span className="hidden sm:inline text-gray-500 self-center">ate</span>
               <input
                 type="date"
                 value={dateRange.endDate}
                 onChange={(e) => onDateRangeChange("endDate", e.target.value)}
-                className="px-2 py-1 border border-gray-300 rounded text-xs sm:text-sm"
+                className="w-full px-2 py-1.5 border border-gray-300 rounded text-xs sm:text-sm"
               />
             </div>
           </div>
           <button
             onClick={onResetDateRange}
-            className="bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-1.5 px-3 rounded text-xs sm:text-sm transition-colors"
+            className="w-full sm:w-auto min-h-[40px] bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-1.5 px-3 rounded text-xs sm:text-sm transition-colors"
           >
             Restaurar padrao
           </button>

@@ -83,7 +83,7 @@ const Consultations = ({ consultations, patients, onNewConsultation, onViewPatie
 
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 sm:p-6 mb-6">
         <h2 className="text-lg font-bold text-gray-800 mb-4">Filtrar Consultas</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
           <div>
             <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Paciente</label>
             <select
@@ -116,9 +116,9 @@ const Consultations = ({ consultations, patients, onNewConsultation, onViewPatie
             />
           </div>
         </div>
-        <div className="mt-4 flex justify-end space-x-3">
-          <button onClick={resetFilters} className="px-4 py-2 text-sm text-gray-700 hover:text-gray-900 font-medium">Limpar Filtros</button>
-          <button className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors">Aplicar Filtros</button>
+        <div className="mt-4 grid grid-cols-2 gap-2 sm:flex sm:justify-end sm:space-x-3 sm:gap-0">
+          <button onClick={resetFilters} className="px-4 py-2.5 text-sm text-gray-700 hover:text-gray-900 font-medium rounded-lg border border-gray-200 bg-white">Limpar Filtros</button>
+          <button className="px-4 py-2.5 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors">Aplicar Filtros</button>
         </div>
       </div>
 
@@ -176,11 +176,11 @@ const Consultations = ({ consultations, patients, onNewConsultation, onViewPatie
                   )}
 
                   <div className="pt-3 border-t border-gray-100 flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-2 sm:space-y-0">
-                    <div className="flex space-x-2">
-                      <button onClick={() => viewConsultationPreview(consultation)} className="text-xs text-indigo-600 hover:text-indigo-700 font-medium">Visualizar Prontuario</button>
+                    <div className="flex flex-wrap gap-x-3 gap-y-1">
+                      <button onClick={() => viewConsultationPreview(consultation)} className="text-xs sm:text-sm text-indigo-600 hover:text-indigo-700 font-semibold">Visualizar Prontuario</button>
                       <button
                         onClick={() => onViewPatientConsultations(patient)}
-                        className="text-xs text-emerald-600 hover:text-emerald-700 font-medium flex items-center"
+                        className="text-xs sm:text-sm text-emerald-600 hover:text-emerald-700 font-semibold flex items-center"
                       >
                         <span className="mr-1"><AppIcon name="consultations" className="h-3.5 w-3.5" /></span>
                         <span>Ver Historico</span>

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import FeedbackBanner from "./FeedbackBanner";
+import FloatingFormActions from "./FloatingFormActions";
 
 const PatientForm = ({ patient, onSubmit, onCancel, isEditing }) => {
   const [formError, setFormError] = useState("");
@@ -29,7 +30,7 @@ const PatientForm = ({ patient, onSubmit, onCancel, isEditing }) => {
   };
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <div className="max-w-2xl mx-auto pb-28 sm:pb-24">
       <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-800 mb-4 sm:mb-6">
         {isEditing ? "Editar Paciente" : "Novo Paciente"}
       </h1>
@@ -162,21 +163,23 @@ const PatientForm = ({ patient, onSubmit, onCancel, isEditing }) => {
             />
           </div>
           
-          <div className="flex flex-col sm:flex-row sm:justify-between space-y-2 sm:space-y-0 sm:space-x-3 pt-3 sm:pt-4 border-t border-gray-200">
-            <button
-              type="button"
-              onClick={onCancel}
-              className="w-full sm:w-auto bg-gray-200 text-gray-800 font-bold py-2.5 sm:py-3 px-4 sm:px-6 rounded-xl hover:bg-gray-300 transition-colors text-sm"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              className="w-full sm:w-auto bg-gradient-to-r from-emerald-600 to-cyan-700 text-white font-bold py-2.5 sm:py-3 px-4 sm:px-6 rounded-xl shadow-md hover:shadow-lg transition-all text-sm"
-            >
-              {isEditing ? "Atualizar Paciente" : "Cadastrar Paciente"}
-            </button>
-          </div>
+          <FloatingFormActions maxWidthClass="max-w-2xl">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={onCancel}
+                className="w-full min-h-[46px] bg-gray-200 text-gray-800 font-bold py-2.5 sm:py-3 px-4 sm:px-6 rounded-xl hover:bg-gray-300 transition-colors text-sm"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                className="w-full min-h-[46px] bg-gradient-to-r from-emerald-600 to-cyan-700 text-white font-bold py-2.5 sm:py-3 px-4 sm:px-6 rounded-xl shadow-md hover:shadow-lg transition-all text-sm"
+              >
+                {isEditing ? "Atualizar Paciente" : "Cadastrar Paciente"}
+              </button>
+            </div>
+          </FloatingFormActions>
         </form>
       </div>
     </div>

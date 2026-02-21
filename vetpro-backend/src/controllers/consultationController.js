@@ -427,8 +427,10 @@ async function chatAssist(req, res) {
           id: true,
           name: true,
           specie: true,
+          subcategory: true,
           breed: true,
-          ownerName: true
+          ownerName: true,
+          porte: true
         }
       });
       if (patientRow) {
@@ -472,8 +474,10 @@ async function refineField(req, res) {
           id: true,
           name: true,
           specie: true,
+          subcategory: true,
           breed: true,
-          ownerName: true
+          ownerName: true,
+          porte: true
         }
       });
       if (patientRow) {

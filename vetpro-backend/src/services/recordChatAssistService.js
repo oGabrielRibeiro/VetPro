@@ -42,11 +42,22 @@ function defaultPorteDictionary() {
     large: [
       { token: "equino", weight: 5 },
       { token: "cavalo", weight: 5 },
+      { token: "egua", weight: 5 },
       { token: "quarto de milha", weight: 6 },
+      { token: "mangalarga", weight: 5 },
+      { token: "mangalarga marchador", weight: 6 },
+      { token: "crioulo", weight: 5 },
       { token: "bovino", weight: 5 },
       { token: "vaca", weight: 5 },
+      { token: "boi", weight: 5 },
       { token: "bezerro", weight: 5 },
+      { token: "nelore", weight: 5 },
+      { token: "holandes", weight: 5 },
+      { token: "girolando", weight: 5 },
+      { token: "jersey", weight: 5 },
+      { token: "angus", weight: 5 },
       { token: "rebanho", weight: 5 },
+      { token: "haras", weight: 5 },
       { token: "fazenda", weight: 4 }
     ],
     small: [
@@ -274,9 +285,9 @@ const SPECIFIC_FIELD_LABELS = {
 };
 
 function classifyPorteFromContext(patient = null, sourceText = "", recordProfile = null) {
-  const profilePorte = String(recordProfile?.porte || "").trim().toLowerCase();
+  const profilePorte = String(recordProfile?.porte || patient?.porte || "").trim().toLowerCase();
   const source = normalize(
-    `${patient?.species || patient?.specie || ""} ${patient?.breed || ""} ${sourceText || ""}`
+    `${patient?.species || patient?.specie || ""} ${patient?.subcategory || ""} ${patient?.breed || ""} ${sourceText || ""}`
   );
   const dictionary = safeReadPorteDictionaryFile();
   const largeScore = scorePorteByDictionary(source, dictionary.large);

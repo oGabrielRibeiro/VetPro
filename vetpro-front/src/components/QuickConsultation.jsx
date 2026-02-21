@@ -3,6 +3,7 @@ import api from "../services/api";
 import VoiceTextarea from "./VoiceTextarea";
 import FeedbackBanner from "./FeedbackBanner";
 import LoadingDot from "./LoadingDot";
+import FloatingFormActions from "./FloatingFormActions";
 import { toUserFriendlyError } from "../utils/errorMessages";
 import {
   PORTE_NOTES_MARK_END,
@@ -122,18 +123,34 @@ function normalizeWords(value = "") {
 
 function classifyAnimalPorte(patient) {
   const source = normalizeWords(
-    `${patient?.species || patient?.specie || ""} ${patient?.subcategory || ""} ${patient?.breed || ""}`,
+    `${patient?.species || patient?.specie || ""} ${patient?.subcategory || ""} ${patient?.breed || ""} ${patient?.name || ""}`,
   );
 
   const largeSignals = [
     "equino",
+    "cavalo",
+    "egua",
+    "garanhao",
+    "quarto de milha",
+    "mangalarga",
+    "mangalarga marchador",
+    "crioulo",
     "bovino",
+    "vaca",
+    "boi",
+    "bezerro",
+    "nelore",
+    "holandes",
+    "holandesa",
+    "girolando",
+    "jersey",
+    "angus",
     "caprino",
     "ovino",
     "suino",
+    "bufalo",
     "asinino",
     "muar",
-    "bufalo",
     "fazenda",
     "rebanho",
   ];
@@ -203,6 +220,7 @@ const QuickConsultation = ({
   const [smallAnimalData, setSmallAnimalData] = useState(DEFAULT_SMALL_ANIMAL_DATA);
   const [largeAnimalData, setLargeAnimalData] = useState(DEFAULT_LARGE_ANIMAL_DATA);
   const [saving, setSaving] = useState(false);
+  const [showMobileMoreActions, setShowMobileMoreActions] = useState(false);
 
   const [conversationTranscript, setConversationTranscript] = useState("");
   const [isConversationRecording, setIsConversationRecording] = useState(false);
@@ -590,7 +608,7 @@ const QuickConsultation = ({
       const sex = pick(/\b(macho|femea)\b/i);
       const age = pick(/\b(\d{1,2})\s*anos?\b/i);
       const namedByAge = pick(/\b\d{1,2}\s*anos?,\s*([A-Za-zÀ-ÿ][\wÀ-ÿ-]*)/i);
-      const namedByLabel = pick(/\b(?:nome|animal|paciente)\s*[:\-]?\s*([A-Za-zÀ-ÿ][\wÀ-ÿ-]*)/i);
+      const namedByLabel = pick(/\b(?:nome|animal|paciente)\s*[:-]?\s*([A-Za-zÀ-ÿ][\wÀ-ÿ-]*)/i);
       const animalName = animalNameFromSection || namedByAge || namedByLabel;
       if (animalName && !fields.animalId) fields.animalId = limit(animalName, 80);
       const identificationParts = [
@@ -635,7 +653,7 @@ const QuickConsultation = ({
       if (historical) fields.historicalDiseases = limit(historical);
 
       const physicalExamDetailed =
-        pick(/(?:exame fisico|exame físico)\s*[:\-]?\s*([^.\n]+)/i) ||
+        pick(/(?:exame fisico|exame físico)\s*[:-]?\s*([^.\n]+)/i) ||
         pickSentence(["febre", "mucosa", "tpc", "fc ", "fr ", "hipomotilidade"]);
       if (physicalExamDetailed) fields.physicalExamDetailed = limit(physicalExamDetailed);
 
@@ -786,28 +804,57 @@ const QuickConsultation = ({
   };
 
   useEffect(() => {
+    const isFieldDraft = Boolean(initialData?.fromFieldMode);
+    const initialPorte =
+      String(initialData?.porte || "").toLowerCase() === "grande"
+        ? "grande"
+        : String(initialData?.porte || "").toLowerCase() === "pequeno"
+          ? "pequeno"
+          : null;
+    const initialSpecificFields =
+      initialData?.specificFields && typeof initialData.specificFields === "object"
+        ? initialData.specificFields
+        : {};
+
     setWeight(initialData?.weight || "");
-    setTemperature("");
-    setHeartRate("");
-    setRespiratoryRate("");
+    setTemperature(initialData?.temperature || "");
+    setHeartRate(initialData?.heartRate || "");
+    setRespiratoryRate(initialData?.respiratoryRate || "");
     setChiefComplaint(initialData?.chiefComplaint || "");
-    setAnamnesis("");
-    setPhysicalExam("");
+    setAnamnesis(initialData?.anamnesis || "");
+    setPhysicalExam(initialData?.physicalExam || "");
     setDiagnosis(initialData?.diagnosis || "");
     setTreatment(initialData?.treatment || "");
-    setProcedurePerformed("nao");
-    setProcedureDetails("");
-    setMedicationPrescribed("nao");
-    setMedicationDetails("");
-    setExamRequested("nao");
-    setExamDetails("");
-    setNotes("");
-    setReturnRecommended(false);
+
+    const initialProcedures = String(initialData?.procedures || "").trim();
+    const initialMedications = String(initialData?.medications || "").trim();
+    const initialExamDetails = String(initialData?.examDetails || "").trim();
+
+    setProcedurePerformed(initialProcedures && !/nao realizado/i.test(initialProcedures) ? "sim" : "nao");
+    setProcedureDetails(initialProcedures && !/nao realizado/i.test(initialProcedures) ? initialProcedures : "");
+    setMedicationPrescribed(initialMedications && !/nao prescrita/i.test(initialMedications) ? "sim" : "nao");
+    setMedicationDetails(initialMedications && !/nao prescrita/i.test(initialMedications) ? initialMedications : "");
+    setExamRequested(initialExamDetails ? "sim" : "nao");
+    setExamDetails(initialExamDetails);
+    setNotes(initialData?.notes ? sanitizeConsultationNotesForDisplay(initialData.notes) : "");
+    setReturnRecommended(Boolean(initialData?.returnRecommendation));
     setReturnDate("");
     setOpenReturnWithoutDate(false);
-    setReturnRecommendation("");
-    setSmallAnimalData(DEFAULT_SMALL_ANIMAL_DATA);
-    setLargeAnimalData(DEFAULT_LARGE_ANIMAL_DATA);
+    setReturnRecommendation(initialData?.returnRecommendation || "");
+    setSmallAnimalData(() => {
+      if (initialPorte !== "pequeno") return DEFAULT_SMALL_ANIMAL_DATA;
+      return {
+        ...DEFAULT_SMALL_ANIMAL_DATA,
+        ...initialSpecificFields,
+      };
+    });
+    setLargeAnimalData(() => {
+      if (initialPorte !== "grande") return DEFAULT_LARGE_ANIMAL_DATA;
+      return {
+        ...DEFAULT_LARGE_ANIMAL_DATA,
+        ...initialSpecificFields,
+      };
+    });
     setConversationTranscript("");
     setTranscriptSegments([]);
     setConversationStartedAt(null);
@@ -815,19 +862,30 @@ const QuickConsultation = ({
     setLiveInterimText("");
     setShowTranscriptExpanded(false);
     setFeedback(null);
+    setAiChatText(initialData?.aiChatText || "");
     setAiMessages([]);
     setAiRefineField("diagnosis");
     setAiRefining(false);
     setAiConfidenceByField({});
     setAiMissingFields({ core: [], specific: [] });
     setPorteOverride(null);
-    setSelectedPorte(null);
+    setSelectedPorte(initialPorte);
+    setShowMobileMoreActions(false);
     liveInterimRef.current = "";
     transcriptRef.current = "";
     keepConversationRecordingRef.current = false;
     setIsConversationRecording(false);
     conversationRecognitionRef.current?.stop?.();
     setConversationRecognition(null);
+
+    if (isFieldDraft && typeof window !== "undefined") {
+      window.requestAnimationFrame(() => {
+        const target = document.getElementById("clinical-section");
+        if (target) {
+          target.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+      });
+    }
   }, [patient?.id, initialData]);
 
   useEffect(() => {
@@ -839,6 +897,7 @@ const QuickConsultation = ({
 
   useEffect(() => {
     if (!draftKey) return;
+    if (initialData?.fromFieldMode) return;
 
     try {
       const raw = localStorage.getItem(draftKey);
@@ -885,7 +944,7 @@ const QuickConsultation = ({
     } catch (error) {
       console.error("Erro ao restaurar rascunho da consulta:", error);
     }
-  }, [draftKey]);
+  }, [draftKey, initialData?.fromFieldMode]);
 
   useEffect(() => {
     if (!draftKey || saving) return;
@@ -2099,6 +2158,7 @@ const QuickConsultation = ({
     setAiMessages([]);
     setAiConfidenceByField({});
     setAiMissingFields({ core: [], specific: [] });
+    setShowMobileMoreActions(false);
     setFeedback(null);
     liveInterimRef.current = "";
     transcriptRef.current = "";
@@ -2816,9 +2876,51 @@ const QuickConsultation = ({
           )}
         </div>
 
-        <div className="fixed left-0 right-0 bottom-14 sm:bottom-4 z-30 px-4 sm:px-0">
-          <div className="mx-auto max-w-3xl rounded-2xl border border-gray-200 bg-white/95 backdrop-blur shadow-lg px-4 py-3 sm:py-4">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+        <FloatingFormActions maxWidthClass="max-w-3xl">
+          <div className="sm:hidden space-y-2">
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => saveConsultationWithPrescription(false)}
+                disabled={saving}
+                className="min-h-[44px] rounded-xl bg-emerald-600 px-3 py-2 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-70 inline-flex items-center justify-center gap-2"
+              >
+                {saving && <LoadingDot />}
+                {saving ? "Salvando..." : "Salvar"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowMobileMoreActions((prev) => !prev)}
+                disabled={saving}
+                className="min-h-[44px] rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm font-bold text-gray-700"
+              >
+                {showMobileMoreActions ? "Fechar" : "Mais"}
+              </button>
+            </div>
+            {showMobileMoreActions && (
+              <div className="grid grid-cols-1 gap-2 rounded-xl border border-gray-200 bg-gray-50 p-2">
+                <button
+                  type="button"
+                  onClick={() => saveConsultationWithPrescription(true)}
+                  disabled={saving}
+                  className="min-h-[42px] rounded-xl bg-indigo-600 px-3 py-2 text-sm font-bold text-white hover:bg-indigo-700 disabled:opacity-70 inline-flex items-center justify-center gap-2"
+                >
+                  {saving && <LoadingDot />}
+                  {saving ? "Processando..." : "Salvar + Receita"}
+                </button>
+                <button
+                  type="button"
+                  onClick={clearAllFields}
+                  disabled={saving}
+                  className="min-h-[42px] rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-70"
+                >
+                  Limpar campos
+                </button>
+              </div>
+            )}
+          </div>
+
+          <div className="hidden sm:grid grid-cols-3 gap-2">
             <button
               type="button"
               onClick={clearAllFields}
@@ -2846,8 +2948,7 @@ const QuickConsultation = ({
               {saving ? "Processando..." : "Salvar + Gerar Receita"}
             </button>
           </div>
-          </div>
-        </div>
+        </FloatingFormActions>
       </div>
     </div>
   );

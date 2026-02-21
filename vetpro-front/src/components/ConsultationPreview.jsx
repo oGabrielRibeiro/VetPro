@@ -3,6 +3,7 @@ import api, { buildApiUrl } from "../services/api";
 import { useAuth } from "../contexts/AuthContext";
 import BeforeAfterSlider from "../components/BeforeAfterSlider";
 import AppIcon from "./AppIcon";
+import LoadingDot from "./LoadingDot";
 import {
   parsePorteDataFromNotes,
   sanitizeConsultationNotesForDisplay,
@@ -171,35 +172,35 @@ const ConsultationPreview = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-none sm:rounded-xl max-w-4xl w-full h-[100dvh] sm:h-auto sm:max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 z-50 bg-black/55 p-0 sm:p-4">
+      <div className="mx-auto h-[100dvh] w-full overflow-y-auto bg-white rounded-none sm:h-auto sm:max-h-[92vh] sm:max-w-4xl sm:rounded-xl">
         {/* Cabeçalho da ficha */}
-        <div className="border-b border-gray-300 p-6">
-          <div className="flex justify-between items-start">
+        <div className="border-b border-gray-300 p-4 sm:p-6">
+          <div className="flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-start">
             <div>
-              <h1 className="text-2xl font-bold text-gray-800">
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-800">
                 PRONTUÁRIO CLÍNICO VETERINÁRIO
               </h1>
-              <p className="text-gray-600 mt-1">
+              <p className="text-sm sm:text-base text-gray-600 mt-1">
                 {activeUser?.clinicName || "Clínica VetCare"}
               </p>
-              <p className="text-gray-600">
+              <p className="text-sm sm:text-base text-gray-600">
                 {activeUser?.clinicAddress ||
                   "Av. Paulista, 1000 - São Paulo/SP"}
               </p>
             </div>
-            <div className="text-right">
-              <p className="font-bold text-lg">
+            <div className="sm:text-right">
+              <p className="font-bold text-base sm:text-lg">
                 Nº {consultationNumber}
               </p>
-              <p className="text-gray-600">{formatDateBR(consultationDate)}</p>
+              <p className="text-sm text-gray-600">{formatDateBR(consultationDate)}</p>
             </div>
           </div>
         </div>
 
         {/* Dados do Paciente */}
-        <div className="p-6 border-b border-gray-200">
-          <h2 className="text-lg font-bold text-gray-800 mb-4">
+        <div className="p-4 sm:p-6 border-b border-gray-200">
+          <h2 className="text-base sm:text-lg font-bold text-gray-800 mb-3 sm:mb-4">
             DADOS DO PACIENTE
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -233,8 +234,8 @@ const ConsultationPreview = ({
         </div>
 
         {/* Dados do Veterinário */}
-        <div className="p-6 border-b border-gray-200">
-          <h2 className="text-lg font-bold text-gray-800 mb-4">
+        <div className="p-4 sm:p-6 border-b border-gray-200">
+          <h2 className="text-base sm:text-lg font-bold text-gray-800 mb-3 sm:mb-4">
             DADOS DO VETERINÁRIO
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -272,12 +273,12 @@ const ConsultationPreview = ({
         </div>
 
         {/* Conteúdo do Prontuário */}
-        <div className="p-6">
+        <div className="p-4 sm:p-6">
           <div className="space-y-6">
             {consultation.consultationType === "retorno" &&
               consultation.previousConsultation && (
                 <div className="rounded-xl border border-blue-200 bg-blue-50/60 p-4">
-                  <h3 className="font-bold text-blue-900 text-lg mb-3">
+                <h3 className="font-bold text-blue-900 text-base sm:text-lg mb-3">
                     AVALIAÇÃO ANTERIOR
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -324,7 +325,7 @@ const ConsultationPreview = ({
 
             {consultation.chiefComplaint && (
               <div>
-                <h3 className="font-bold text-gray-800 text-lg mb-2">
+                <h3 className="font-bold text-gray-800 text-base sm:text-lg mb-2">
                   QUEIXA PRINCIPAL
                 </h3>
                 <p className="text-gray-700 whitespace-pre-line">
@@ -335,7 +336,7 @@ const ConsultationPreview = ({
 
             {consultation.anamnesis && (
               <div>
-                <h3 className="font-bold text-gray-800 text-lg mb-2">
+                <h3 className="font-bold text-gray-800 text-base sm:text-lg mb-2">
                   ANAMNESE
                 </h3>
                 <p className="text-gray-700 whitespace-pre-line">
@@ -346,7 +347,7 @@ const ConsultationPreview = ({
 
             {consultation.clinicalAssessment && (
               <div>
-                <h3 className="font-bold text-gray-800 text-lg mb-2">
+                <h3 className="font-bold text-gray-800 text-base sm:text-lg mb-2">
                   AVALIAÇÃO CLÍNICA
                 </h3>
                 <p className="text-gray-700 whitespace-pre-line">
@@ -357,7 +358,7 @@ const ConsultationPreview = ({
 
             {consultation.diagnosis && (
               <div>
-                <h3 className="font-bold text-gray-800 text-lg mb-2">
+                <h3 className="font-bold text-gray-800 text-base sm:text-lg mb-2">
                   DIAGNÓSTICO
                 </h3>
                 <p className="text-gray-700 whitespace-pre-line">
@@ -368,7 +369,7 @@ const ConsultationPreview = ({
 
             {consultation.treatment && (
               <div>
-                <h3 className="font-bold text-gray-800 text-lg mb-2">
+                <h3 className="font-bold text-gray-800 text-base sm:text-lg mb-2">
                   CONDUTA / TRATAMENTO
                 </h3>
                 <p className="text-gray-700 whitespace-pre-line">
@@ -379,7 +380,7 @@ const ConsultationPreview = ({
 
             {visibleObservations && (
               <div>
-                <h3 className="font-bold text-gray-800 text-lg mb-2">
+                <h3 className="font-bold text-gray-800 text-base sm:text-lg mb-2">
                   OBSERVAÇÕES
                 </h3>
                 <p className="text-gray-700 whitespace-pre-line">
@@ -394,7 +395,7 @@ const ConsultationPreview = ({
               consultation.diet ||
               consultation.housing) && (
               <div>
-                <h3 className="font-bold text-gray-800 text-lg mb-2">
+                <h3 className="font-bold text-gray-800 text-base sm:text-lg mb-2">
                   INFORMAÇÕES ESPECÍFICAS
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -444,7 +445,7 @@ const ConsultationPreview = ({
         </div>
 
         {/* Rodapé com assinatura */}
-        <div className="p-6 border-t border-gray-300">
+        <div className="p-4 sm:p-6 border-t border-gray-300">
           <div className="text-center">
             <div className="border-b-2 border-dashed border-gray-400 w-64 mx-auto mb-4"></div>
             <p className="font-bold">
@@ -468,8 +469,8 @@ const ConsultationPreview = ({
           </div>
         </div>
 
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+        <div className="flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-center mb-4">
+          <h2 className="text-xl sm:text-lg font-bold text-gray-800 flex items-center gap-2">
             <AppIcon name="paperclip" className="h-5 w-5" />
             Exames Anexados
           </h2>
@@ -479,22 +480,22 @@ const ConsultationPreview = ({
               setCompareMode(!compareMode);
               setSelectedCompareFiles([]);
             }}
-            className="text-sm bg-indigo-600 text-white px-3 py-1 rounded-lg hover:bg-indigo-700"
+            className="w-full sm:w-auto text-sm bg-indigo-600 text-white px-3 py-2 rounded-lg hover:bg-indigo-700"
           >
             {compareMode ? "Cancelar Comparação" : "Comparar Lado a Lado"}
           </button>
         </div>
 
-        <div className="bg-gray-50 p-4 rounded-xl mb-6">
+        <div className="bg-gray-50 p-3 sm:p-4 rounded-xl mb-6">
           <h3 className="font-semibold text-sm text-gray-700 mb-3">
             ➕ Anexar Novo Exame
           </h3>
 
-          <div className="flex flex-col sm:flex-row gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-[1fr_1.3fr_auto] gap-3">
             <select
               value={fileType}
               onChange={(e) => setFileType(e.target.value)}
-              className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
+              className="w-full border border-gray-300 rounded-lg px-3 py-3 sm:py-2 text-sm"
             >
               <option value="exame">Exame Geral</option>
               <option value="imagem">Imagem</option>
@@ -503,11 +504,11 @@ const ConsultationPreview = ({
               <option value="laboratorio">Laboratório</option>
             </select>
 
-            <label className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 cursor-pointer">
+            <label className="w-full inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-3 sm:py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 cursor-pointer">
               <span aria-hidden="true">
                 <AppIcon name="paperclip" className="h-4 w-4" />
               </span>
-              <span>{selectedFile ? selectedFile.name : "Anexar arquivo"}</span>
+              <span className="truncate">{selectedFile ? selectedFile.name : "Anexar arquivo"}</span>
               <input
                 type="file"
                 onChange={(e) => setSelectedFile(e.target.files[0])}
@@ -518,8 +519,9 @@ const ConsultationPreview = ({
             <button
               onClick={handleUploadFile}
               disabled={!selectedFile || uploading}
-              className="bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-emerald-700 disabled:opacity-50"
+              className="w-full sm:w-auto bg-emerald-600 text-white px-4 py-3 sm:py-2 rounded-lg text-sm font-medium hover:bg-emerald-700 disabled:opacity-50 inline-flex items-center justify-center gap-2"
             >
+              {uploading && <LoadingDot />}
               {uploading ? "Enviando..." : "Enviar"}
             </button>
           </div>
@@ -532,7 +534,7 @@ const ConsultationPreview = ({
           </h2>
 
           {loadingFiles && (
-            <p className="text-sm text-gray-500">Carregando exames...</p>
+            <p className="text-sm text-gray-500 inline-flex items-center gap-2"><LoadingDot className="text-gray-500" /> Carregando exames...</p>
           )}
 
           {!loadingFiles && files && (
@@ -549,7 +551,7 @@ const ConsultationPreview = ({
                         {fileList.map((file) => (
                           <div
                             key={file.id}
-                            className={`flex justify-between items-center p-3 rounded-lg cursor-pointer ${
+                            className={`flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-center p-3 rounded-lg cursor-pointer ${
                               compareMode &&
                               selectedCompareFiles.find((f) => f.id === file.id)
                                 ? "bg-indigo-100 border border-indigo-400"
@@ -559,18 +561,18 @@ const ConsultationPreview = ({
                               compareMode && toggleCompareFile(file)
                             }
                           >
-                            <span className="text-sm text-gray-800">
+                            <span className="text-sm text-gray-800 break-all">
                               {file.originalName}
                             </span>
 
-                            <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-4 sm:gap-3 self-end sm:self-auto">
                               <a
                                 href={buildApiUrl(`/consultations/files/${file.id}/view`, {
                                   token: localStorage.getItem("token"),
                                 })}
                                 target="_blank"
                                 rel="noreferrer"
-                                className="text-blue-600 hover:text-blue-700 text-xs font-medium"
+                                className="text-blue-600 hover:text-blue-700 text-sm sm:text-xs font-semibold"
                                 onClick={(e) => e.stopPropagation()}
                               >
                                 Visualizar
@@ -580,7 +582,7 @@ const ConsultationPreview = ({
                                   token: localStorage.getItem("token"),
                                 })}
                                 download={file.originalName}
-                                className="text-indigo-600 hover:text-indigo-700 text-xs font-medium"
+                                className="text-indigo-600 hover:text-indigo-700 text-sm sm:text-xs font-semibold"
                                 onClick={(e) => e.stopPropagation()}
                               >
                                 Baixar
@@ -613,22 +615,24 @@ const ConsultationPreview = ({
         )}
 
         {/* Botões de ação */}
-        <div className="p-6 bg-gray-50 flex justify-end space-x-3">
+        <div className="mt-4 sm:mt-0 sm:sticky sm:bottom-0 z-20 border-t border-gray-200 bg-white/95 backdrop-blur p-4 sm:p-6">
+          <div className="mx-auto max-w-4xl grid grid-cols-2 gap-2 sm:flex sm:justify-end sm:space-x-3 sm:gap-0">
           <button
             onClick={() => onClose?.()}
-            className="px-6 py-2 bg-gray-200 text-gray-800 font-medium rounded-lg hover:bg-gray-300 transition-colors"
+            className="w-full sm:w-auto px-4 sm:px-6 py-3 sm:py-2 bg-gray-200 text-gray-800 font-semibold rounded-lg hover:bg-gray-300 transition-colors"
           >
             Fechar
           </button>
           <button
             onClick={handleDownloadConsultationPDF}
-            className="px-6 py-2 bg-emerald-600 text-white font-medium rounded-lg hover:bg-emerald-700 transition-colors flex items-center"
+            className="w-full sm:w-auto px-4 sm:px-6 py-3 sm:py-2 bg-emerald-600 text-white font-semibold rounded-lg hover:bg-emerald-700 transition-colors inline-flex items-center justify-center"
           >
             <span className="mr-2">
               <AppIcon name="print" className="h-4 w-4" />
             </span>
             Imprimir PDF
           </button>
+          </div>
         </div>
       </div>
     </div>

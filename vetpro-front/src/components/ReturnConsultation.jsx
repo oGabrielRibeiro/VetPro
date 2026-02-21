@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import api from "../services/api";
 import VoiceTextarea from "./VoiceTextarea";
 import FeedbackBanner from "./FeedbackBanner";
+import LoadingDot from "./LoadingDot";
+import FloatingFormActions from "./FloatingFormActions";
 import { toUserFriendlyError } from "../utils/errorMessages";
 import { sanitizeConsultationNotesForDisplay } from "../utils/consultationNotes";
 
@@ -33,6 +35,7 @@ const ReturnConsultation = ({
   const [openReturnWithoutDate, setOpenReturnWithoutDate] = useState(false);
   const [returnRecommendation, setReturnRecommendation] = useState("");
   const [saving, setSaving] = useState(false);
+  const [showMobileMoreActions, setShowMobileMoreActions] = useState(false);
 
   const [conversationTranscript, setConversationTranscript] = useState("");
   const [isConversationRecording, setIsConversationRecording] = useState(false);
@@ -188,6 +191,7 @@ const ReturnConsultation = ({
     setAiRefineField("diagnosis");
     setAiRefining(false);
     setAiConfidenceByField({});
+    setShowMobileMoreActions(false);
     liveInterimRef.current = "";
     transcriptRef.current = "";
     keepConversationRecordingRef.current = false;
@@ -850,7 +854,7 @@ const ReturnConsultation = ({
   }
 
   return (
-    <div className="max-w-3xl mx-auto space-y-4 pb-24 sm:pb-4">
+    <div className="max-w-3xl mx-auto space-y-4 pb-36 sm:pb-28">
       <button
         type="button"
         onClick={onBack}
@@ -890,16 +894,18 @@ const ReturnConsultation = ({
               type="button"
               onClick={() => generateDraftFromChat(false)}
               disabled={aiGenerating}
-              className="min-h-[42px] rounded-lg bg-violet-600 px-3 py-2 text-sm font-bold text-white disabled:opacity-70"
+              className="min-h-[42px] rounded-lg bg-violet-600 px-3 py-2 text-sm font-bold text-white disabled:opacity-70 inline-flex items-center justify-center gap-2"
             >
+              {aiGenerating && <LoadingDot />}
               {aiGenerating ? "Gerando..." : "Gerar IA (preencher vazios)"}
             </button>
             <button
               type="button"
               onClick={() => generateDraftFromChat(true)}
               disabled={aiGenerating}
-              className="min-h-[42px] rounded-lg border border-violet-300 bg-white px-3 py-2 text-sm font-bold text-violet-800 disabled:opacity-70"
+              className="min-h-[42px] rounded-lg border border-violet-300 bg-white px-3 py-2 text-sm font-bold text-violet-800 disabled:opacity-70 inline-flex items-center justify-center gap-2"
             >
+              {aiGenerating && <LoadingDot className="text-violet-700" />}
               {aiGenerating ? "Aplicando..." : "Gerar IA (substituir campos)"}
             </button>
           </div>
@@ -921,8 +927,9 @@ const ReturnConsultation = ({
               type="button"
               onClick={refineSelectedField}
               disabled={aiRefining}
-              className="min-h-[42px] rounded-lg border border-violet-300 bg-white px-3 py-2 text-sm font-bold text-violet-800 disabled:opacity-70"
+              className="min-h-[42px] rounded-lg border border-violet-300 bg-white px-3 py-2 text-sm font-bold text-violet-800 disabled:opacity-70 inline-flex items-center justify-center gap-2"
             >
+              {aiRefining && <LoadingDot className="text-violet-700" />}
               {aiRefining ? "Refinando..." : "Refinar campo com IA"}
             </button>
           </div>
@@ -1197,16 +1204,40 @@ const ReturnConsultation = ({
           )}
         </div>
 
-        <div className="sticky bottom-0 -mx-4 sm:mx-0 border-t border-gray-200 bg-white/95 px-4 sm:px-0 py-3 backdrop-blur">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            <button type="button" disabled={saving} onClick={() => handleSave(false)} className="min-h-[46px] rounded-xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-70">
+        <FloatingFormActions maxWidthClass="max-w-3xl">
+          <div className="sm:hidden space-y-2">
+            <div className="grid grid-cols-2 gap-2">
+              <button type="button" disabled={saving} onClick={() => handleSave(false)} className="min-h-[44px] rounded-xl bg-emerald-600 px-3 py-2 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-70 inline-flex items-center justify-center gap-2">
+                {saving && <LoadingDot />}
+                {saving ? "Salvando..." : "Salvar"}
+              </button>
+              <button
+                type="button"
+                disabled={saving}
+                onClick={() => setShowMobileMoreActions((prev) => !prev)}
+                className="min-h-[44px] rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm font-bold text-gray-700"
+              >
+                {showMobileMoreActions ? "Fechar" : "Mais"}
+              </button>
+            </div>
+            {showMobileMoreActions && (
+              <button type="button" disabled={saving} onClick={() => handleSave(true)} className="w-full min-h-[42px] rounded-xl bg-indigo-600 px-3 py-2 text-sm font-bold text-white hover:bg-indigo-700 disabled:opacity-70 inline-flex items-center justify-center gap-2">
+                {saving && <LoadingDot />}
+                {saving ? "Processando..." : "Salvar + Receita"}
+              </button>
+            )}
+          </div>
+          <div className="hidden sm:grid grid-cols-2 gap-2">
+            <button type="button" disabled={saving} onClick={() => handleSave(false)} className="min-h-[46px] rounded-xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-70 inline-flex items-center justify-center gap-2">
+              {saving && <LoadingDot />}
               {saving ? "Salvando..." : "Salvar Retorno"}
             </button>
-            <button type="button" disabled={saving} onClick={() => handleSave(true)} className="min-h-[46px] rounded-xl bg-indigo-600 px-4 py-3 text-sm font-bold text-white hover:bg-indigo-700 disabled:opacity-70">
+            <button type="button" disabled={saving} onClick={() => handleSave(true)} className="min-h-[46px] rounded-xl bg-indigo-600 px-4 py-3 text-sm font-bold text-white hover:bg-indigo-700 disabled:opacity-70 inline-flex items-center justify-center gap-2">
+              {saving && <LoadingDot />}
               {saving ? "Processando..." : "Salvar + Gerar Receita"}
             </button>
           </div>
-        </div>
+        </FloatingFormActions>
       </div>
     </div>
   );

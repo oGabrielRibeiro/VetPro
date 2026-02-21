@@ -1,5 +1,13 @@
 const prisma = require("../lib/prisma");
 
+class ValidationError extends Error {
+  constructor(message) {
+    super(message);
+    this.name = "ValidationError";
+    this.statusCode = 400;
+  }
+}
+
 function serializePatient(patient) {
   return {
     ...patient,
@@ -7,22 +15,102 @@ function serializePatient(patient) {
   };
 }
 
+function normalizePhone(value) {
+  const raw = String(value || "").trim();
+  return raw || null;
+}
+
+function normalizeCpf(value) {
+  const digits = String(value || "").replace(/\D+/g, "");
+  return digits || null;
+}
+
+function normalizeStatus(value) {
+  const normalized = String(value || "ativo").trim().toLowerCase();
+  if (["ativo", "obito", "transferido"].includes(normalized)) {
+    return normalized;
+  }
+  return "ativo";
+}
+
+function parseDate(value) {
+  if (!value) return null;
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function parseNumber(value) {
+  if (value === "" || value == null) return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function validatePatientInput(data = {}, mode = "create") {
+  const name = String(data.name || "").trim();
+  const species = String(data.specie || data.species || "").trim();
+  const ownerName = String(data.ownerName || "").trim();
+
+  if (!name) throw new ValidationError("Nome do paciente e obrigatorio.");
+  if (!species) throw new ValidationError("Especie e obrigatoria.");
+  if (!ownerName) throw new ValidationError("Tutor obrigatorio para criar paciente.");
+
+  const cpf = normalizeCpf(data.ownerCpf);
+  if (cpf && !/^\d{11}$/.test(cpf)) {
+    throw new ValidationError("CPF do tutor invalido. Informe 11 digitos numericos.");
+  }
+
+  const weight = parseNumber(data.weight);
+  if (weight != null && weight <= 0) {
+    throw new ValidationError("Peso deve ser maior que zero.");
+  }
+
+  const status = normalizeStatus(data.status);
+  if (!["ativo", "obito", "transferido"].includes(status)) {
+    throw new ValidationError("Status invalido. Use ativo, obito ou transferido.");
+  }
+
+  if (mode === "create" && !ownerName) {
+    throw new ValidationError("Tutor obrigatorio para criar paciente.");
+  }
+}
+
 function normalizePatientInput(data = {}) {
-  const ageValue = data.age === "" || data.age == null ? null : Number(data.age);
-  const weightValue = data.weight === "" || data.weight == null ? null : Number(data.weight);
+  const ageValue = parseNumber(data.age);
+  const weightValue = parseNumber(data.weight);
+  const riskValue = parseNumber(data.anestheticRiskScore);
+  const birthDate = parseDate(data.birthDate);
 
   return {
     name: (data.name || "").trim(),
     specie: (data.specie || data.species || "").trim(),
+    subcategory: data.subcategory ? data.subcategory.trim() : null,
     breed: data.breed ? data.breed.trim() : null,
+    sex: data.sex ? data.sex.trim().toUpperCase() : null,
     age: Number.isFinite(ageValue) ? Math.trunc(ageValue) : null,
+    birthDate,
     weight: Number.isFinite(weightValue) ? weightValue : null,
+    color: data.color ? data.color.trim() : null,
+    microchip: data.microchip ? data.microchip.trim() : null,
+    photoUrl: data.photoUrl ? data.photoUrl.trim() : null,
+    status: normalizeStatus(data.status),
+    porte: data.porte ? data.porte.trim().toLowerCase() : null,
     ownerName: (data.ownerName || "").trim(),
-    ownerPhone: data.ownerPhone ? data.ownerPhone.trim() : null
+    ownerPhone: normalizePhone(data.ownerPhone),
+    ownerAltPhone: normalizePhone(data.ownerAltPhone),
+    ownerEmail: data.ownerEmail ? data.ownerEmail.trim().toLowerCase() : null,
+    ownerCpf: normalizeCpf(data.ownerCpf),
+    ownerAddress: data.ownerAddress ? data.ownerAddress.trim() : null,
+    ownerNotes: data.ownerNotes ? data.ownerNotes.trim() : null,
+    emergencyFlag: Boolean(data.emergencyFlag),
+    responsibleVet: data.responsibleVet ? data.responsibleVet.trim() : null,
+    originClinic: data.originClinic ? data.originClinic.trim() : null,
+    anestheticRiskScore:
+      Number.isFinite(riskValue) ? Math.max(0, Math.min(5, Math.trunc(riskValue))) : null
   };
 }
 
 async function createPatient(userId, clinicId, data) {
+  validatePatientInput(data, "create");
   const normalized = normalizePatientInput(data);
 
   return await prisma.patient.create({
@@ -82,6 +170,7 @@ async function getPatientById(userId, patientId) {
 }
 
 async function updatePatient(userId, patientId, data) {
+  validatePatientInput(data, "update");
   const normalized = normalizePatientInput(data);
 
   return await prisma.patient.updateMany({
@@ -108,4 +197,5 @@ module.exports = {
   getPatientById,
   updatePatient,
   deletePatient,
+  ValidationError
 };

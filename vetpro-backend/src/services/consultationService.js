@@ -1,5 +1,22 @@
 const prisma = require("../lib/prisma");
 
+function buildPatientSyncDataFromConsultation(normalizedData = {}, currentPatient = null) {
+  const nextWeight = Number(normalizedData?.weight);
+  const currentWeight = Number(currentPatient?.weight);
+
+  const canSyncWeight =
+    Number.isFinite(nextWeight) &&
+    nextWeight > 0 &&
+    nextWeight < 2000 &&
+    (!Number.isFinite(currentWeight) || Math.abs(currentWeight - nextWeight) >= 0.01);
+
+  if (!canSyncWeight) {
+    return {};
+  }
+
+  return { weight: nextWeight };
+}
+
 function normalizeConsultationData(data = {}) {
   const normalized = {
     consultationType: data.consultationType || (data.template === "return" ? "retorno" : "nova"),
@@ -95,7 +112,7 @@ async function createConsultation({
       };
     }
 
-    return await tx.consultation.create({
+    const createdConsultation = await tx.consultation.create({
       data: {
         numeroProntuario: nextNumber,
         userId,
@@ -107,6 +124,16 @@ async function createConsultation({
         ...normalizedData
       }
     });
+
+    const patientSyncData = buildPatientSyncDataFromConsultation(normalizedData, patient);
+    if (Object.keys(patientSyncData).length) {
+      await tx.patient.update({
+        where: { id: patient.id },
+        data: patientSyncData
+      });
+    }
+
+    return createdConsultation;
   });
 }
 

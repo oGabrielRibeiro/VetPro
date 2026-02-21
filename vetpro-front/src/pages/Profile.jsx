@@ -162,20 +162,20 @@ const Profile = ({ profile, onSave, onCancel, onDeleteAccount }) => {
 
   return (
     <div className="max-w-4xl mx-auto">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 sm:mb-8">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6 sm:mb-8">
         <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-800">
           Meu Perfil
         </h1>
-        <div className="flex space-x-3">
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:space-x-3 sm:gap-0 w-full sm:w-auto">
           <button
             onClick={onCancel}
-            className="bg-gray-200 text-gray-800 font-bold py-2 px-4 sm:py-2.5 sm:px-6 rounded-xl hover:bg-gray-300 transition-colors text-sm sm:text-base"
+            className="w-full sm:w-auto min-h-[44px] bg-gray-200 text-gray-800 font-bold py-2 px-4 sm:py-2.5 sm:px-6 rounded-xl hover:bg-gray-300 transition-colors text-sm sm:text-base"
           >
             Cancelar
           </button>
           <button
             onClick={handleSubmit}
-            className="bg-emerald-600 text-white font-bold py-2 px-4 sm:py-2.5 sm:px-6 rounded-xl shadow-md hover:shadow-lg transition-all text-sm sm:text-base"
+            className="w-full sm:w-auto min-h-[44px] bg-emerald-600 text-white font-bold py-2 px-4 sm:py-2.5 sm:px-6 rounded-xl shadow-md hover:shadow-lg transition-all text-sm sm:text-base"
           >
             Salvar Alteracoes
           </button>
@@ -368,7 +368,7 @@ const Profile = ({ profile, onSave, onCancel, onDeleteAccount }) => {
             </div>
 
             <div className="border-t border-gray-200 pt-4 mt-4 space-y-4">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <h3 className="font-bold text-gray-800">Dados da Clinica</h3>
                 <div className="flex items-center space-x-3">
                   <div className="w-16 h-16 rounded-lg bg-gray-50 border border-gray-200 flex items-center justify-center overflow-hidden">

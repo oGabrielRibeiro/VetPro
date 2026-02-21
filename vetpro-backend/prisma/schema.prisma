@@ -37,11 +37,28 @@ model Patient {
   id         String   @id @default(uuid())
   name       String
   specie     String
+  subcategory String?
   breed      String?
+  sex        String?
   age        Int?
+  birthDate  DateTime?
   weight     Float?
+  color      String?
+  microchip  String?
+  photoUrl   String?
+  status     String   @default("ativo")
+  porte      String?
   ownerName  String
   ownerPhone String?
+  ownerAltPhone String?
+  ownerEmail String?
+  ownerCpf   String?
+  ownerAddress String?
+  ownerNotes String?
+  emergencyFlag Boolean @default(false)
+  responsibleVet String?
+  originClinic String?
+  anestheticRiskScore Int?
   createdAt  DateTime @default(now())
 
   clinicId String

@@ -9,7 +9,8 @@
     "seed": "node src/scripts/seed.js",
     "smoke:checklist": "node src/scripts/smoke-checklist.js",
     "ai:evaluate": "node src/scripts/evaluate-chat-assist.js",
-    "ai:evaluate:mobile": "node src/scripts/evaluate-chat-assist-mobile.js"
+    "ai:evaluate:mobile": "node src/scripts/evaluate-chat-assist-mobile.js",
+    "ai:dataset:field": "node src/scripts/build-field-training-dataset.js"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",

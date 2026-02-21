@@ -1,9 +1,69 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import api from "../services/api";
 import FeedbackBanner from "./FeedbackBanner";
+import LoadingDot from "./LoadingDot";
+import FloatingFormActions from "./FloatingFormActions";
 import { toUserFriendlyError } from "../utils/errorMessages";
+import {
+  PORTE_NOTES_MARK_END,
+  PORTE_NOTES_MARK_START,
+} from "../utils/consultationNotes";
 
-const FieldModeConsultation = ({ patient, onSave, onBack, onSwitchToManual }) => {
+const SPECIFIC_FIELD_LABELS = {
+  vaccinationStatus: "Vacinacao",
+  vaccinationProtocol: "Protocolo vacinal",
+  lastVaccines: "Ultimas vacinas aplicadas",
+  dewormingStatus: "Vermifugacao",
+  ectoparasiteControl: "Controle de ectoparasitas",
+  diet: "Dieta",
+  rationBrand: "Racao / marca",
+  feedingFrequency: "Frequencia alimentar",
+  waterIntakeSmall: "Ingestao de agua",
+  housing: "Ambiente",
+  lifestyle: "Estilo de vida",
+  contactWithAnimals: "Contato com outros animais",
+  reproductiveStatusSmall: "Estado reprodutivo",
+  preventiveCare: "Preventivos em uso",
+  behavior: "Comportamento",
+  allergyHistory: "Historico alergico",
+  chronicDiseases: "Doencas cronicas",
+  currentSupplements: "Suplementos em uso",
+  farmName: "Propriedade",
+  productionSystem: "Sistema de producao",
+  animalFunction: "Finalidade zootecnica",
+  batch: "Lote / grupo",
+  animalId: "Identificacao do animal",
+  bodyConditionScore: "Escore corporal",
+  reproductiveStatus: "Estado reprodutivo",
+  daysInMilk: "Dias em lactacao",
+  parity: "Numero de partos",
+  herdVaccination: "Vacinacao do rebanho",
+  herdDeworming: "Vermifugacao do rebanho",
+  forage: "Volumoso",
+  concentrate: "Concentrado",
+  waterIntake: "Consumo de agua",
+  mineralSupplementation: "Suplementacao mineral",
+  hoofStatus: "Casco e locomocao",
+  rumenMotility: "Motilidade ruminal",
+  fecesAndUrine: "Fezes e urina",
+  milkProduction: "Producao de leite",
+  historicalDiseases: "Historico sanitario",
+  propertyAndManagement: "Propriedade e manejo",
+  contactAnimals: "Contactantes",
+  animalIdentificationDetails: "Animal atendido - identificacao detalhada",
+  neonateAndReproduction: "Neonato / reproducao",
+  previousTreatmentHistory: "Tratamento anterior",
+  physicalExamDetailed: "Exame fisico detalhado",
+  requestedExamPanel: "Exames complementares solicitados",
+};
+
+const FieldModeConsultation = ({
+  patient,
+  onSave,
+  onBack,
+  onSwitchToManual,
+  onContinueToManual,
+}) => {
   const [weight, setWeight] = useState("");
   const [temperature, setTemperature] = useState("");
   const [heartRate, setHeartRate] = useState("");
@@ -20,13 +80,23 @@ const FieldModeConsultation = ({ patient, onSave, onBack, onSwitchToManual }) =>
   const [liveInterim, setLiveInterim] = useState("");
   const [showTimelineExpanded, setShowTimelineExpanded] = useState(false);
   const [parsedData, setParsedData] = useState(null);
+  const [structuredDraft, setStructuredDraft] = useState(null);
   const [parsedConfidence, setParsedConfidence] = useState(null);
+  const [roleReliability, setRoleReliability] = useState(null);
   const [saving, setSaving] = useState(false);
   const [audioProfile, setAudioProfile] = useState("normal");
   const [currentSpeaker, setCurrentSpeaker] = useState("Auto");
   const [analysisSource, setAnalysisSource] = useState("local");
   const [analyzing, setAnalyzing] = useState(false);
   const [feedback, setFeedback] = useState(null);
+  const [showMobileMoreActions, setShowMobileMoreActions] = useState(false);
+  const [showPorteChoiceModal, setShowPorteChoiceModal] = useState(false);
+  const [manualPorteOverride, setManualPorteOverride] = useState(null);
+  const [porteDetectionState, setPorteDetectionState] = useState({
+    porte: "pequeno",
+    confident: false,
+    reason: "indefinido",
+  });
 
   const keepRecordingRef = useRef(false);
   const transcriptRef = useRef("");
@@ -50,6 +120,32 @@ const FieldModeConsultation = ({ patient, onSave, onBack, onSwitchToManual }) =>
 
   const showFeedback = (type, message) => {
     setFeedback({ type, message });
+  };
+
+  const buildChatInputFromSegments = (currentSegments, fallbackTranscript) => {
+    if (Array.isArray(currentSegments) && currentSegments.length > 0) {
+      return currentSegments
+        .map((item) => {
+          const speaker = item?.speaker || "Tutor";
+          const text = String(item?.text || "").trim();
+          if (!text) return "";
+          return `${speaker}: ${text}`;
+        })
+        .filter(Boolean)
+        .join("\n");
+    }
+    return String(fallbackTranscript || "").trim();
+  };
+
+  const mapConfidenceByFieldFromDraft = (raw = {}) => {
+    if (!raw || typeof raw !== "object") return null;
+    const mapped = {};
+    Object.entries(raw).forEach(([key, value]) => {
+      const score = Math.max(0, Math.min(1, Number(value || 0)));
+      const label = score >= 0.75 ? "alta" : score >= 0.5 ? "media" : "baixa";
+      mapped[key] = { score, label };
+    });
+    return Object.keys(mapped).length ? mapped : null;
   };
 
   useEffect(() => {
@@ -88,6 +184,65 @@ const FieldModeConsultation = ({ patient, onSave, onBack, onSwitchToManual }) =>
       .normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "")
       .toLowerCase();
+
+  const inferPorteFromContext = (sourceText = "") => {
+    const patientSource = normalizeText(
+      `${patient?.species || patient?.specie || ""} ${patient?.subcategory || ""} ${patient?.breed || ""}`,
+    );
+    const textSource = normalizeText(sourceText);
+    const source = `${patientSource} ${textSource}`.trim();
+
+    const largeSignals = [
+      "equino",
+      "cavalo",
+      "egua",
+      "quarto de milha",
+      "mangalarga",
+      "bovino",
+      "vaca",
+      "bezerro",
+      "ovino",
+      "caprino",
+      "suino",
+      "fazenda",
+      "haras",
+      "rebanho",
+      "lote",
+    ];
+    const smallSignals = [
+      "canino",
+      "cachorro",
+      "cao",
+      "felino",
+      "gato",
+      "pet",
+      "apartamento",
+      "domiciliar",
+    ];
+
+    const largeHits = largeSignals.filter((token) => source.includes(token)).length;
+    const smallHits = smallSignals.filter((token) => source.includes(token)).length;
+
+    if (largeHits >= 1 && largeHits >= smallHits) {
+      return {
+        porte: "grande",
+        confident: largeHits >= smallHits + 1,
+        reason: "tokens-grande",
+      };
+    }
+    if (smallHits >= 1 && smallHits > largeHits) {
+      return {
+        porte: "pequeno",
+        confident: smallHits >= largeHits + 1,
+        reason: "tokens-pequeno",
+      };
+    }
+    return {
+      porte: "pequeno",
+      confident: false,
+      reason: "sem-evidencia",
+    };
+  };
 
   const detectSpeakerFromText = (phrase, fallbackSpeaker = "Tutor") => {
     const normalized = normalizeText(phrase || "");
@@ -634,6 +789,8 @@ const FieldModeConsultation = ({ patient, onSave, onBack, onSwitchToManual }) =>
     }
 
     setAnalyzing(true);
+    setParsedConfidence(null);
+    setRoleReliability(null);
     try {
       const formData = new FormData();
       formData.append("segments", JSON.stringify(candidateSegments || []));
@@ -650,6 +807,7 @@ const FieldModeConsultation = ({ patient, onSave, onBack, onSwitchToManual }) =>
       });
 
       const result = response.data || {};
+      setRoleReliability(result?.context?.roleReliability || null);
       if (Array.isArray(result.segments) && result.segments.length > 0) {
         setSegments(result.segments);
       }
@@ -665,12 +823,65 @@ const FieldModeConsultation = ({ patient, onSave, onBack, onSwitchToManual }) =>
           : candidateSegments) || [];
       const parsed =
         result.parsed || parseTranscriptLocal(fallbackTranscript, fallbackSegments);
-      setParsedData(parsed);
-      setParsedConfidence(
-        result.parsedConfidence || buildLocalConfidence(parsed, fallbackSegments),
+
+      let bestDraft = null;
+      try {
+        const chatInput = buildChatInputFromSegments(fallbackSegments, fallbackTranscript);
+        if (chatInput) {
+          const inferredPorte = inferPorteFromContext(chatInput);
+          const requestedPorte = manualPorteOverride || inferredPorte.porte;
+          setPorteDetectionState(inferredPorte);
+          const draftResponse = await api.post("/consultations/chat-assist", {
+            mode: "nova",
+            patientId: patient?.id || null,
+            text: chatInput,
+            messages: [{ role: "user", content: chatInput }],
+            recordProfile: {
+              porte: requestedPorte,
+            },
+          });
+          bestDraft = draftResponse?.data?.draft || null;
+          if (bestDraft) {
+            const draftPorte = String(bestDraft.porte || "").toLowerCase();
+            if (requestedPorte === "grande" && draftPorte !== "grande") {
+              bestDraft = {
+                ...bestDraft,
+                porte: "grande",
+              };
+            }
+          }
+          if (!manualPorteOverride && !inferredPorte.confident) {
+            setShowPorteChoiceModal(true);
+          }
+          const confidenceFromDraft = mapConfidenceByFieldFromDraft(
+            draftResponse?.data?.confidenceByField || {},
+          );
+          if (confidenceFromDraft) {
+            setParsedConfidence(confidenceFromDraft);
+          }
+        }
+      } catch (draftError) {
+        console.error("Falha ao detalhar draft da consulta de campo:", draftError);
+      }
+
+      const normalizedParsed = bestDraft
+        ? {
+            chiefComplaint: String(bestDraft.chiefComplaint || parsed?.chiefComplaint || "").trim(),
+            anamnesis: String(bestDraft.anamnesis || parsed?.anamnesis || "").trim(),
+            physicalExam: String(bestDraft.physicalExam || parsed?.physicalExam || "").trim(),
+            diagnosis: String(bestDraft.diagnosis || parsed?.diagnosis || "").trim(),
+            treatment: String(bestDraft.treatment || parsed?.treatment || "").trim(),
+            medications: String(bestDraft.medications || parsed?.medications || "").trim(),
+          }
+        : parsed;
+
+      setStructuredDraft(bestDraft);
+      setParsedData(normalizedParsed);
+      setParsedConfidence((prev) =>
+        prev || result.parsedConfidence || buildLocalConfidence(normalizedParsed, fallbackSegments),
       );
       setAnalysisSource(result.provider || "heuristic");
-      const hasParsedContent = Object.values(parsed || {}).some((value) =>
+      const hasParsedContent = Object.values(normalizedParsed || {}).some((value) =>
         String(value || "").trim(),
       );
       if (!fallbackTranscript && !hasParsedContent) {
@@ -682,8 +893,10 @@ const FieldModeConsultation = ({ patient, onSave, onBack, onSwitchToManual }) =>
     } catch (error) {
       console.error("Falha no assistente de campo (backend):", error);
       const parsed = parseTranscriptLocal(baseTranscript, candidateSegments);
+      setStructuredDraft(null);
       setParsedData(parsed);
       setParsedConfidence(buildLocalConfidence(parsed, candidateSegments));
+      setRoleReliability({ reliable: false, score: 0.3, reason: "fallback_local" });
       setAnalysisSource("local");
     } finally {
       setAnalyzing(false);
@@ -712,9 +925,15 @@ const FieldModeConsultation = ({ patient, onSave, onBack, onSwitchToManual }) =>
     setIsRecording(false);
     setIsPaused(false);
     setShowPausedActions(false);
+    setShowMobileMoreActions(false);
     setSegments([]);
     setParsedData(null);
+    setStructuredDraft(null);
     setParsedConfidence(null);
+    setRoleReliability(null);
+    setManualPorteOverride(null);
+    setPorteDetectionState({ porte: "pequeno", confident: false, reason: "indefinido" });
+    setShowPorteChoiceModal(false);
     setElapsedSeconds(0);
     setStartedAt(null);
     transcriptRef.current = "";
@@ -772,8 +991,14 @@ const FieldModeConsultation = ({ patient, onSave, onBack, onSwitchToManual }) =>
       setSegments([]);
       setLiveInterim("");
       setShowPausedActions(false);
+      setShowMobileMoreActions(false);
       setParsedData(null);
+      setStructuredDraft(null);
       setParsedConfidence(null);
+      setRoleReliability(null);
+      setManualPorteOverride(null);
+      setPorteDetectionState({ porte: "pequeno", confident: false, reason: "indefinido" });
+      setShowPorteChoiceModal(false);
       setCurrentSpeaker("Auto");
       setAnalysisSource("local");
       detectedSpeakerRef.current = "Tutor";
@@ -865,7 +1090,12 @@ const FieldModeConsultation = ({ patient, onSave, onBack, onSwitchToManual }) =>
     setSegments([]);
     setLiveInterim("");
     setParsedData(null);
+    setStructuredDraft(null);
     setParsedConfidence(null);
+    setRoleReliability(null);
+    setManualPorteOverride(null);
+    setPorteDetectionState({ porte: "pequeno", confident: false, reason: "indefinido" });
+    setShowPorteChoiceModal(false);
     setElapsedSeconds(0);
     setStartedAt(null);
     transcriptRef.current = "";
@@ -883,6 +1113,29 @@ const FieldModeConsultation = ({ patient, onSave, onBack, onSwitchToManual }) =>
     showFeedback("success", "Conversa mantida para preenchimento.");
   };
 
+  const choosePorteManually = async (porte) => {
+    const selected = porte === "grande" ? "grande" : "pequeno";
+    setManualPorteOverride(selected);
+    setPorteDetectionState((prev) => ({
+      ...prev,
+      porte: selected,
+      confident: true,
+      reason: "manual",
+    }));
+    setShowPorteChoiceModal(false);
+    if (segmentsRef.current.length || transcriptRef.current.trim()) {
+      await runFieldAssist(segmentsRef.current);
+    }
+  };
+
+  const detectedPorte =
+    String(structuredDraft?.porte || "").toLowerCase() === "grande"
+      ? "grande"
+      : String(structuredDraft?.porte || "").toLowerCase() === "pequeno"
+        ? "pequeno"
+        : porteDetectionState.porte;
+  const activePorte = manualPorteOverride || detectedPorte || "pequeno";
+
   const cleanupRecordingResources = async () => {
     keepRecordingRef.current = false;
     pauseRequestedRef.current = false;
@@ -897,53 +1150,180 @@ const FieldModeConsultation = ({ patient, onSave, onBack, onSwitchToManual }) =>
       .map((item) => `[${item.stamp}] ${item.speaker || "Tutor"}: ${item.text}`)
       .join("\n");
 
+  const buildManualDraftPayload = () => {
+    const parsed = parsedData || parseTranscriptLocal(transcriptRef.current || "", segments) || {};
+    const draft = structuredDraft && typeof structuredDraft === "object" ? structuredDraft : {};
+    const timestampedTranscript = buildTimestampedTranscript();
+    const specificFields =
+      draft.specificFields && typeof draft.specificFields === "object"
+        ? draft.specificFields
+        : {};
+    const filledSpecificItems = Object.entries(specificFields)
+      .map(([key, value]) => ({
+        key,
+        label: SPECIFIC_FIELD_LABELS[key] || key,
+        value: String(value || "").trim(),
+      }))
+      .filter((item) => item.value);
+    const enforcedPorte = manualPorteOverride || porteDetectionState.porte || draft.porte || "pequeno";
+    const porte = String(enforcedPorte || "").toLowerCase() === "grande" ? "grande" : "pequeno";
+
+    const chiefComplaint = String(draft.chiefComplaint || parsed.chiefComplaint || "").trim();
+    const anamnesis = String(draft.anamnesis || parsed.anamnesis || "").trim();
+    const physicalExam = String(draft.physicalExam || parsed.physicalExam || "").trim();
+    const diagnosis = String(draft.diagnosis || parsed.diagnosis || "").trim();
+    const treatment = String(draft.treatment || parsed.treatment || "").trim();
+    const procedures = String(draft.procedures || "").trim();
+    const medications = String(draft.medications || parsed.medications || "").trim();
+    const examDetails = String(draft.examDetails || "").trim();
+    const returnRecommendation = String(draft.returnRecommendation || "").trim();
+
+    const hasMeaningfulData = [
+      chiefComplaint,
+      anamnesis,
+      physicalExam,
+      diagnosis,
+      treatment,
+      medications,
+      transcriptRef.current,
+    ].some((value) => String(value || "").trim());
+
+    return {
+      hasMeaningfulData,
+      porte,
+      payload: {
+        patientId: patient.id,
+        consultationType: "nova",
+        weight,
+        temperature,
+        heartRate,
+        respiratoryRate,
+        chiefComplaint,
+        anamnesis,
+        physicalExam,
+        diagnosis,
+        treatment,
+        procedures,
+        medications,
+        examDetails,
+        returnRecommendation,
+        fromFieldMode: true,
+        porte,
+        specificFields: filledSpecificItems.reduce((acc, item) => {
+          acc[item.key] = item.value;
+          return acc;
+        }, {}),
+        aiChatText: [
+          chiefComplaint ? `Queixa: ${chiefComplaint}` : "",
+          anamnesis ? `Anamnese: ${anamnesis}` : "",
+          physicalExam ? `Exame fisico: ${physicalExam}` : "",
+          diagnosis ? `Diagnostico: ${diagnosis}` : "",
+          treatment ? `Conduta: ${treatment}` : "",
+          medications ? `Medicacao: ${medications}` : "",
+          timestampedTranscript ? `Transcricao:\n${timestampedTranscript}` : "",
+        ]
+          .filter(Boolean)
+          .join("\n\n"),
+      },
+      timestampedTranscript,
+      filledSpecificItems,
+      shouldRecommendReturn:
+        Boolean(returnRecommendation) && !/\b(nao|não)\s+retorn/.test(returnRecommendation.toLowerCase()),
+    };
+  };
+
   const handleSave = async (generatePrescription = false) => {
     if (!patient?.id) {
       showFeedback("error", "Selecione um paciente antes de salvar.");
       return;
     }
 
-    const parsed = parsedData || parseTranscriptLocal(transcriptRef.current || "", segments) || {};
-    const timestampedTranscript = buildTimestampedTranscript();
+    if (!manualPorteOverride && !porteDetectionState.confident) {
+      setShowPorteChoiceModal(true);
+      showFeedback(
+        "error",
+        "Nao foi possivel detectar o porte com seguranca. Escolha pequeno ou grande porte para continuar.",
+      );
+      return;
+    }
+
+    const draftBundle = buildManualDraftPayload();
+    const {
+      porte,
+      payload: manualPayload,
+      timestampedTranscript,
+      filledSpecificItems,
+      shouldRecommendReturn,
+    } = draftBundle;
+
+    const specificSummary = filledSpecificItems.length
+      ? [
+          porte === "grande"
+            ? "Ficha detalhada - grande porte"
+            : "Ficha complementar - pequeno porte",
+          ...filledSpecificItems.map((item) => `${item.label}: ${item.value}`),
+        ].join("\n")
+      : "";
+    const structuredPorteBlock = filledSpecificItems.length
+      ? `${PORTE_NOTES_MARK_START}\n${JSON.stringify({
+          porte,
+          fields: filledSpecificItems.reduce((acc, item) => {
+            acc[item.key] = item.value;
+            return acc;
+          }, {}),
+        })}\n${PORTE_NOTES_MARK_END}`
+      : "";
 
     const payload = {
-      patientId: patient.id,
-      consultationType: "nova",
-      weight,
-      temperature,
-      heartRate,
-      respiratoryRate,
-      chiefComplaint: parsed.chiefComplaint || "Nao informado",
-      anamnesis: parsed.anamnesis || "Nao informado",
-      physicalExam: parsed.physicalExam || "Nao informado",
-      diagnosis: parsed.diagnosis || "Nao informado",
-      treatment: parsed.treatment || "Nao informado",
-      procedures: "Nao realizado",
-      medications: parsed.medications ? parsed.medications : "Nao prescrita",
+      patientId: manualPayload.patientId,
+      consultationType: manualPayload.consultationType,
+      weight: manualPayload.weight,
+      temperature: manualPayload.temperature,
+      heartRate: manualPayload.heartRate,
+      respiratoryRate: manualPayload.respiratoryRate,
+      chiefComplaint: manualPayload.chiefComplaint || "Nao informado",
+      anamnesis: manualPayload.anamnesis || "Nao informado",
+      physicalExam: manualPayload.physicalExam || "Nao informado",
+      diagnosis: manualPayload.diagnosis || "Nao informado",
+      treatment: manualPayload.treatment || "Nao informado",
+      procedures: manualPayload.procedures || "Nao realizado",
+      medications: manualPayload.medications || "Nao prescrita",
       notes: [
         "Registro gerado em Modo Campo.",
         `Origem da analise: ${analysisSource}.`,
+        manualPayload.examDetails ? `Detalhes do exame: ${manualPayload.examDetails}` : "",
+        specificSummary,
         timestampedTranscript
           ? `Transcricao com minutagem:\n${timestampedTranscript}`
           : "Transcricao indisponivel.",
+        structuredPorteBlock,
       ]
         .filter(Boolean)
         .join("\n\n"),
-      returnRecommendation: "",
+      returnRecommendation: manualPayload.returnRecommendation,
       returnPlan: {
-        recommended: false,
+        recommended: shouldRecommendReturn,
         date: null,
-        open: false,
+        open: shouldRecommendReturn,
       },
     };
 
+    if (!generatePrescription && typeof onContinueToManual === "function") {
+      setShowPorteChoiceModal(false);
+      onContinueToManual({
+        ...manualPayload,
+      });
+      return;
+    }
+
     try {
       setSaving(true);
+      setShowMobileMoreActions(false);
       const saved = await onSave(payload);
       const savedId = saved?.id || saved?.data?.id || saved?.data?.data?.id;
 
       const hasMedication =
-        parsed?.medications && !/n[aa]o prescrita/i.test(String(parsed.medications));
+        payload.medications && !/n[aa]o prescrita/i.test(String(payload.medications));
 
       if (generatePrescription && savedId && hasMedication) {
         const response = await api.post(
@@ -991,6 +1371,24 @@ const FieldModeConsultation = ({ patient, onSave, onBack, onSwitchToManual }) =>
     }
   };
 
+  const goToManualEditor = async () => {
+    const draftBundle = buildManualDraftPayload();
+    if (!draftBundle.hasMeaningfulData) {
+      showFeedback(
+        "error",
+        "Ainda nao ha dados suficientes para preencher o prontuario manual.",
+      );
+      return;
+    }
+
+    await cleanupRecordingResources();
+    if (typeof onContinueToManual === "function") {
+      onContinueToManual(draftBundle.payload);
+      return;
+    }
+    onSwitchToManual?.();
+  };
+
   if (!patient) {
     return (
       <div className="max-w-3xl mx-auto rounded-xl border border-gray-200 bg-white p-6">
@@ -1001,7 +1399,7 @@ const FieldModeConsultation = ({ patient, onSave, onBack, onSwitchToManual }) =>
   }
 
   return (
-    <div className="max-w-3xl mx-auto space-y-4 pb-24 sm:pb-4">
+    <div className="max-w-3xl mx-auto space-y-4 pb-36 sm:pb-28">
       <div className="rounded-2xl border border-cyan-200 bg-gradient-to-r from-cyan-50 to-emerald-50 p-4 sm:p-5 shadow-sm">
         <div className="flex items-start justify-between gap-3">
           <div>
@@ -1100,6 +1498,57 @@ const FieldModeConsultation = ({ patient, onSave, onBack, onSwitchToManual }) =>
           <p className="text-[11px] text-cyan-700 font-semibold">
             Analise: {analysisSource === "deepgram" ? "Diarizacao Deepgram" : "Heuristica local"}
           </p>
+          {roleReliability && (
+            <p className={`text-[11px] font-semibold ${roleReliability.reliable ? "text-emerald-700" : "text-amber-700"}`}>
+              Separacao Tutor/Vet: {roleReliability.reliable ? "estavel" : "incerta"} ({Math.round((roleReliability.score || 0) * 100)}%)
+            </p>
+          )}
+          <div className="w-full max-w-md rounded-lg border border-cyan-200 bg-white p-2 space-y-2">
+            <p className="text-[11px] font-semibold text-cyan-800">
+              Porte do prontuario:{" "}
+              <strong>{activePorte === "grande" ? "Grande porte" : "Pequeno porte"}</strong>
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => choosePorteManually("pequeno")}
+                disabled={analyzing}
+                className={`rounded-lg border px-3 py-1.5 text-xs font-semibold ${
+                  activePorte === "pequeno"
+                    ? "border-blue-600 bg-blue-600 text-white"
+                    : detectedPorte === "pequeno"
+                      ? "border-blue-300 bg-blue-50 text-blue-700"
+                      : "border-gray-300 bg-white text-gray-700"
+                }`}
+              >
+                Pequeno porte
+              </button>
+              <button
+                type="button"
+                onClick={() => choosePorteManually("grande")}
+                disabled={analyzing}
+                className={`rounded-lg border px-3 py-1.5 text-xs font-semibold ${
+                  activePorte === "grande"
+                    ? "border-amber-600 bg-amber-600 text-white"
+                    : detectedPorte === "grande"
+                      ? "border-amber-300 bg-amber-50 text-amber-800"
+                      : "border-gray-300 bg-white text-gray-700"
+                }`}
+              >
+                Grande porte
+              </button>
+              {manualPorteOverride && (
+                <button
+                  type="button"
+                  onClick={() => setManualPorteOverride(null)}
+                  disabled={analyzing}
+                  className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700"
+                >
+                  Usar detectado
+                </button>
+              )}
+            </div>
+          </div>
           <div className="w-full max-w-md rounded-lg border border-cyan-200 bg-white p-2">
             <input
               ref={audioFileInputRef}
@@ -1182,8 +1631,9 @@ const FieldModeConsultation = ({ patient, onSave, onBack, onSwitchToManual }) =>
                 type="button"
                 onClick={analyzeCurrentConversation}
                 disabled={analyzing}
-                className="rounded-md border border-emerald-300 bg-white px-2 py-1 text-[11px] font-semibold text-emerald-800 disabled:opacity-70"
+                className="rounded-md border border-emerald-300 bg-white px-2 py-1 text-[11px] font-semibold text-emerald-800 disabled:opacity-70 inline-flex items-center justify-center gap-1"
               >
+                {analyzing && <LoadingDot className="h-3 w-3" />}
                 {analyzing ? "Reprocessando..." : "Reprocessar"}
               </button>
             </div>
@@ -1221,6 +1671,26 @@ const FieldModeConsultation = ({ patient, onSave, onBack, onSwitchToManual }) =>
                 </div>
               );
             })}
+            {structuredDraft && (
+              <div className="rounded-lg border border-emerald-200 bg-white p-2 space-y-1">
+                <p className="text-[11px] font-semibold text-emerald-900">
+                  Ficha de porte detectada:{" "}
+                  <strong>
+                    {String(structuredDraft?.porte || "").toLowerCase() === "grande"
+                      ? "Grande porte"
+                      : "Pequeno porte"}
+                  </strong>
+                </p>
+                <p className="text-[11px] text-emerald-800">
+                  Campos especificos preenchidos:{" "}
+                  {
+                    Object.values(structuredDraft?.specificFields || {}).filter((value) =>
+                      String(value || "").trim(),
+                    ).length
+                  }
+                </p>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -1271,41 +1741,106 @@ const FieldModeConsultation = ({ patient, onSave, onBack, onSwitchToManual }) =>
         <div className="h-3" />
       </div>
 
-      <div className="fixed left-0 right-0 bottom-14 sm:bottom-4 z-30 px-4 sm:px-0">
-        <div className="mx-auto max-w-3xl rounded-2xl border border-gray-200 bg-white/95 backdrop-blur shadow-lg px-4 py-3 sm:py-4">
-          <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
+      <FloatingFormActions maxWidthClass="max-w-3xl">
+        <div className="sm:hidden space-y-2">
+          <div className="grid grid-cols-2 gap-2">
             <button
               type="button"
               onClick={() => handleSave(false)}
               disabled={saving || analyzing}
-              className="min-h-[46px] rounded-xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-70"
+              className="min-h-[44px] rounded-xl bg-emerald-600 px-3 py-2 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-70 inline-flex items-center justify-center gap-2"
             >
-              {saving ? "Salvando..." : "Salvar Campo"}
+              {saving && <LoadingDot />}
+              {saving ? "Salvando..." : "Salvar"}
             </button>
             <button
               type="button"
-              onClick={() => handleSave(true)}
+              onClick={() => setShowMobileMoreActions((prev) => !prev)}
               disabled={saving || analyzing}
-              className="min-h-[46px] rounded-xl bg-indigo-600 px-4 py-3 text-sm font-bold text-white hover:bg-indigo-700 disabled:opacity-70"
+              className="min-h-[44px] rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm font-bold text-gray-700"
             >
-              {saving ? "Processando..." : "Salvar + Receita"}
+              {showMobileMoreActions ? "Fechar" : "Mais"}
             </button>
-            <button
-              type="button"
-              onClick={async () => {
-                await cleanupRecordingResources();
-                onSwitchToManual?.();
-              }}
-              className="min-h-[46px] rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm font-bold text-gray-700"
-            >
-              Consulta manual
-            </button>
-            <button
+          </div>
+          {showMobileMoreActions && (
+            <div className="grid grid-cols-1 gap-2 rounded-xl border border-gray-200 bg-gray-50 p-2">
+              <button
+                type="button"
+                onClick={() => handleSave(true)}
+                disabled={saving || analyzing}
+                className="min-h-[42px] rounded-xl bg-indigo-600 px-3 py-2 text-sm font-bold text-white hover:bg-indigo-700 disabled:opacity-70 inline-flex items-center justify-center gap-2"
+              >
+                {saving && <LoadingDot />}
+                {saving ? "Processando..." : "Salvar + Receita"}
+              </button>
+              <button
+                type="button"
+                onClick={goToManualEditor}
+                className="min-h-[42px] rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm font-bold text-gray-700"
+              >
+                Consulta manual
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  setSegments([]);
+                  setParsedData(null);
+                  setStructuredDraft(null);
+                  setParsedConfidence(null);
+                  setRoleReliability(null);
+                  setManualPorteOverride(null);
+                  setPorteDetectionState({ porte: "pequeno", confident: false, reason: "indefinido" });
+                  setShowPorteChoiceModal(false);
+                  transcriptRef.current = "";
+                  recordedAudioBlobRef.current = null;
+                  setUploadedAudioName("");
+                  setShowMobileMoreActions(false);
+                }}
+                className="min-h-[42px] rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm font-bold text-gray-700"
+              >
+                Limpar capturas
+              </button>
+            </div>
+          )}
+        </div>
+
+        <div className="hidden sm:grid grid-cols-4 gap-2">
+          <button
+            type="button"
+            onClick={() => handleSave(false)}
+            disabled={saving || analyzing}
+            className="min-h-[46px] rounded-xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-70 inline-flex items-center justify-center gap-2"
+          >
+            {saving && <LoadingDot />}
+            {saving ? "Salvando..." : "Salvar Campo"}
+          </button>
+          <button
+            type="button"
+            onClick={() => handleSave(true)}
+            disabled={saving || analyzing}
+            className="min-h-[46px] rounded-xl bg-indigo-600 px-4 py-3 text-sm font-bold text-white hover:bg-indigo-700 disabled:opacity-70 inline-flex items-center justify-center gap-2"
+          >
+            {saving && <LoadingDot />}
+            {saving ? "Processando..." : "Salvar + Receita"}
+          </button>
+          <button
+            type="button"
+            onClick={goToManualEditor}
+            className="min-h-[46px] rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm font-bold text-gray-700"
+          >
+            Consulta manual
+          </button>
+          <button
             type="button"
             onClick={async () => {
               setSegments([]);
               setParsedData(null);
+              setStructuredDraft(null);
               setParsedConfidence(null);
+              setRoleReliability(null);
+              setManualPorteOverride(null);
+              setPorteDetectionState({ porte: "pequeno", confident: false, reason: "indefinido" });
+              setShowPorteChoiceModal(false);
               transcriptRef.current = "";
               recordedAudioBlobRef.current = null;
               setUploadedAudioName("");
@@ -1314,9 +1849,42 @@ const FieldModeConsultation = ({ patient, onSave, onBack, onSwitchToManual }) =>
           >
             Limpar capturas
           </button>
+        </div>
+      </FloatingFormActions>
+
+      {showPorteChoiceModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4">
+          <div className="w-full max-w-sm rounded-2xl border border-gray-200 bg-white p-4 shadow-xl">
+            <h3 className="text-base font-bold text-gray-900">Confirmar porte do paciente</h3>
+            <p className="mt-1 text-sm text-gray-600">
+              A transcricao nao trouxe evidencia suficiente para detectar o porte com seguranca.
+            </p>
+            <div className="mt-4 grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => choosePorteManually("pequeno")}
+                className="min-h-[42px] rounded-xl border border-blue-300 bg-blue-50 px-3 py-2 text-sm font-bold text-blue-800"
+              >
+                Pequeno porte
+              </button>
+              <button
+                type="button"
+                onClick={() => choosePorteManually("grande")}
+                className="min-h-[42px] rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-sm font-bold text-amber-800"
+              >
+                Grande porte
+              </button>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowPorteChoiceModal(false)}
+              className="mt-2 w-full min-h-[40px] rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-700"
+            >
+              Fechar
+            </button>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };
