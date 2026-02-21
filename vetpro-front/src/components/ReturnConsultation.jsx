@@ -3,6 +3,7 @@ import api from "../services/api";
 import VoiceTextarea from "./VoiceTextarea";
 import FeedbackBanner from "./FeedbackBanner";
 import { toUserFriendlyError } from "../utils/errorMessages";
+import { sanitizeConsultationNotesForDisplay } from "../utils/consultationNotes";
 
 const ReturnConsultation = ({
   patient,
@@ -155,27 +156,6 @@ const ReturnConsultation = ({
     return "";
   };
 
-  const parseTranscriptToSections = (text) => {
-    const content = (text || "").trim();
-    if (!content) return null;
-
-    return {
-      chiefComplaint:
-        extractByKeywords(content, ["queixa", "motivo do retorno", "motivo"]) ||
-        content.slice(0, 220),
-      anamnesis: extractByKeywords(content, ["anamnese", "historico", "evolucao"]),
-      physicalExam: extractByKeywords(content, ["exame fisico"]),
-      diagnosis: extractByKeywords(content, ["diagnostico"]),
-      treatment: extractByKeywords(content, ["tratamento", "conduta"]),
-      medication: extractByKeywords(content, [
-        "medicacao",
-        "prescricao",
-        "prescrever",
-        "receita",
-      ]),
-    };
-  };
-
   useEffect(() => {
     setWeight(previousConsultation?.weight || "");
     setTemperature("");
@@ -250,7 +230,7 @@ const ReturnConsultation = ({
       setMedicationDetails(draft.medicationDetails || "");
       setExamRequested(draft.examRequested || "nao");
       setExamDetails(draft.examDetails || "");
-      setNotes(draft.notes || "");
+      setNotes(sanitizeConsultationNotesForDisplay(draft.notes || ""));
       setReturnRecommended(Boolean(draft.returnRecommended));
       setReturnDate(draft.returnDate || "");
       setOpenReturnWithoutDate(Boolean(draft.openReturnWithoutDate));
@@ -423,7 +403,28 @@ const ReturnConsultation = ({
     setAiConfidenceByField({});
   };
 
-  const analyzeTranscript = () => {
+  const analyzeTranscriptLocal = (text) => {
+    const content = (text || "").trim();
+    if (!content) return null;
+
+    return {
+      chiefComplaint:
+        extractByKeywords(content, ["queixa", "motivo do retorno", "motivo"]) ||
+        content.slice(0, 220),
+      anamnesis: extractByKeywords(content, ["anamnese", "historico", "evolucao"]),
+      physicalExam: extractByKeywords(content, ["exame fisico"]),
+      diagnosis: extractByKeywords(content, ["diagnostico"]),
+      treatment: extractByKeywords(content, ["tratamento", "conduta"]),
+      medication: extractByKeywords(content, [
+        "medicacao",
+        "prescricao",
+        "prescrever",
+        "receita",
+      ]),
+    };
+  };
+
+  const analyzeTranscript = async () => {
     const text = transcriptRef.current.trim() || conversationTranscript.trim();
     if (!text) {
       showFeedback(
@@ -433,12 +434,30 @@ const ReturnConsultation = ({
       return null;
     }
 
-    const parsed = parseTranscriptToSections(text);
+    let parsed = null;
+    try {
+      const response = await api.post("/consultations/heuristic-parse", {
+        transcript: text,
+        segments: transcriptSegments
+      });
+      const serverParsed = response?.data?.parsed || {};
+      parsed = {
+        chiefComplaint: String(serverParsed.chiefComplaint || "").trim(),
+        anamnesis: String(serverParsed.anamnesis || "").trim(),
+        physicalExam: String(serverParsed.physicalExam || "").trim(),
+        diagnosis: String(serverParsed.diagnosis || "").trim(),
+        treatment: String(serverParsed.treatment || "").trim(),
+        medication: String(serverParsed.medications || "").trim(),
+      };
+    } catch {
+      parsed = analyzeTranscriptLocal(text);
+    }
+
     setParsedTranscriptPreview(parsed);
     return parsed;
   };
 
-  const applyTranscriptToRecord = () => {
+  const applyTranscriptToRecord = async () => {
     const text = transcriptRef.current.trim() || conversationTranscript.trim();
     if (!text) {
       showFeedback(
@@ -448,7 +467,7 @@ const ReturnConsultation = ({
       return;
     }
 
-    const parsed = parsedTranscriptPreview || analyzeTranscript();
+    const parsed = parsedTranscriptPreview || (await analyzeTranscript());
     if (!parsed) return;
 
     if (!chiefComplaint) setChiefComplaint(parsed.chiefComplaint);
@@ -621,7 +640,7 @@ const ReturnConsultation = ({
         setMedicationDetails(value);
         break;
       case "notes":
-        setNotes(value);
+        setNotes(sanitizeConsultationNotesForDisplay(value));
         break;
       default:
         break;

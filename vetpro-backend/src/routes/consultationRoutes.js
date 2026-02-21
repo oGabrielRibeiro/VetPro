@@ -23,6 +23,7 @@ router.post(
   fieldAudioUpload.single("audio"),
   consultationController.fieldAssist
 );
+router.post("/heuristic-parse", authMiddleware, consultationController.heuristicParse);
 router.post("/chat-assist", authMiddleware, consultationController.chatAssist);
 router.post("/refine-field", authMiddleware, consultationController.refineField);
 router.get("/:id/chat-history", authMiddleware, consultationController.getChatHistory);

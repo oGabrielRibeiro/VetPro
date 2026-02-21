@@ -1,0 +1,44 @@
+{
+  "version": 1,
+  "description": "Dicionario treinavel para classificacao de porte no assistente de prontuario.",
+  "large": [
+    { "token": "equino", "weight": 5 },
+    { "token": "cavalo", "weight": 5 },
+    { "token": "egua", "weight": 4 },
+    { "token": "garanhao", "weight": 4 },
+    { "token": "quarto de milha", "weight": 6 },
+    { "token": "mangalarga", "weight": 5 },
+    { "token": "bovino", "weight": 5 },
+    { "token": "vaca", "weight": 5 },
+    { "token": "bezerro", "weight": 5 },
+    { "token": "novilha", "weight": 4 },
+    { "token": "rebanho", "weight": 5 },
+    { "token": "fazenda", "weight": 4 },
+    { "token": "lote", "weight": 4 },
+    { "token": "piquete", "weight": 4 },
+    { "token": "curral", "weight": 4 },
+    { "token": "cocho", "weight": 3 },
+    { "token": "motilidade ruminal", "weight": 4 },
+    { "token": "cmt", "weight": 4 },
+    { "token": "aie", "weight": 4 },
+    { "token": "mormo", "weight": 4 },
+    { "token": "producao leiteira", "weight": 4 }
+  ],
+  "small": [
+    { "token": "canino", "weight": 4 },
+    { "token": "cachorro", "weight": 4 },
+    { "token": "cao", "weight": 4 },
+    { "token": "felino", "weight": 4 },
+    { "token": "gato", "weight": 4 },
+    { "token": "coelho", "weight": 3 },
+    { "token": "hamster", "weight": 3 },
+    { "token": "pet", "weight": 3 },
+    { "token": "apartamento", "weight": 3 },
+    { "token": "creche canina", "weight": 3 },
+    { "token": "hotelzinho", "weight": 3 }
+  ],
+  "conflict_resolution": {
+    "strong_threshold": 6,
+    "minimum_margin": 2
+  }
+}

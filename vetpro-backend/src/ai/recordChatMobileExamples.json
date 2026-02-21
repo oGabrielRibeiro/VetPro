@@ -1,676 +1,964 @@
 {
   "version": 1,
-  "description": "Exemplos few-shot para extracao de prontuario veterinario.",
+  "description": "Cenarios curtos de voz (modo campo/mobile) para avaliar preenchimento rapido do prontuario.",
   "examples": [
     {
-      "id": "peq_canino_otite",
+      "id": "mobile_peq_checkup_apetite",
       "mode": "nova",
       "porte": "pequeno",
-      "input": "Tutor relata que o cachorro está coçando muito a orelha esquerda há 4 dias, com secreção e odor forte. No exame, hiperemia no conduto auditivo e dor leve à palpação. Suspeita de otite externa. Conduta: limpeza auricular e medicação tópica por 10 dias. Retorno em 7 dias. Vacinação: Em dia. Ingestão de água: Normal.",
+      "input": "Tutor por voz: ele ficou mais preguicoso essa semana e comendo mais, sem vomito. Vet: no exame sem alteracao grave, orientar reduzir petisco e voltar em 30 dias. Diagnostico: Quadro estavel com risco de ganho de peso por manejo alimentar. Conduta: Orientado reduzir petiscos e ampliar atividade fisica progressiva. Retorno: Retorno para controle de peso em 30 dias. Ingestao de agua: Normal.",
       "output": {
-        "chiefComplaint": "Prurido intenso em orelha esquerda com secreção e odor há 4 dias.",
-        "anamnesis": "Tutor relata coceira frequente na orelha esquerda, secreção e odor forte com evolução de 4 dias.",
-        "physicalExam": "Conduto auditivo esquerdo com hiperemia e dor leve à palpação.",
-        "diagnosis": "Suspeita de otite externa esquerda.",
-        "treatment": "Orientada limpeza auricular e tratamento tópico por 10 dias.",
-        "procedures": "",
-        "medications": "Medicação tópica otológica conforme prescrição.",
-        "examDetails": "",
-        "notes": "",
-        "returnRecommendation": "Retorno para reavaliação em 7 dias.",
-        "porte": "pequeno",
-        "specificFields": {
-          "behavior": "Incomodado com a orelha, coçando com frequência.",
-          "waterIntakeSmall": "Normal",
-          "vaccinationStatus": "Em dia"
-        }
-      }
-    },
-    {
-      "id": "peq_felino_urinario",
-      "mode": "nova",
-      "porte": "pequeno",
-      "input": "Gata com disúria e micções frequentes em pequeno volume desde ontem. Tutor relata vocalização na caixa de areia. Exame físico com dor abdominal caudal discreta. Suspeita de cistite. Solicitado urina tipo I e ultrassom abdominal. Conduta: Conduta inicial de suporte e monitoramento clínico até resultados dos exames. Retorno: Reavaliar após exames ou antes em caso de piora. Ingestão de água: Diminuida. Dieta: Ração seca predominante.",
-      "output": {
-        "chiefComplaint": "Disúria e polaciúria com vocalização durante micção.",
-        "anamnesis": "Tutor relata início há 24 horas de micções frequentes, em pequeno volume, com desconforto na caixa de areia.",
-        "physicalExam": "Dor abdominal caudal discreta ao exame físico.",
-        "diagnosis": "Suspeita de cistite felina.",
-        "treatment": "Conduta inicial de suporte e monitoramento clínico até resultados dos exames.",
+        "chiefComplaint": "Letargia leve e aumento de apetite sem vomito.",
+        "anamnesis": "Tutor relata uma semana de menor disposicao e aumento do apetite.",
+        "physicalExam": "Sem alteracoes graves ao exame clinico geral.",
+        "diagnosis": "Quadro estavel com risco de ganho de peso por manejo alimentar.",
+        "treatment": "Orientado reduzir petiscos e ampliar atividade fisica progressiva.",
         "procedures": "",
         "medications": "",
-        "examDetails": "Solicitado urina tipo I e ultrassonografia abdominal.",
+        "examDetails": "",
         "notes": "",
-        "returnRecommendation": "Reavaliar após exames ou antes em caso de piora.",
+        "returnRecommendation": "Retorno para controle de peso em 30 dias.",
         "porte": "pequeno",
         "specificFields": {
-          "diet": "Ração seca predominante.",
-          "waterIntakeSmall": "Diminuida",
-          "behavior": "Desconforto e vocalização ao urinar."
+          "behavior": "Mais preguicoso.",
+          "diet": "Consumo aumentado de alimento.",
+          "waterIntakeSmall": "Normal"
         }
       }
     },
     {
-      "id": "peq_retorno_dermato",
+      "id": "mobile_peq_otite_curta",
+      "mode": "nova",
+      "porte": "pequeno",
+      "input": "Audio tutor: coceira forte na orelha direita, saiu secrecao escura e cheiro ruim desde ontem. Vet: hiperemia de conduto, suspeita de otite, limpar ouvido e gotas por 7 dias. No exame fisico: Conduto direito hiperemico e doloroso. Conduta: Limpeza auricular e terapia topica por 7 dias. Retorno: Retorno em 7 dias para reavaliacao. Vacinacao: Em dia. Ingestao de agua: Normal.",
+      "output": {
+        "chiefComplaint": "Prurido em orelha direita com secrecao escura e odor.",
+        "anamnesis": "Inicio agudo desde ontem com coceira intensa e secrecao otica.",
+        "physicalExam": "Conduto direito hiperemico e doloroso.",
+        "diagnosis": "Suspeita de otite externa direita.",
+        "treatment": "Limpeza auricular e terapia topica por 7 dias.",
+        "procedures": "",
+        "medications": "Gotas otologicas conforme prescricao.",
+        "examDetails": "",
+        "notes": "",
+        "returnRecommendation": "Retorno em 7 dias para reavaliacao.",
+        "porte": "pequeno",
+        "specificFields": {
+          "behavior": "Incomodado e cocando o ouvido.",
+          "vaccinationStatus": "Em dia",
+          "waterIntakeSmall": "Normal"
+        }
+      }
+    },
+    {
+      "id": "mobile_peq_emese_diarreia",
+      "mode": "nova",
+      "porte": "pequeno",
+      "input": "Mensagem curta: vomitou 3 vezes hoje e diarreia desde madrugada. Vet orienta hidratacao, antiemetico e hemograma se mantiver piora. Diagnostico: Gastroenterite aguda a esclarecer. Conduta: Suporte hidrico e antiemetico conforme avaliacao clinica. Medicacao: Antiemetico prescrito. Retorno: Retorno imediato em caso de piora ou em 24 horas. Ingestao de agua: Diminuida.",
+      "output": {
+        "chiefComplaint": "Emese e diarreia agudas.",
+        "anamnesis": "Tutor relata 3 episodios de vomito e diarreia desde a madrugada.",
+        "physicalExam": "",
+        "diagnosis": "Gastroenterite aguda a esclarecer.",
+        "treatment": "Suporte hidrico e antiemetico conforme avaliacao clinica.",
+        "procedures": "",
+        "medications": "Antiemetico prescrito.",
+        "examDetails": "Solicitar hemograma se persistirem sinais clinicos.",
+        "notes": "",
+        "returnRecommendation": "Retorno imediato em caso de piora ou em 24 horas.",
+        "porte": "pequeno",
+        "specificFields": {
+          "behavior": "Prostracao leve.",
+          "waterIntakeSmall": "Diminuida",
+          "diet": ""
+        }
+      }
+    },
+    {
+      "id": "mobile_peq_retorno_dermato",
       "mode": "retorno",
       "porte": "pequeno",
-      "input": "Retorno de cão com dermatite. Tutor relata melhora parcial do prurido, porém ainda com lambedura de patas. Exame físico com eritema leve interdigital. Mantida terapia tópica e reforço de controle ambiental. Diagnóstico: Dermatite em evolução com resposta parcial ao tratamento. Conduta: Mantida terapia tópica e orientado reforço do manejo ambiental. Controle de ectoparasitas: Controle regular conforme tutor.",
+      "input": "Retorno rapido por voz: melhorou a coceira, mas ainda lambe as patas a noite. Vet manteve shampoo e controle ambiental, retorno em 10 dias. No exame fisico: Lesoes ativas discretas em regioes interdigitais. Diagnostico: Dermatopatia em evolucao com resposta parcial. Conduta: Mantido protocolo topico e reforco de manejo ambiental.",
       "output": {
-        "chiefComplaint": "Retorno por prurido com melhora parcial e lambedura de patas persistente.",
-        "anamnesis": "Tutor informa evolução favorável parcial, com redução do prurido geral e persistência de lambedura interdigital.",
-        "physicalExam": "Eritema interdigital leve em membros torácicos.",
-        "diagnosis": "Dermatite em evolução com resposta parcial ao tratamento.",
-        "treatment": "Mantida terapia tópica e orientado reforço do manejo ambiental.",
+        "chiefComplaint": "Retorno por prurido com melhora parcial e lambedura de patas.",
+        "anamnesis": "Tutor informa melhora parcial da dermatite, com persistencia de lambedura noturna.",
+        "physicalExam": "Lesoes ativas discretas em regioes interdigitais.",
+        "diagnosis": "Dermatopatia em evolucao com resposta parcial.",
+        "treatment": "Mantido protocolo topico e reforco de manejo ambiental.",
         "procedures": "",
         "medications": "",
         "examDetails": "",
         "notes": "",
-        "returnRecommendation": "Novo retorno em 10 a 14 dias para acompanhamento.",
+        "returnRecommendation": "Retorno em 10 dias.",
         "porte": "pequeno",
         "specificFields": {
-          "ectoparasiteControl": "Controle regular conforme tutor.",
-          "behavior": "Lambedura de patas ainda presente.",
-          "preventiveCare": "Reforço de higiene ambiental."
+          "behavior": "Lambe as patas a noite.",
+          "ectoparasiteControl": "Em controle.",
+          "preventiveCare": "Reforco de higiene ambiental."
         }
       }
     },
     {
-      "id": "peq_checkup_peso",
+      "id": "mobile_peq_felino_vomito",
+      "mode": "retorno",
+      "porte": "pequeno",
+      "input": "Audio curto: Vomitou 2 vezes e esta sem apetite desde ontem. Vet: Antiemetico e dieta leve. No exame fisico: Achados compativeis com quadro descrito. Diagnostico: Gastroenterite aguda. Conduta: Antiemetico e dieta leve. Medicacao: Conforme prescricao. Exames solicitados: Exames complementares se necessario. Retorno: Reavaliar em 5 a 10 dias. Ingestao de agua: Normal.",
+      "output": {
+        "chiefComplaint": "Vomito agudo e hiporexia.",
+        "anamnesis": "Tutor relata vomito agudo e hiporexia.",
+        "physicalExam": "Achados compativeis com quadro descrito.",
+        "diagnosis": "Gastroenterite aguda.",
+        "treatment": "Antiemetico e dieta leve.",
+        "procedures": "",
+        "medications": "Conforme prescricao.",
+        "examDetails": "Exames complementares se necessario.",
+        "notes": "",
+        "returnRecommendation": "Reavaliar em 5 a 10 dias.",
+        "porte": "pequeno",
+        "specificFields": {
+          "behavior": "Alterado conforme quadro clinico.",
+          "diet": "Nao informado",
+          "waterIntakeSmall": "Normal"
+        }
+      }
+    },
+    {
+      "id": "mobile_peq_canino_tosse",
       "mode": "nova",
       "porte": "pequeno",
-      "input": "Tutor refere apetite aumentado e menor disposição nas últimas semanas, sem perda de peso. Exame físico geral sem alterações críticas. Orientado ajuste alimentar, redução de petiscos e incremento de atividade física. Diagnóstico: Condição clínica estável, com risco de ganho ponderal por manejo alimentar. Retorno: Reavaliar peso e escore corporal em 30 dias. Dieta: Ração seca com petiscos frequentes.",
+      "input": "Audio curto: Cachorro com tosse seca apos hotel. Vet: Isolamento e suporte clinico. No exame fisico: Achados compativeis com quadro descrito. Diagnostico: Traqueobronquite infecciosa suspeita. Conduta: Isolamento e suporte clinico. Medicacao: Conforme prescricao. Exames solicitados: Exames complementares se necessario. Retorno: Reavaliar em 5 a 10 dias. Dieta: Nao informado. Ingestao de agua: Normal.",
       "output": {
-        "chiefComplaint": "Apetite aumentado e menor disposição sem perda de peso.",
-        "anamnesis": "Tutor relata alteração progressiva de apetite e nível de energia nas últimas semanas.",
-        "physicalExam": "Exame físico geral sem alterações críticas no momento.",
-        "diagnosis": "Condição clínica estável, com risco de ganho ponderal por manejo alimentar.",
-        "treatment": "Orientado ajuste alimentar com redução de petiscos e aumento gradual de atividade física.",
+        "chiefComplaint": "Tosse seca recorrente.",
+        "anamnesis": "Tutor relata tosse seca recorrente.",
+        "physicalExam": "Achados compativeis com quadro descrito.",
+        "diagnosis": "Traqueobronquite infecciosa suspeita.",
+        "treatment": "Isolamento e suporte clinico.",
         "procedures": "",
-        "medications": "",
-        "examDetails": "",
+        "medications": "Conforme prescricao.",
+        "examDetails": "Exames complementares se necessario.",
         "notes": "",
-        "returnRecommendation": "Reavaliar peso e escore corporal em 30 dias.",
+        "returnRecommendation": "Reavaliar em 5 a 10 dias.",
         "porte": "pequeno",
         "specificFields": {
-          "diet": "Ração seca com petiscos frequentes.",
-          "feedingFrequency": "2 vezes ao dia",
-          "behavior": "Mais sedentário recentemente."
+          "behavior": "Alterado conforme quadro clinico.",
+          "diet": "Nao informado",
+          "waterIntakeSmall": "Normal"
         }
       }
     },
     {
-      "id": "grande_bovino_mastite",
+      "id": "mobile_peq_canino_dermite",
+      "mode": "nova",
+      "porte": "pequeno",
+      "input": "Audio curto: Coceira intensa em patas e abdomen. Vet: Controle antiparasitario e antipruriginoso. No exame fisico: Achados compativeis com quadro descrito. Diagnostico: Dermatite alergica suspeita. Conduta: Controle antiparasitario e antipruriginoso. Medicacao: Conforme prescricao. Exames solicitados: Exames complementares se necessario. Retorno: Reavaliar em 5 a 10 dias. Dieta: Nao informado. Ingestao de agua: Normal.",
+      "output": {
+        "chiefComplaint": "Prurido cutaneo.",
+        "anamnesis": "Tutor relata prurido cutaneo.",
+        "physicalExam": "Achados compativeis com quadro descrito.",
+        "diagnosis": "Dermatite alergica suspeita.",
+        "treatment": "Controle antiparasitario e antipruriginoso.",
+        "procedures": "",
+        "medications": "Conforme prescricao.",
+        "examDetails": "Exames complementares se necessario.",
+        "notes": "",
+        "returnRecommendation": "Reavaliar em 5 a 10 dias.",
+        "porte": "pequeno",
+        "specificFields": {
+          "behavior": "Alterado conforme quadro clinico.",
+          "diet": "Nao informado",
+          "waterIntakeSmall": "Normal"
+        }
+      }
+    },
+    {
+      "id": "mobile_peq_felino_urinario",
+      "mode": "retorno",
+      "porte": "pequeno",
+      "input": "Audio curto: Gato urina pouco e vai varias vezes a caixa. Vet: Suporte e analgesia. No exame fisico: Achados compativeis com quadro descrito. Diagnostico: Cistite felina suspeita. Conduta: Suporte e analgesia. Medicacao: Conforme prescricao. Exames solicitados: Exames complementares se necessario. Retorno: Reavaliar em 5 a 10 dias. Dieta: Nao informado. Ingestao de agua: Normal.",
+      "output": {
+        "chiefComplaint": "Disuria e polaciuria.",
+        "anamnesis": "Tutor relata disuria e polaciuria.",
+        "physicalExam": "Achados compativeis com quadro descrito.",
+        "diagnosis": "Cistite felina suspeita.",
+        "treatment": "Suporte e analgesia.",
+        "procedures": "",
+        "medications": "Conforme prescricao.",
+        "examDetails": "Exames complementares se necessario.",
+        "notes": "",
+        "returnRecommendation": "Reavaliar em 5 a 10 dias.",
+        "porte": "pequeno",
+        "specificFields": {
+          "behavior": "Alterado conforme quadro clinico.",
+          "diet": "Nao informado",
+          "waterIntakeSmall": "Normal"
+        }
+      }
+    },
+    {
+      "id": "mobile_peq_canino_obesidade_retorno",
+      "mode": "nova",
+      "porte": "pequeno",
+      "input": "Audio curto: Retorno: perdeu pouco peso, ainda recebe petiscos. Vet: Reforco de plano alimentar. No exame fisico: Achados compativeis com quadro descrito. Diagnostico: Obesidade em manejo. Conduta: Reforco de plano alimentar. Medicacao: Conforme prescricao. Exames solicitados: Exames complementares se necessario. Dieta: Nao informado. Ingestao de agua: Normal.",
+      "output": {
+        "chiefComplaint": "Controle de peso em andamento.",
+        "anamnesis": "Tutor relata controle de peso em andamento.",
+        "physicalExam": "Achados compativeis com quadro descrito.",
+        "diagnosis": "Obesidade em manejo.",
+        "treatment": "Reforco de plano alimentar.",
+        "procedures": "",
+        "medications": "Conforme prescricao.",
+        "examDetails": "Exames complementares se necessario.",
+        "notes": "",
+        "returnRecommendation": "Reavaliar em 5 a 10 dias.",
+        "porte": "pequeno",
+        "specificFields": {
+          "behavior": "Alterado conforme quadro clinico.",
+          "diet": "Nao informado",
+          "waterIntakeSmall": "Normal"
+        }
+      }
+    },
+    {
+      "id": "mobile_peq_canino_dor_lombar",
+      "mode": "nova",
+      "porte": "pequeno",
+      "input": "Audio curto: Dachshund chorando ao pular e subir escada. Vet: Repouso e analgesia. No exame fisico: Achados compativeis com quadro descrito. Diagnostico: Discopatia inicial suspeita. Conduta: Repouso e analgesia. Medicacao: Conforme prescricao. Exames solicitados: Exames complementares se necessario. Retorno: Reavaliar em 5 a 10 dias. Dieta: Nao informado. Ingestao de agua: Normal.",
+      "output": {
+        "chiefComplaint": "Dor lombar.",
+        "anamnesis": "Tutor relata dor lombar.",
+        "physicalExam": "Achados compativeis com quadro descrito.",
+        "diagnosis": "Discopatia inicial suspeita.",
+        "treatment": "Repouso e analgesia.",
+        "procedures": "",
+        "medications": "Conforme prescricao.",
+        "examDetails": "Exames complementares se necessario.",
+        "notes": "",
+        "returnRecommendation": "Reavaliar em 5 a 10 dias.",
+        "porte": "pequeno",
+        "specificFields": {
+          "behavior": "Alterado conforme quadro clinico.",
+          "diet": "Nao informado",
+          "waterIntakeSmall": "Normal"
+        }
+      }
+    },
+    {
+      "id": "mobile_peq_felino_estomatite_retorno",
+      "mode": "retorno",
+      "porte": "pequeno",
+      "input": "Audio curto: Retorno com melhora parcial da gengivite. Vet: Manter analgesia e dieta umida. No exame fisico: Achados compativeis com quadro descrito. Diagnostico: Gengivoestomatite em controle. Conduta: Manter analgesia e dieta umida. Medicacao: Conforme prescricao. Exames solicitados: Exames complementares se necessario. Ingestao de agua: Normal.",
+      "output": {
+        "chiefComplaint": "Dor oral residual.",
+        "anamnesis": "Tutor relata dor oral residual.",
+        "physicalExam": "Achados compativeis com quadro descrito.",
+        "diagnosis": "Gengivoestomatite em controle.",
+        "treatment": "Manter analgesia e dieta umida.",
+        "procedures": "",
+        "medications": "Conforme prescricao.",
+        "examDetails": "Exames complementares se necessario.",
+        "notes": "",
+        "returnRecommendation": "Reavaliar em 5 a 10 dias.",
+        "porte": "pequeno",
+        "specificFields": {
+          "behavior": "Alterado conforme quadro clinico.",
+          "diet": "Nao informado",
+          "waterIntakeSmall": "Normal"
+        }
+      }
+    },
+    {
+      "id": "mobile_peq_canino_ferida",
+      "mode": "nova",
+      "porte": "pequeno",
+      "input": "Audio curto: Corte superficial em pata apos passeio. Vet: Curativo local e higiene. No exame fisico: Achados compativeis com quadro descrito. Diagnostico: Trauma cutaneo leve. Conduta: Curativo local e higiene. Medicacao: Conforme prescricao. Exames solicitados: Exames complementares se necessario. Retorno: Reavaliar em 5 a 10 dias. Dieta: Nao informado. Ingestao de agua: Normal.",
+      "output": {
+        "chiefComplaint": "Ferida superficial em membro.",
+        "anamnesis": "Tutor relata ferida superficial em membro.",
+        "physicalExam": "Achados compativeis com quadro descrito.",
+        "diagnosis": "Trauma cutaneo leve.",
+        "treatment": "Curativo local e higiene.",
+        "procedures": "",
+        "medications": "Conforme prescricao.",
+        "examDetails": "Exames complementares se necessario.",
+        "notes": "",
+        "returnRecommendation": "Reavaliar em 5 a 10 dias.",
+        "porte": "pequeno",
+        "specificFields": {
+          "behavior": "Alterado conforme quadro clinico.",
+          "diet": "Nao informado",
+          "waterIntakeSmall": "Normal"
+        }
+      }
+    },
+    {
+      "id": "mobile_peq_canino_vacina",
+      "mode": "nova",
+      "porte": "pequeno",
+      "input": "Audio curto: Consulta preventiva com vacina antirrabica em atraso. Vet: Atualizar vacina e vermifugo. No exame fisico: Achados compativeis com quadro descrito. Diagnostico: Protocolo preventivo desatualizado. Conduta: Atualizar vacina e vermifugo. Medicacao: Conforme prescricao. Exames solicitados: Exames complementares se necessario. Retorno: Reavaliar em 5 a 10 dias. Dieta: Nao informado. Ingestao de agua: Normal.",
+      "output": {
+        "chiefComplaint": "Atualizacao sanitaria.",
+        "anamnesis": "Tutor relata atualizacao sanitaria.",
+        "physicalExam": "Achados compativeis com quadro descrito.",
+        "diagnosis": "Protocolo preventivo desatualizado.",
+        "treatment": "Atualizar vacina e vermifugo.",
+        "procedures": "",
+        "medications": "Conforme prescricao.",
+        "examDetails": "Exames complementares se necessario.",
+        "notes": "",
+        "returnRecommendation": "Reavaliar em 5 a 10 dias.",
+        "porte": "pequeno",
+        "specificFields": {
+          "behavior": "Alterado conforme quadro clinico.",
+          "diet": "Nao informado",
+          "waterIntakeSmall": "Normal"
+        }
+      }
+    },
+    {
+      "id": "mobile_peq_canino_diarreia_alimentar",
+      "mode": "retorno",
+      "porte": "pequeno",
+      "input": "Audio curto: Diarreia apos comer comida humana. Vet: Dieta gastrointestinal e probiotico. No exame fisico: Achados compativeis com quadro descrito. Diagnostico: Enterite alimentar. Conduta: Dieta gastrointestinal e probiotico. Medicacao: Conforme prescricao. Exames solicitados: Exames complementares se necessario. Retorno: Reavaliar em 5 a 10 dias. Ingestao de agua: Normal.",
+      "output": {
+        "chiefComplaint": "Diarreia aguda alimentar.",
+        "anamnesis": "Tutor relata diarreia aguda alimentar.",
+        "physicalExam": "Achados compativeis com quadro descrito.",
+        "diagnosis": "Enterite alimentar.",
+        "treatment": "Dieta gastrointestinal e probiotico.",
+        "procedures": "",
+        "medications": "Conforme prescricao.",
+        "examDetails": "Exames complementares se necessario.",
+        "notes": "",
+        "returnRecommendation": "Reavaliar em 5 a 10 dias.",
+        "porte": "pequeno",
+        "specificFields": {
+          "behavior": "Alterado conforme quadro clinico.",
+          "diet": "Nao informado",
+          "waterIntakeSmall": "Normal"
+        }
+      }
+    },
+    {
+      "id": "mobile_peq_felino_respiratorio",
+      "mode": "nova",
+      "porte": "pequeno",
+      "input": "Audio curto: Espirros e secrecao nasal ha 2 dias. Vet: Suporte clinico. No exame fisico: Achados compativeis com quadro descrito. Diagnostico: Complexo respiratorio felino suspeito. Conduta: Suporte clinico. Medicacao: Conforme prescricao. Exames solicitados: Exames complementares se necessario. Retorno: Reavaliar em 5 a 10 dias. Dieta: Nao informado. Ingestao de agua: Normal.",
+      "output": {
+        "chiefComplaint": "Sinais respiratorios altos.",
+        "anamnesis": "Tutor relata sinais respiratorios altos.",
+        "physicalExam": "Achados compativeis com quadro descrito.",
+        "diagnosis": "Complexo respiratorio felino suspeito.",
+        "treatment": "Suporte clinico.",
+        "procedures": "",
+        "medications": "Conforme prescricao.",
+        "examDetails": "Exames complementares se necessario.",
+        "notes": "",
+        "returnRecommendation": "Reavaliar em 5 a 10 dias.",
+        "porte": "pequeno",
+        "specificFields": {
+          "behavior": "Alterado conforme quadro clinico.",
+          "diet": "Nao informado",
+          "waterIntakeSmall": "Normal"
+        }
+      }
+    },
+    {
+      "id": "mobile_peq_canino_oftalmo",
+      "mode": "nova",
+      "porte": "pequeno",
+      "input": "Audio curto: Olho vermelho e lacrimejamento. Vet: Colirio e higiene ocular. No exame fisico: Achados compativeis com quadro descrito. Diagnostico: Conjuntivite leve. Conduta: Colirio e higiene ocular. Exames solicitados: Exames complementares se necessario. Retorno: Reavaliar em 5 a 10 dias. Dieta: Nao informado. Ingestao de agua: Normal.",
+      "output": {
+        "chiefComplaint": "Irritacao ocular.",
+        "anamnesis": "Tutor relata irritacao ocular.",
+        "physicalExam": "Achados compativeis com quadro descrito.",
+        "diagnosis": "Conjuntivite leve.",
+        "treatment": "Colirio e higiene ocular.",
+        "procedures": "",
+        "medications": "Conforme prescricao.",
+        "examDetails": "Exames complementares se necessario.",
+        "notes": "",
+        "returnRecommendation": "Reavaliar em 5 a 10 dias.",
+        "porte": "pequeno",
+        "specificFields": {
+          "behavior": "Alterado conforme quadro clinico.",
+          "diet": "Nao informado",
+          "waterIntakeSmall": "Normal"
+        }
+      }
+    },
+    {
+      "id": "mobile_peq_canino_otite_retorno",
+      "mode": "retorno",
+      "porte": "pequeno",
+      "input": "Audio curto: Retorno de otite com secrecao discreta. Vet: Prorrogar terapia topica. No exame fisico: Achados compativeis com quadro descrito. Diagnostico: Otite externa em resolucao. Conduta: Prorrogar terapia topica. Medicacao: Conforme prescricao. Exames solicitados: Exames complementares se necessario. Dieta: Nao informado. Ingestao de agua: Normal.",
+      "output": {
+        "chiefComplaint": "Otite em melhora parcial.",
+        "anamnesis": "Tutor relata otite em melhora parcial.",
+        "physicalExam": "Achados compativeis com quadro descrito.",
+        "diagnosis": "Otite externa em resolucao.",
+        "treatment": "Prorrogar terapia topica.",
+        "procedures": "",
+        "medications": "Conforme prescricao.",
+        "examDetails": "Exames complementares se necessario.",
+        "notes": "",
+        "returnRecommendation": "Reavaliar em 5 a 10 dias.",
+        "porte": "pequeno",
+        "specificFields": {
+          "behavior": "Alterado conforme quadro clinico.",
+          "diet": "Nao informado",
+          "waterIntakeSmall": "Normal"
+        }
+      }
+    },
+    {
+      "id": "mobile_peq_felino_obstipacao",
+      "mode": "nova",
+      "porte": "pequeno",
+      "input": "Audio curto: Sem evacuar ha 2 dias, faz forca. Vet: Hidratacao e ajuste de fibra. No exame fisico: Achados compativeis com quadro descrito. Diagnostico: Obstipacao leve. Conduta: Hidratacao e ajuste de fibra. Medicacao: Conforme prescricao. Exames solicitados: Exames complementares se necessario. Retorno: Reavaliar em 5 a 10 dias. Dieta: Nao informado. Ingestao de agua: Normal.",
+      "output": {
+        "chiefComplaint": "Constipacao inicial.",
+        "anamnesis": "Tutor relata constipacao inicial.",
+        "physicalExam": "Achados compativeis com quadro descrito.",
+        "diagnosis": "Obstipacao leve.",
+        "treatment": "Hidratacao e ajuste de fibra.",
+        "procedures": "",
+        "medications": "Conforme prescricao.",
+        "examDetails": "Exames complementares se necessario.",
+        "notes": "",
+        "returnRecommendation": "Reavaliar em 5 a 10 dias.",
+        "porte": "pequeno",
+        "specificFields": {
+          "behavior": "Alterado conforme quadro clinico.",
+          "diet": "Nao informado",
+          "waterIntakeSmall": "Normal"
+        }
+      }
+    },
+    {
+      "id": "mobile_peq_canino_pulgas_retorno",
+      "mode": "nova",
+      "porte": "pequeno",
+      "input": "Audio curto: Melhorou coceira mas ainda ha pulgas. Vet: Troca de protocolo mensal. No exame fisico: Achados compativeis com quadro descrito. Diagnostico: Dermatite por pulgas em controle. Conduta: Troca de protocolo mensal. Medicacao: Conforme prescricao. Exames solicitados: Exames complementares se necessario. Retorno: Reavaliar em 5 a 10 dias. Dieta: Nao informado. Ingestao de agua: Normal.",
+      "output": {
+        "chiefComplaint": "Controle parcial de ectoparasitas.",
+        "anamnesis": "Tutor relata controle parcial de ectoparasitas.",
+        "physicalExam": "Achados compativeis com quadro descrito.",
+        "diagnosis": "Dermatite por pulgas em controle.",
+        "treatment": "Troca de protocolo mensal.",
+        "procedures": "",
+        "medications": "Conforme prescricao.",
+        "examDetails": "Exames complementares se necessario.",
+        "notes": "",
+        "returnRecommendation": "Reavaliar em 5 a 10 dias.",
+        "porte": "pequeno",
+        "specificFields": {
+          "behavior": "Alterado conforme quadro clinico.",
+          "diet": "Nao informado",
+          "waterIntakeSmall": "Normal"
+        }
+      }
+    },
+    {
+      "id": "mobile_peq_canino_otite_aguda2",
+      "mode": "retorno",
+      "porte": "pequeno",
+      "input": "Audio curto: Cheiro forte na orelha e dor ao toque. Vet: Limpeza e gotas otologicas. No exame fisico: Achados compativeis com quadro descrito. Diagnostico: Otite externa aguda. Conduta: Limpeza e gotas otologicas. Exames solicitados: Exames complementares se necessario. Retorno: Reavaliar em 5 a 10 dias. Dieta: Nao informado. Ingestao de agua: Normal.",
+      "output": {
+        "chiefComplaint": "Otalgia com secrecao.",
+        "anamnesis": "Tutor relata otalgia com secrecao.",
+        "physicalExam": "Achados compativeis com quadro descrito.",
+        "diagnosis": "Otite externa aguda.",
+        "treatment": "Limpeza e gotas otologicas.",
+        "procedures": "",
+        "medications": "Conforme prescricao.",
+        "examDetails": "Exames complementares se necessario.",
+        "notes": "",
+        "returnRecommendation": "Reavaliar em 5 a 10 dias.",
+        "porte": "pequeno",
+        "specificFields": {
+          "behavior": "Alterado conforme quadro clinico.",
+          "diet": "Nao informado",
+          "waterIntakeSmall": "Normal"
+        }
+      }
+    },
+    {
+      "id": "mobile_grande_bovino_mastite_audio",
       "mode": "nova",
       "porte": "grande",
-      "input": "Vaca em lactação com queda de produção e edema de quarto mamário posterior direito há 2 dias. Exame físico com dor local e alteração do leite. Suspeita de mastite clínica. Coletada amostra para CMT/cultura e instituído protocolo terapêutico. Conduta: Instituído protocolo terapêutico para mastite conforme avaliação clínica e rotina da propriedade. Exames solicitados: Solicitado CMT e cultura microbiológica do leite. Retorno: Reavaliar em 48-72 horas e acompanhar produção.",
+      "input": "Campo por audio: vaca 214 caiu leite hoje, quarto traseiro direito inchado e dolorido. Vet coletou leite pra CMT e cultura, iniciou protocolo de mastite e reavaliar em 48h. No exame fisico: Quarto mamario traseiro direito edemaciado e dolorido. Diagnostico: Suspeita de mastite clinica. Conduta: Protocolo terapeutico para mastite conforme rotina da propriedade. Procedimento: Coleta de amostra de leite para CMT e cultura.",
       "output": {
-        "chiefComplaint": "Queda de produção leiteira com edema em quarto mamário posterior direito.",
-        "anamnesis": "Responsável relata início há 2 dias de edema mamário, dor local e redução de produção.",
-        "physicalExam": "Dor à palpação do quarto posterior direito e alteração macroscópica do leite.",
-        "diagnosis": "Suspeita de mastite clínica.",
-        "treatment": "Instituído protocolo terapêutico para mastite conforme avaliação clínica e rotina da propriedade.",
-        "procedures": "Coleta de amostra de leite para CMT/cultura.",
+        "chiefComplaint": "Queda de producao leiteira com edema de quarto mamario.",
+        "anamnesis": "Responsavel relata queda aguda de leite e dor em quarto traseiro direito.",
+        "physicalExam": "Quarto mamario traseiro direito edemaciado e dolorido.",
+        "diagnosis": "Suspeita de mastite clinica.",
+        "treatment": "Protocolo terapeutico para mastite conforme rotina da propriedade.",
+        "procedures": "Coleta de amostra de leite para CMT e cultura.",
         "medications": "",
-        "examDetails": "Solicitado CMT e cultura microbiológica do leite.",
+        "examDetails": "CMT e cultura microbiologica do leite.",
         "notes": "",
-        "returnRecommendation": "Reavaliar em 48-72 horas e acompanhar produção.",
+        "returnRecommendation": "Reavaliar em 48 horas.",
         "porte": "grande",
         "specificFields": {
           "productionSystem": "Leite",
-          "daysInMilk": "120",
-          "milkProduction": "Queda de produção observada no último controle."
+          "animalId": "Vaca 214",
+          "milkProduction": "Queda de producao no dia do atendimento."
         }
       }
     },
     {
-      "id": "grande_equino_claudicacao",
+      "id": "mobile_grande_equino_colica_audio",
       "mode": "nova",
       "porte": "grande",
-      "input": "Equino de esporte com claudicação de membro torácico esquerdo após treino. Exame com dor em flexão distal e sensibilidade em casco. Recomendada redução de carga, anti-inflamatório e avaliação de casqueamento. No exame físico: Dor em flexão distal e sensibilidade no casco do membro torácico esquerdo. Diagnóstico: Claudicação locomotora com suspeita de sobrecarga distal. Conduta: Recomendada redução de carga de trabalho, anti-inflamatório e manejo locomotor. Medicação: Anti-inflamatório conforme prescrição. Retorno: Reavaliar evolução em 5 a 7 dias.",
+      "input": "Audio do tratador: cavalo rolando, olhando flanco e sem comer. Vet no local: dor abdominal, motilidade reduzida, passou sonda e analgesia, pediu retorno em poucas horas. No exame fisico: Dor abdominal e motilidade intestinal reduzida. Diagnostico: Sindroma colica equina em avaliacao inicial. Conduta: Estabilizacao com analgesia e suporte clinico. Procedimento: Sondagem nasogastrica no atendimento. Medicacao: Analgesico conforme prescricao.",
       "output": {
-        "chiefComplaint": "Claudicação em membro torácico esquerdo após exercício.",
-        "anamnesis": "Responsável relata início após treino com piora à movimentação.",
-        "physicalExam": "Dor em flexão distal e sensibilidade no casco do membro torácico esquerdo.",
-        "diagnosis": "Claudicação locomotora com suspeita de sobrecarga distal.",
-        "treatment": "Recomendada redução de carga de trabalho, anti-inflamatório e manejo locomotor.",
-        "procedures": "",
-        "medications": "Anti-inflamatório conforme prescrição.",
+        "chiefComplaint": "Dor abdominal aguda em equino com sinais de colica.",
+        "anamnesis": "Tratador relata inquietacao, olhar para flanco e anorexia.",
+        "physicalExam": "Dor abdominal e motilidade intestinal reduzida.",
+        "diagnosis": "Sindroma colica equina em avaliacao inicial.",
+        "treatment": "Estabilizacao com analgesia e suporte clinico.",
+        "procedures": "Sondagem nasogastrica no atendimento.",
+        "medications": "Analgesico conforme prescricao.",
         "examDetails": "",
         "notes": "",
-        "returnRecommendation": "Reavaliar evolução em 5 a 7 dias.",
+        "returnRecommendation": "Reavaliar em poucas horas.",
         "porte": "grande",
         "specificFields": {
-          "animalFunction": "Esporte",
-          "hoofStatus": "Sensibilidade em casco e necessidade de revisão do casqueamento.",
-          "physicalExamDetailed": "Avaliação locomotora com dor em flexão distal."
+          "animalFunction": "Trabalho",
+          "rumenMotility": "",
+          "physicalExamDetailed": "Sinais compativeis com colica no exame clinico."
         }
       }
     },
     {
-      "id": "grande_bezerro_diarreia",
-      "mode": "nova",
-      "porte": "grande",
-      "input": "Bezerro com diarreia aquosa e apatia desde ontem. Responsável informa redução de sucção e desidratação leve. Exame com mucosas discretamente secas. Conduta com suporte hídrico e ajuste nutricional; solicitado exame coproparasitológico. No exame físico: Mucosas discretamente secas ao exame físico. Diagnóstico: Síndrome entérica aguda em bezerro. Retorno: Reavaliar em 24-48 horas ou antes se piora.",
-      "output": {
-        "chiefComplaint": "Diarreia aquosa com apatia em bezerro.",
-        "anamnesis": "Responsável relata início em 24 horas com redução de sucção e sinais de desidratação leve.",
-        "physicalExam": "Mucosas discretamente secas ao exame físico.",
-        "diagnosis": "Síndrome entérica aguda em bezerro.",
-        "treatment": "Conduta de suporte hídrico e ajuste nutricional.",
-        "procedures": "",
-        "medications": "",
-        "examDetails": "Solicitado exame coproparasitológico.",
-        "notes": "",
-        "returnRecommendation": "Reavaliar em 24-48 horas ou antes se piora.",
-        "porte": "grande",
-        "specificFields": {
-          "animalIdentificationDetails": "Bezerro em fase de aleitamento.",
-          "neonateAndReproduction": "Neonato com histórico recente de colostragem.",
-          "fecesAndUrine": "Fezes aquosas; monitorar frequência e volume."
-        }
-      }
-    },
-    {
-      "id": "grande_retorno_rebanho",
+      "id": "mobile_grande_rebanho_escore",
       "mode": "retorno",
       "porte": "grande",
-      "input": "Retorno sanitário em lote de vacas. Houve melhora geral após ajuste de manejo, mas ainda com dois animais com escore corporal baixo. Reforçadas medidas de suplementação mineral e monitoramento de consumo. No exame físico: Animais do lote com condição geral estável, mantendo atenção para escore corporal reduzido em parte do grupo. Diagnóstico: Evolução favorável do lote com necessidade de correção nutricional pontual. Conduta: Reforçadas medidas de suplementação mineral e monitoramento de consumo.",
+      "input": "Retorno de lote por voz: melhorou consumo, mas 3 vacas ainda magras. Vet reforcou sal mineral e ajuste de dieta do lote. No exame fisico: Condicao geral estavel, com animais de escore corporal reduzido. Diagnostico: Evolucao parcial, mantendo deficit nutricional em parte do rebanho. Conduta: Reforcada suplementacao mineral e ajuste de dieta coletiva. ECC: Baixo em parte do lote.",
       "output": {
-        "chiefComplaint": "Retorno de lote com melhora geral e persistência de baixo escore corporal em dois animais.",
-        "anamnesis": "Responsável relata evolução positiva após ajuste de manejo, com pontos pendentes nutricionais.",
-        "physicalExam": "Animais do lote com condição geral estável, mantendo atenção para escore corporal reduzido em parte do grupo.",
-        "diagnosis": "Evolução favorável do lote com necessidade de correção nutricional pontual.",
-        "treatment": "Reforçadas medidas de suplementação mineral e monitoramento de consumo.",
+        "chiefComplaint": "Retorno de lote com vacas ainda abaixo de escore ideal.",
+        "anamnesis": "Responsavel refere melhora de consumo, com persistencia de baixo escore em parte do lote.",
+        "physicalExam": "Condicao geral estavel, com animais de escore corporal reduzido.",
+        "diagnosis": "Evolucao parcial, mantendo deficit nutricional em parte do rebanho.",
+        "treatment": "Reforcada suplementacao mineral e ajuste de dieta coletiva.",
         "procedures": "",
         "medications": "",
         "examDetails": "",
         "notes": "",
-        "returnRecommendation": "Novo retorno programado em 15 dias para reavaliação do lote.",
+        "returnRecommendation": "Retorno programado em 15 dias.",
         "porte": "grande",
         "specificFields": {
-          "batch": "Lote de vacas em produção.",
-          "bodyConditionScore": "Parte do lote com escore corporal abaixo do ideal.",
-          "mineralSupplementation": "Suplementação reforçada e monitorada."
+          "batch": "Lote com 3 vacas abaixo do ideal.",
+          "bodyConditionScore": "Baixo em parte do lote.",
+          "mineralSupplementation": "Reforcada."
         }
       }
     },
     {
-      "id": "peq_canino_neuro_1",
+      "id": "mobile_grande_bezerro_diarreia",
       "mode": "nova",
-      "porte": "pequeno",
-      "input": "O Fred (Dachshund, 6 anos) parou de andar de repente hoje cedo. Ele arrasta as patinhas de trás e parece que está sentindo muita dor nas costas, fica tremendo e não deixa encostar. Ele é vacinado e come ração premium. No exame físico: Ausência de propriocepção em membros posteriores, sensibilidade profunda preservada e dor aguda em região tóraco-lombar. Diagnóstico: Suspeita de Doença do Disco Intervertebral (DDIV). Conduta: Repouso em gaiola (restrição severa de movimentos). Procedimento: Solicitada Tomografia Computadorizada ou Mielografia. Medicação: Protocolo de analgesia multimodal (opioides + gabapentinoides). Retorno: Reavaliação neurológica em 24h. Ingestão de água: Normal.",
+      "porte": "grande",
+      "input": "Mensagem de campo: bezerro com diarreia aquosa e pouca mamada desde ontem. Vet orientou soro, ajuste alimentar e pediu copro. No exame fisico: Sinais de desidratacao leve ao exame. Diagnostico: Enteropatia aguda em bezerro. Conduta: Suporte hidrico e ajuste nutricional. Exames solicitados: Exame coproparasitologico solicitado. Retorno: Reavaliar em 24 a 48 horas.",
       "output": {
-        "chiefComplaint": "Paresia de membros pélvicos de início agudo.",
-        "anamnesis": "Tutor relata perda súbita de locomoção posterior, arrastando membros pélvicos e apresentando tremores (dor).",
-        "physicalExam": "Ausência de propriocepção em membros posteriores, sensibilidade profunda preservada e dor aguda em região tóraco-lombar.",
-        "diagnosis": "Suspeita de Doença do Disco Intervertebral (DDIV).",
-        "treatment": "Repouso em gaiola (restrição severa de movimentos).",
-        "procedures": "Solicitada Tomografia Computadorizada ou Mielografia.",
-        "medications": "Protocolo de analgesia multimodal (opioides + gabapentinoides).",
-        "examDetails": "",
-        "notes": "Caso com urgência cirúrgica dependendo da progressão.",
-        "returnRecommendation": "Reavaliação neurológica em 24h.",
-        "porte": "pequeno",
-        "specificFields": {
-          "behavior": "Álgico e prostrado.",
-          "waterIntakeSmall": "Normal",
-          "vaccinationStatus": "Em dia"
-        }
-      }
-    },
-    {
-      "id": "peq_felino_trato_urinario",
-      "mode": "nova",
-      "porte": "pequeno",
-      "input": "O Simba tá tentando fazer xixi toda hora mas não sai nada. Ele fica chorando na caixinha de areia e lambendo as partes dele. Ele só come ração seca das baratas. Tem 4 anos e não sai de casa. No exame físico: Bexiga extremamente repleta e rígida à palpação (globo vesical), dor abdominal severa. Diagnóstico: Doença do Trato Urinário Inferior dos Felinos (DTUIF) - Obstrutiva. Conduta: Desobstrução uretral imediata sob sedação. Procedimento: Sondagem uretral e cistocentese de alívio. Medicação: Fluidoterapia intravenosa e analgésicos. Exames solicitados: Urinálise e dosagem de potássio (risco de hipercalemia). Retorno: Internação para monitoração de débito urinário. Vacinação: Não informado. Ingestão de água: Não observada.",
-      "output": {
-        "chiefComplaint": "Disúria e estrangúria (suspeita de obstrução uretral).",
-        "anamnesis": "Feline macho, 4 anos, indoor, dieta baseada em ração seca comercial. Apresenta vocalização ao urinar e tentativas infrutíferas.",
-        "physicalExam": "Bexiga extremamente repleta e rígida à palpação (globo vesical), dor abdominal severa.",
-        "diagnosis": "Doença do Trato Urinário Inferior dos Felinos (DTUIF) - Obstrutiva.",
-        "treatment": "Desobstrução uretral imediata sob sedação.",
-        "procedures": "Sondagem uretral e cistocentese de alívio.",
-        "medications": "Fluidoterapia intravenosa e analgésicos.",
-        "examDetails": "Urinálise e dosagem de potássio (risco de hipercalemia).",
-        "notes": "Emergência metabólica.",
-        "returnRecommendation": "Internação para monitoração de débito urinário.",
-        "porte": "pequeno",
-        "specificFields": {
-          "behavior": "Agitado/Vocalizando.",
-          "waterIntakeSmall": "Não observada",
-          "vaccinationStatus": "Não informado"
-        }
-      }
-    },
-    {
-      "id": "peq_canino_onco",
-      "mode": "nova",
-      "porte": "pequeno",
-      "input": "Apareceu um caroço enorme na perna da Mel (Boxer, 9 anos) faz um mês e parece que está crescendo rápido. Ela não reclama de dor, mas está perdendo peso. Vacinas estão ok. No exame físico: Nódulo de aproximadamente 5cm, aderido, consistência firme em região de membro torácico. Diagnóstico: Suspeita de Mastocitoma ou Sarcoma de tecidos moles. Conduta: Planejamento para exérese cirúrgica com margem. Procedimento: Citologia por agulha fina (PAAF). Exames solicitados: Solicitado histopatológico e estadiamento (Raio-x de tórax e USG abdominal). Retorno: Retorno após resultado da citologia. Ingestão de água: Normal.",
-      "output": {
-        "chiefComplaint": "Nódulo cutâneo em membro de crescimento rápido.",
-        "anamnesis": "Paciente senil apresenta massa tumoral em membro, com evolução de 30 dias e perda de peso progressiva (caquexia neoplásica).",
-        "physicalExam": "Nódulo de aproximadamente 5cm, aderido, consistência firme em região de membro torácico.",
-        "diagnosis": "Suspeita de Mastocitoma ou Sarcoma de tecidos moles.",
-        "treatment": "Planejamento para exérese cirúrgica com margem.",
-        "procedures": "Citologia por agulha fina (PAAF).",
-        "medications": "",
-        "examDetails": "Solicitado histopatológico e estadiamento (Raio-x de tórax e USG abdominal).",
-        "notes": "Boxers têm alta predisposição genética para mastocitomas.",
-        "returnRecommendation": "Retorno após resultado da citologia.",
-        "porte": "pequeno",
-        "specificFields": {
-          "behavior": "Normal",
-          "waterIntakeSmall": "Normal",
-          "vaccinationStatus": "Em dia"
-        }
-      }
-    },
-    {
-      "id": "peq_canino_odonto",
-      "mode": "nova",
-      "porte": "pequeno",
-      "input": "O hálito da Belinha (Yorkshire, 7 anos) está insuportável. Ela parou de comer a ração seca, só quer comida mole. Vi que os dentes dela estão cheios de sujeira preta e um deles parece estar balançando. No exame físico: Presença severa de cálculo dentário (tártaro), gengivite acentuada e mobilidade dental em incisivos. Diagnóstico: Doença Periodontal Grau IV. Conduta: Tratamento Periodontal (limpeza e extrações). Procedimento: Tartarectomia sob anestesia geral e radiografia intraoral. Medicação: Antibioticoterapia e anti-inflamatório pré/pós-operatório. Exames solicitados: Avaliação cardiológica pré-anestésica. Retorno: Agendar cirurgia odontológica. Vacinação: Em dia. Ingestão de água: Normal.",
-      "output": {
-        "chiefComplaint": "Halitose severa e seletividade alimentar por dor oral.",
-        "anamnesis": "Tutor relata odor fétido oral e dificuldade em mastigar alimentos sólidos. Histórico de ausência de escovação dentária.",
-        "physicalExam": "Presença severa de cálculo dentário (tártaro), gengivite acentuada e mobilidade dental em incisivos.",
-        "diagnosis": "Doença Periodontal Grau IV.",
-        "treatment": "Tratamento Periodontal (limpeza e extrações).",
-        "procedures": "Tartarectomia sob anestesia geral e radiografia intraoral.",
-        "medications": "Antibioticoterapia e anti-inflamatório pré/pós-operatório.",
-        "examDetails": "Avaliação cardiológica pré-anestésica.",
-        "notes": "Risco de fístula oronasal.",
-        "returnRecommendation": "Agendar cirurgia odontológica.",
-        "porte": "pequeno",
-        "specificFields": {
-          "behavior": "Irritada ao manipular a boca.",
-          "waterIntakeSmall": "Normal",
-          "vaccinationStatus": "Em dia"
-        }
-      }
-    },
-    {
-      "id": "peq_canino_hemato",
-      "mode": "nova",
-      "porte": "pequeno",
-      "input": "O Rex está muito pálido e apareceram umas manchas roxas na barriga dele hoje. Ele está muito fraco, nem levanta para beber água. Ele teve muito carrapato mês passado na fazenda. Tem 3 anos. No exame físico: Mucosas hipocoradas (anêmicas), presença de petéquias em derme e linfonodos reativos. Diagnóstico: Suspeita de Hemoparasitose (Erliquiose/Babesiose). Conduta: Suporte volêmico e terapia específica. Procedimento: Coleta de sangue para hemograma e teste rápido (4DX). Medicação: Doxiciclina e suporte vitamínico. Exames solicitados: Contagem de plaquetas urgente (risco de trombocitopenia severa). Retorno: Internação imediata. Vacinação: Não informado. Ingestão de água: Diminuída.",
-      "output": {
-        "chiefComplaint": "Astenia progressiva e sufusões/petéquias em região abdominal.",
-        "anamnesis": "Histórico recente de infestação por carrapatos. Paciente apresenta prostração severa e sinais de sangramento cutâneo.",
-        "physicalExam": "Mucosas hipocoradas (anêmicas), presença de petéquias em derme e linfonodos reativos.",
-        "diagnosis": "Suspeita de Hemoparasitose (Erliquiose/Babesiose).",
-        "treatment": "Suporte volêmico e terapia específica.",
-        "procedures": "Coleta de sangue para hemograma e teste rápido (4DX).",
-        "medications": "Doxiciclina e suporte vitamínico.",
-        "examDetails": "Contagem de plaquetas urgente (risco de trombocitopenia severa).",
-        "notes": "Avaliar necessidade de transfusão sanguínea.",
-        "returnRecommendation": "Internação imediata.",
-        "porte": "pequeno",
-        "specificFields": {
-          "behavior": "Letárgico/Adinâmico.",
-          "waterIntakeSmall": "Diminuída",
-          "vaccinationStatus": "Não informado"
-        }
-      }
-    },
-    {
-      "id": "peq_canino_leish",
-      "mode": "nova",
-      "porte": "pequeno",
-      "input": "As unhas do meu cachorro estão crescendo muito rápido e ele está com umas feridas no focinho e na ponta da orelha que não saram. Ele está perdendo peso mesmo comendo bem. Moramos perto de mata. No exame físico: Unhas hipertróficas, dermatite esfoliativa em pavilhão auricular e plano nasal, linfonodomegalia generalizada. Diagnóstico: Suspeita de Leishmaniose Visceral Canina. Conduta: Protocolo de tratamento conforme legislação local. Procedimento: Sorologia/Elisa para Leishmaniose e citologia de linfonodo. Medicação: Repelentes (coleira) e tratamento específico se confirmado. Exames solicitados: Perfil bioquímico renal (risco de glomerulonefrite). Retorno: Retorno após resultado sorológico. Vacinação: Desatualizado. Ingestão de água: Normal.",
-      "output": {
-        "chiefComplaint": "Onicogrifose e lesões cutâneas ulcerativas crônicas.",
-        "anamnesis": "Tutor relata emagrecimento progressivo apesar do apetite preservado. Presença de feridas em extremidades com baixa cicatrização.",
-        "physicalExam": "Unhas hipertróficas, dermatite esfoliativa em pavilhão auricular e plano nasal, linfonodomegalia generalizada.",
-        "diagnosis": "Suspeita de Leishmaniose Visceral Canina.",
-        "treatment": "Protocolo de tratamento conforme legislação local.",
-        "procedures": "Sorologia/Elisa para Leishmaniose e citologia de linfonodo.",
-        "medications": "Repelentes (coleira) e tratamento específico se confirmado.",
-        "examDetails": "Perfil bioquímico renal (risco de glomerulonefrite).",
-        "notes": "Doença de notificação compulsória (Zoonose).",
-        "returnRecommendation": "Retorno após resultado sorológico.",
-        "porte": "pequeno",
-        "specificFields": {
-          "behavior": "Normal a apático.",
-          "waterIntakeSmall": "Normal",
-          "vaccinationStatus": "Desatualizado"
-        }
-      }
-    },
-    {
-      "id": "peq_canino_obstetrica",
-      "mode": "nova",
-      "porte": "pequeno",
-      "input": "Minha cadela está em trabalho de parto faz 4 horas, nasceu um filhote mas parece que tem outro preso. Ela está fazendo força, mas está ficando cansada e saiu um líquido verde estranho. No exame físico: Paciente exausta, contrações uterinas fracas (inércia uterina secundária). Canal de parto com feto impactado. Diagnóstico: Distocia fetal/Inércia uterina. Conduta: Intervenção obstétrica ou cesariana de emergência. Procedimento: Ultrassonografia para avaliar batimentos fetais. Medicação: Ocitocina e Gluconato de Cálcio (se indicado após exames). Retorno: Internação imediata. Vacinação: Em dia. Ingestão de água: Normal.",
-      "output": {
-        "chiefComplaint": "Distocia (parto distócico).",
-        "anamnesis": "Fêmea em trabalho de parto prolongado com intervalo de 4h entre fetos. Presença de descarga vulvar esverdeada (loquiação).",
-        "physicalExam": "Paciente exausta, contrações uterinas fracas (inércia uterina secundária). Canal de parto com feto impactado.",
-        "diagnosis": "Distocia fetal/Inércia uterina.",
-        "treatment": "Intervenção obstétrica ou cesariana de emergência.",
-        "procedures": "Ultrassonografia para avaliar batimentos fetais.",
-        "medications": "Ocitocina e Gluconato de Cálcio (se indicado após exames).",
-        "examDetails": "",
-        "notes": "Risco de morte fetal e sepse materna.",
-        "returnRecommendation": "Internação imediata.",
-        "porte": "pequeno",
-        "specificFields": {
-          "behavior": "Exausta/Álgica.",
-          "waterIntakeSmall": "Normal",
-          "vaccinationStatus": "Em dia"
-        }
-      }
-    },
-    {
-      "id": "peq_canino_piometra",
-      "mode": "nova",
-      "porte": "pequeno",
-      "input": "A Luna (SRD, 5 anos) não é castrada. O cio dela acabou faz um mês. Agora ela está prostrada, bebendo muita água e saindo um pus com sangue pela vagina. Ela não quer comer nada hoje. No exame físico: Desidratação leve, febre (39.5°C) e sensibilidade abdominal à palpação profunda. Diagnóstico: Piometra de colo aberto. Conduta: Ovariossalpingohisterectomia (OSH) de urgência. Procedimento: Ultrassonografia abdominal e hemograma. Medicação: Antibioticoterapia de amplo espectro e fluidoterapia. Exames solicitados: Avaliação de função renal (risco de lesão por imunocomplexos). Retorno: Encaminhamento para cirurgia. Vacinação: Em dia. Ingestão de água: Aumentada.",
-      "output": {
-        "chiefComplaint": "Secreção vulvar purulenta e prostração pós-estro.",
-        "anamnesis": "Cadela não castrada em fase de diestro. Apresenta poliúria, polidipsia e descarga vaginal fétida.",
-        "physicalExam": "Desidratação leve, febre (39.5°C) e sensibilidade abdominal à palpação profunda.",
-        "diagnosis": "Piometra de colo aberto.",
-        "treatment": "Ovariossalpingohisterectomia (OSH) de urgência.",
-        "procedures": "Ultrassonografia abdominal e hemograma.",
-        "medications": "Antibioticoterapia de amplo espectro e fluidoterapia.",
-        "examDetails": "Avaliação de função renal (risco de lesão por imunocomplexos).",
-        "notes": "Risco crítico de peritonite se houver ruptura uterina.",
-        "returnRecommendation": "Encaminhamento para cirurgia.",
-        "porte": "pequeno",
-        "specificFields": {
-          "behavior": "Prostrada.",
-          "waterIntakeSmall": "Aumentada",
-          "vaccinationStatus": "Em dia"
-        }
-      }
-    },
-    {
-      "id": "peq_canino_colapso_traqueia",
-      "mode": "nova",
-      "porte": "pequeno",
-      "input": "Toda vez que o meu Yorkshire puxa a guia ou fica animado, ele faz um barulho de ganso engasgado. Parece que ele está sufocando por alguns segundos e depois volta ao normal. No exame físico: Sensibilidade traqueal positiva (reflexo de tosse imediato à palpação da traqueia cervical). Diagnóstico: Suspeita de Colapso de Traqueia. Conduta: Substituição de coleira de pescoço por peitoral e controle de peso. Procedimento: Radiografia cervical e torácica em fase inspiratória e expiratória. Medicação: Antitussígenos e broncodilatadores se necessário. Retorno: Retorno em 30 dias para controle. Vacinação: Em dia. Ingestão de água: Normal.",
-      "output": {
-        "chiefComplaint": "Tosse produtiva paroxística (\"tosse de ganso\").",
-        "anamnesis": "Tutor relata episódios de angústia respiratória desencadeados por excitação ou pressão cervical (guia).",
-        "physicalExam": "Sensibilidade traqueal positiva (reflexo de tosse imediato à palpação da traqueia cervical).",
-        "diagnosis": "Suspeita de Colapso de Traqueia.",
-        "treatment": "Substituição de coleira de pescoço por peitoral e controle de peso.",
-        "procedures": "Radiografia cervical e torácica em fase inspiratória e expiratória.",
-        "medications": "Antitussígenos e broncodilatadores se necessário.",
-        "examDetails": "",
-        "notes": "Evitar situações de estresse e calor excessivo.",
-        "returnRecommendation": "Retorno em 30 dias para controle.",
-        "porte": "pequeno",
-        "specificFields": {
-          "behavior": "Ativo/Ansioso.",
-          "waterIntakeSmall": "Normal",
-          "vaccinationStatus": "Em dia"
-        }
-      }
-    },
-    {
-      "id": "peq_canino_otite_croni",
-      "mode": "nova",
-      "porte": "pequeno",
-      "input": "Meu Cocker Spaniel vive com a orelha inflamada. Já usei vários remédios e não resolve. Agora a orelha dele está inchada, parece um balão de sangue, e ele está com a cabeça torta. No exame físico: Estenose de conduto auditivo por proliferação tecidual, secreção ceruminosa fétida e otohematoma em face interna da orelha. Diagnóstico: Otite externa crônica e Otohematoma; avaliar Otite Média/Interna. Conduta: Drenagem cirúrgica do hematoma e limpeza profunda sob sedação. Procedimento: Citologia de conduto e cultura/antibiograma. Medicação: Antibiótico sistêmico e otológico conforme cultura. Exames solicitados: Avaliação neurológica para descartar síndrome vestibular. Retorno: Retorno para curativo em 48h. Vacinação: Em dia. Ingestão de água: Normal.",
-      "output": {
-        "chiefComplaint": "Otohematoma e otite crônica recidivante.",
-        "anamnesis": "Histórico de otites de repetição. Apresenta aumento de volume flutuante em pavilhão auricular (hematoma) e desvio de cabeça (head tilt).",
-        "physicalExam": "Estenose de conduto auditivo por proliferação tecidual, secreção ceruminosa fétida e otohematoma em face interna da orelha.",
-        "diagnosis": "Otite externa crônica e Otohematoma; avaliar Otite Média/Interna.",
-        "treatment": "Drenagem cirúrgica do hematoma e limpeza profunda sob sedação.",
-        "procedures": "Citologia de conduto e cultura/antibiograma.",
-        "medications": "Antibiótico sistêmico e otológico conforme cultura.",
-        "examDetails": "Avaliação neurológica para descartar síndrome vestibular.",
-        "notes": "Raça com forte predisposição por anatomia do pavilhão.",
-        "returnRecommendation": "Retorno para curativo em 48h.",
-        "porte": "pequeno",
-        "specificFields": {
-          "behavior": "Muito incomodado.",
-          "waterIntakeSmall": "Normal",
-          "vaccinationStatus": "Em dia"
-        }
-      }
-    },
-    {
-      "id": "peq_canino_parvo",
-      "mode": "nova",
-      "porte": "pequeno",
-      "input": "Comprei esse filhote de maltês faz 3 dias. Ele começou com uma diarreia com sangue muito forte e o cheiro é horrível. Ele não para de vomitar e está murchinho, nem abre o olho direito. No exame físico: Mucosas pálidas, tempo de preenchimento capilar aumentado (3s), desidratação >8%, dor abdominal. Diagnóstico: Suspeita de Parvovirose Canina. Conduta: Isolamento e suporte intensivo. Procedimento: Teste rápido para Parvovirose e hemograma. Medicação: Fluidoterapia agressiva, antieméticos intravenosos e antibioticoterapia de cobertura. Exames solicitados: Monitorar leucopenia severa. Retorno: Internação em setor de doenças infectocontagiosas. Vacinação: Incompleto. Ingestão de água: Inexistente (recusa).",
-      "output": {
-        "chiefComplaint": "Gastroenterite hemorrágica aguda em filhote.",
-        "anamnesis": "Filhote recém-adquirido, protocolo vacinal incompleto. Apresenta diarreia sanguinolenta fétida, êmese e desidratação severa.",
-        "physicalExam": "Mucosas pálidas, tempo de preenchimento capilar aumentado (3s), desidratação >8%, dor abdominal.",
-        "diagnosis": "Suspeita de Parvovirose Canina.",
-        "treatment": "Isolamento e suporte intensivo.",
-        "procedures": "Teste rápido para Parvovirose e hemograma.",
-        "medications": "Fluidoterapia agressiva, antieméticos intravenosos e antibioticoterapia de cobertura.",
-        "examDetails": "Monitorar leucopenia severa.",
-        "notes": "Prognóstico reservado devido à idade e estado de hidratação.",
-        "returnRecommendation": "Internação em setor de doenças infectocontagiosas.",
-        "porte": "pequeno",
-        "specificFields": {
-          "behavior": "Comatoso/Prostrado.",
-          "waterIntakeSmall": "Inexistente (recusa)",
-          "vaccinationStatus": "Incompleto"
-        }
-      }
-    },
-    {
-      "id": "peq_felino_esporo",
-      "mode": "nova",
-      "porte": "pequeno",
-      "input": "O meu gato briga muito na rua. Ele apareceu com uns buracos na pele, umas feridas que não fecham e soltam um líquido. Tem no nariz e na pata. Já passei pomada e não adiantou nada. No exame físico: Nódulos ulcerados com exsudação serosanguinolenta em região de espelho nasal e extremidade de membro anterior. Diagnóstico: Suspeita de Esporotricose Felina. Conduta: Terapia antifúngica sistêmica prolongada. Procedimento: Citologia por imprint ou cultura fúngica. Medicação: Itraconazol (dose felina) por pelo menos 3 meses. Exames solicitados: Avaliação de função hepática durante o tratamento. Retorno: Retorno mensal para acompanhamento das lesões. Vacinação: Não informado. Ingestão de água: Normal.",
-      "output": {
-        "chiefComplaint": "Lesões cutâneas nodulares e ulcerativas.",
-        "anamnesis": "Feline com acesso à rua e histórico de brigas. Lesões crônicas sem resposta a tratamentos tópicos convencionais.",
-        "physicalExam": "Nódulos ulcerados com exsudação serosanguinolenta em região de espelho nasal e extremidade de membro anterior.",
-        "diagnosis": "Suspeita de Esporotricose Felina.",
-        "treatment": "Terapia antifúngica sistêmica prolongada.",
-        "procedures": "Citologia por imprint ou cultura fúngica.",
-        "medications": "Itraconazol (dose felina) por pelo menos 3 meses.",
-        "examDetails": "Avaliação de função hepática durante o tratamento.",
-        "notes": "Zoonose importante. Tutor orientado sobre o manejo do animal e riscos.",
-        "returnRecommendation": "Retorno mensal para acompanhamento das lesões.",
-        "porte": "pequeno",
-        "specificFields": {
-          "behavior": "Normal/Arisco.",
-          "waterIntakeSmall": "Normal",
-          "vaccinationStatus": "Não informado"
-        }
-      }
-    },
-    {
-      "id": "peq_canino_gdv",
-      "mode": "nova",
-      "porte": "pequeno",
-      "input": "Meu Pastor Alemão jantou e logo depois correu no quintal. Agora a barriga dele está inchada igual um tambor, ele está tentando vomitar mas não sai nada, só uma babá. Ele está muito agoniado. No exame físico: Abdômen distendido e timpânico à percussão, sinais de choque hipovolêmico (mucosas pálidas, taquicardia). Diagnóstico: Complexo Dilatação-Vólvulo Gástrico (DVG). Conduta: Descompressão gástrica de emergência e estabilização do choque. Procedimento: Trocarização gástrica e radiografia abdominal lateral direita. Medicação: Fluidoterapia de choque e analgesia. Retorno: Bloco cirúrgico imediato. Vacinação: Em dia. Ingestão de água: Não avaliado.",
-      "output": {
-        "chiefComplaint": "Distensão abdominal aguda e tentativa de êmese improdutiva.",
-        "anamnesis": "Cão de grande porte, histórico de exercício após alimentação. Apresenta timpanismo abdominal e sialorreia.",
-        "physicalExam": "Abdômen distendido e timpânico à percussão, sinais de choque hipovolêmico (mucosas pálidas, taquicardia).",
-        "diagnosis": "Complexo Dilatação-Vólvulo Gástrico (DVG).",
-        "treatment": "Descompressão gástrica de emergência e estabilização do choque.",
-        "procedures": "Trocarização gástrica e radiografia abdominal lateral direita.",
-        "medications": "Fluidoterapia de choque e analgesia.",
-        "examDetails": "",
-        "notes": "Emergência cirúrgica absoluta (Gastropexia necessária).",
-        "returnRecommendation": "Bloco cirúrgico imediato.",
-        "porte": "pequeno",
-        "specificFields": {
-          "behavior": "Agonizante/Inquieto.",
-          "waterIntakeSmall": "Não avaliado",
-          "vaccinationStatus": "Em dia"
-        }
-      }
-    },
-    {
-      "id": "peq_canino_hipotireo",
-      "mode": "nova",
-      "porte": "pequeno",
-      "input": "O Totó está muito gordo e preguiçoso. Ele não quer mais brincar, só dorme e está ficando careca nas laterais do corpo, mas não coça. A pele dele parece que ficou mais escura. No exame físico: Obesidade, bradicardia, alopecia em \"cauda de rato\" e tronco lateral, hiperpigmentação cutânea. Diagnóstico: Suspeita de Hipotireoidismo Canino. Conduta: Reposição hormonal após confirmação. Procedimento: Dosagem de T4 livre por diálise e TSH canino. Medicação: Levotiroxina sódica conforme prescrição. Exames solicitados: Perfil lipídico (frequente hipercolesterolemia associada). Retorno: Retorno em 15 dias para novos exames. Vacinação: Em dia. Ingestão de água: Normal.",
-      "output": {
-        "chiefComplaint": "Ganho de peso, letargia e alopecia bilateral simétrica não pruriginosa.",
-        "anamnesis": "Tutor relata intolerância ao exercício e mudanças dermatológicas crônicas (hiperpigmentação).",
-        "physicalExam": "Obesidade, bradicardia, alopecia em \"cauda de rato\" e tronco lateral, hiperpigmentação cutânea.",
-        "diagnosis": "Suspeita de Hipotireoidismo Canino.",
-        "treatment": "Reposição hormonal após confirmação.",
-        "procedures": "Dosagem de T4 livre por diálise e TSH canino.",
-        "medications": "Levotiroxina sódica conforme prescrição.",
-        "examDetails": "Perfil lipídico (frequente hipercolesterolemia associada).",
-        "notes": "Avaliar melhora do nível de atividade após início da terapia.",
-        "returnRecommendation": "Retorno em 15 dias para novos exames.",
-        "porte": "pequeno",
-        "specificFields": {
-          "behavior": "Muito calmo/Letárgico.",
-          "waterIntakeSmall": "Normal",
-          "vaccinationStatus": "Em dia"
-        }
-      }
-    },
-    {
-      "id": "peq_canino_demodecia",
-      "mode": "nova",
-      "porte": "pequeno",
-      "input": "Esse cachorro de 6 meses está com umas falhas de pelo ao redor dos olhos, parece que ele está de óculos. Não coça, mas está aumentando. As vacinas estão atrasadas. No exame físico: Áreas de alopecia e eritema leve em região periocular e membros anteriores. Diagnóstico: Suspeita de Demodicose (Sarna Demodécica) localizada. Conduta: Controle de ectoparasitas e melhora da imunidade. Procedimento: Raspado de pele profundo. Medicação: Afoxolaner ou Fluralaner conforme peso. Retorno: Reavaliação em 30 dias. Ingestão de água: Normal.",
-      "output": {
-        "chiefComplaint": "Alopecia periocular bilateral.",
-        "anamnesis": "Animal jovem com falhas de pelo localizadas em face. Ausência de prurido relatada pelo tutor.",
-        "physicalExam": "Áreas de alopecia e eritema leve em região periocular e membros anteriores.",
-        "diagnosis": "Suspeita de Demodicose (Sarna Demodécica) localizada.",
-        "treatment": "Controle de ectoparasitas e melhora da imunidade.",
-        "procedures": "Raspado de pele profundo.",
-        "medications": "Afoxolaner ou Fluralaner conforme peso.",
-        "examDetails": "",
-        "notes": "Condição frequentemente associada à queda de imunidade em filhotes.",
-        "returnRecommendation": "Reavaliação em 30 dias.",
-        "porte": "pequeno",
-        "specificFields": {
-          "behavior": "Normal",
-          "waterIntakeSmall": "Normal",
-          "vaccinationStatus": "Atrasado"
-        }
-      }
-    },
-    {
-      "id": "peq_canino_hernia",
-      "mode": "nova",
-      "porte": "pequeno",
-      "input": "Apareceu uma bola mole na barriga, perto do umbigo do meu filhote de Poodle. Quando eu aperto, ela some para dentro, mas depois volta. Ele brinca normal. No exame físico: Hérnia umbilical de aproximadamente 1cm, conteúdo redutível, anel herniário palpável. Diagnóstico: Hérnia Umbilical. Conduta: Correção cirúrgica (Herniorrafia). Exames solicitados: Recomenda-se realizar junto com a castração. Retorno: Agendar cirurgia eletiva. Vacinação: Em dia. Ingestão de água: Normal.",
-      "output": {
-        "chiefComplaint": "Aumento de volume redutível em região umbilical.",
-        "anamnesis": "Tutor notou massa macia em abdômen ventral que reduz à pressão manual. Sem sinais de dor ou desconforto.",
-        "physicalExam": "Hérnia umbilical de aproximadamente 1cm, conteúdo redutível, anel herniário palpável.",
-        "diagnosis": "Hérnia Umbilical.",
-        "treatment": "Correção cirúrgica (Herniorrafia).",
+        "chiefComplaint": "Diarreia aquosa em bezerro com hiporexia.",
+        "anamnesis": "Inicio em 24 horas com reducao de mamada e apatia.",
+        "physicalExam": "Sinais de desidratacao leve ao exame.",
+        "diagnosis": "Enteropatia aguda em bezerro.",
+        "treatment": "Suporte hidrico e ajuste nutricional.",
         "procedures": "",
         "medications": "",
-        "examDetails": "Recomenda-se realizar junto com a castração.",
-        "notes": "Monitorar se a hérnia se tornar rígida, fria ou dolorosa (risco de encarceramento).",
-        "returnRecommendation": "Agendar cirurgia eletiva.",
-        "porte": "pequeno",
+        "examDetails": "Exame coproparasitologico solicitado.",
+        "notes": "",
+        "returnRecommendation": "Reavaliar em 24 a 48 horas.",
+        "porte": "grande",
         "specificFields": {
-          "behavior": "Ativo/Normal.",
-          "waterIntakeSmall": "Normal",
-          "vaccinationStatus": "Em dia"
+          "animalIdentificationDetails": "Bezerro em aleitamento.",
+          "fecesAndUrine": "Fezes aquosas.",
+          "neonateAndReproduction": "Neonato."
         }
       }
     },
     {
-      "id": "peq_canino_pancreatite",
-      "mode": "nova",
-      "porte": "pequeno",
-      "input": "O meu cachorro comeu um monte de gordura de churrasco ontem. Hoje ele está vomitando muito, com a barriga muito dura e parece que está rezando, com o peito no chão e a bunda levantada. No exame físico: Dor severa em abdômen cranial, desidratação, mucosas congestas. Diagnóstico: Suspeita de Pancreatite Aguda. Conduta: Internação para controle de dor e hidratação. Procedimento: Ultrassonografia abdominal e teste de Lipase Pancreática Específica (cPL). Medicação: Analgesia potente (opioides), antieméticos e jejum alimentar. Exames solicitados: Hemograma e perfil bioquímico (enzimas hepáticas e renais). Retorno: Internação imediata. Vacinação: Em dia. Ingestão de água: Recusa.",
+      "id": "mobile_grande_equino_febre_anemia",
+      "mode": "retorno",
+      "porte": "grande",
+      "input": "Audio de campo: Equino com febre e mucosas palidas. Vet: Suporte e exames hematologicos. No exame fisico: Achados de campo compativeis com o quadro. Diagnostico: Hemoparasitose suspeita. Conduta: Suporte e exames hematologicos. Medicacao: Conforme prescricao. Exames solicitados: Exames de campo/laboratoriais conforme necessidade. Retorno: Reavaliar em 24 a 72 horas. Sistema de producao: Nao informado. Lote: Lote em acompanhamento.",
       "output": {
-        "chiefComplaint": "Êmese profusa e dor abdominal intensa pós-ingestão de gordura.",
-        "anamnesis": "Histórico de transgressão alimentar gordurosa. Apresenta postura de \"prece\" (alívio de dor abdominal).",
-        "physicalExam": "Dor severa em abdômen cranial, desidratação, mucosas congestas.",
-        "diagnosis": "Suspeita de Pancreatite Aguda.",
-        "treatment": "Internação para controle de dor e hidratação.",
-        "procedures": "Ultrassonografia abdominal e teste de Lipase Pancreática Específica (cPL).",
-        "medications": "Analgesia potente (opioides), antieméticos e jejum alimentar.",
-        "examDetails": "Hemograma e perfil bioquímico (enzimas hepáticas e renais).",
-        "notes": "Condição potencialmente fatal.",
-        "returnRecommendation": "Internação imediata.",
-        "porte": "pequeno",
-        "specificFields": {
-          "behavior": "Álgico/Prostrado.",
-          "waterIntakeSmall": "Recusa",
-          "vaccinationStatus": "Em dia"
-        }
-      }
-    },
-    {
-      "id": "peq_canino_osteosar",
-      "mode": "nova",
-      "porte": "pequeno",
-      "input": "O Thor (Rottweiler, 6 anos) está mancando muito da pata da frente. Perto do \"pulso\" dele está muito inchado, duro e quente. Ele está chorando de dor e não quer mais apoiar a pata. No exame físico: Edema rígido em metáfise óssea, calor local e sensibilidade extrema à palpação. Diagnóstico: Suspeita de Osteossarcoma. Conduta: Manejo de dor e avaliação de amputação/quimioterapia. Procedimento: Radiografia de membro afetado e tórax (pesquisa de metástase). Medicação: Analgesia multimodal (AINEs + Opioides). Exames solicitados: Biópsia óssea para confirmação histopatológica. Retorno: Retorno após radiografias. Vacinação: Em dia. Ingestão de água: Normal.",
-      "output": {
-        "chiefComplaint": "Claudicação severa e aumento de volume ósseo.",
-        "anamnesis": "Cão de raça grande com aumento de volume firme em rádio distal (\"pulso\"). Evolução rápida com dor intensa.",
-        "physicalExam": "Edema rígido em metáfise óssea, calor local e sensibilidade extrema à palpação.",
-        "diagnosis": "Suspeita de Osteossarcoma.",
-        "treatment": "Manejo de dor e avaliação de amputação/quimioterapia.",
-        "procedures": "Radiografia de membro afetado e tórax (pesquisa de metástase).",
-        "medications": "Analgesia multimodal (AINEs + Opioides).",
-        "examDetails": "Biópsia óssea para confirmação histopatológica.",
-        "notes": "Neoplasia óssea altamente agressiva.",
-        "returnRecommendation": "Retorno após radiografias.",
-        "porte": "pequeno",
-        "specificFields": {
-          "behavior": "Muito álgico.",
-          "waterIntakeSmall": "Normal",
-          "vaccinationStatus": "Em dia"
-        }
-      }
-    },
-    {
-      "id": "peq_felino_fivfelv",
-      "mode": "nova",
-      "porte": "pequeno",
-      "input": "O meu gato não melhora dessa gripe. Ele está sempre com o nariz escorrendo, os olhos sujos e a gengiva muito vermelha e sangrando. Ele está ficando muito magro. No exame físico: Gengivite proliferativa, secreção nasal bilateral, linfonodomegalia e baixo escore corporal. Diagnóstico: Suspeita de Imunodeficiência Felina (FIV) e/ou Leucemia Felina (FeLV). Conduta: Tratamento de suporte e controle de infecções secundárias. Procedimento: Teste rápido (SNAP) FIV/FeLV. Medicação: Antibioticoterapia para estomatite e imunoestimulantes. Exames solicitados: Hemograma completo para avaliar anemias ou leucemias. Retorno: Retorno após resultado do teste viral. Vacinação: Não informado. Ingestão de água: Normal.",
-      "output": {
-        "chiefComplaint": "Complexo respiratório crônico e gengivostomatite.",
-        "anamnesis": "Feline com sintomas respiratórios persistentes e inflamação oral severa. Tutor relata emagrecimento progressivo.",
-        "physicalExam": "Gengivite proliferativa, secreção nasal bilateral, linfonodomegalia e baixo escore corporal.",
-        "diagnosis": "Suspeita de Imunodeficiência Felina (FIV) e/ou Leucemia Felina (FeLV).",
-        "treatment": "Tratamento de suporte e controle de infecções secundárias.",
-        "procedures": "Teste rápido (SNAP) FIV/FeLV.",
-        "medications": "Antibioticoterapia para estomatite e imunoestimulantes.",
-        "examDetails": "Hemograma completo para avaliar anemias ou leucemias.",
-        "notes": "Doenças virais crônicas com impacto no sistema imune.",
-        "returnRecommendation": "Retorno após resultado do teste viral.",
-        "porte": "pequeno",
-        "specificFields": {
-          "behavior": "Apático.",
-          "waterIntakeSmall": "Normal",
-          "vaccinationStatus": "Não informado"
-        }
-      }
-    },
-    {
-      "id": "peq_canino_tosse_canis",
-      "mode": "nova",
-      "porte": "pequeno",
-      "input": "Levei o meu cachorro para um hotelzinho semana passada. Agora ele está com uma tosse seca, parece que tem algo entalado, e as vezes parece que ele vai vomitar uma espuma branca de tanto tossir. No exame físico: Reflexo tussígeno exacerbado à palpação traqueal, pulmões limpos à auscultação. Diagnóstico: Traqueobronquite Infecciosa Canina (Tosse dos Canis). Conduta: Isolamento de outros cães e repouso. Medicação: Mucolíticos e, se necessário, antibioticoterapia (Doxiciclina). Retorno: Retorno em 7 dias se não houver melhora. Vacinação: Desatualizado (falta Pneumodog/KC). Ingestão de água: Normal.",
-      "output": {
-        "chiefComplaint": "Tosse seca paroxística pós-exposição a aglomeração.",
-        "anamnesis": "Histórico recente de contato com outros animais (hotelzinho). Apresenta tosse produtiva (expectoração de muco branco).",
-        "physicalExam": "Reflexo tussígeno exacerbado à palpação traqueal, pulmões limpos à auscultação.",
-        "diagnosis": "Traqueobronquite Infecciosa Canina (Tosse dos Canis).",
-        "treatment": "Isolamento de outros cães e repouso.",
+        "chiefComplaint": "Febre e apatia em equino.",
+        "anamnesis": "Responsavel relata febre e apatia em equino.",
+        "physicalExam": "Achados de campo compativeis com o quadro.",
+        "diagnosis": "Hemoparasitose suspeita.",
+        "treatment": "Suporte e exames hematologicos.",
         "procedures": "",
-        "medications": "Mucolíticos e, se necessário, antibioticoterapia (Doxiciclina).",
-        "examDetails": "",
-        "notes": "Doença altamente contagiosa.",
-        "returnRecommendation": "Retorno em 7 dias se não houver melhora.",
-        "porte": "pequeno",
+        "medications": "Conforme prescricao.",
+        "examDetails": "Exames de campo/laboratoriais conforme necessidade.",
+        "notes": "",
+        "returnRecommendation": "Reavaliar em 24 a 72 horas.",
+        "porte": "grande",
         "specificFields": {
-          "behavior": "Ativo, mas cansado pela tosse.",
-          "waterIntakeSmall": "Normal",
-          "vaccinationStatus": "Desatualizado (falta Pneumodog/KC)"
+          "batch": "Lote em acompanhamento",
+          "productionSystem": "Nao informado",
+          "physicalExamDetailed": "Avaliacao clinica de campo realizada."
+        }
+      }
+    },
+    {
+      "id": "mobile_grande_bovino_retencao_placenta",
+      "mode": "nova",
+      "porte": "grande",
+      "input": "Audio de campo: Vaca pos-parto com placenta retida. Vet: Conduta reprodutiva e suporte. No exame fisico: Achados de campo compativeis com o quadro. Diagnostico: Risco de metrite puerperal. Medicacao: Conforme prescricao. Exames solicitados: Exames de campo/laboratoriais conforme necessidade. Retorno: Reavaliar em 24 a 72 horas. Sistema de producao: Nao informado. Lote: Lote em acompanhamento.",
+      "output": {
+        "chiefComplaint": "Retencao placentaria.",
+        "anamnesis": "Responsavel relata retencao placentaria.",
+        "physicalExam": "Achados de campo compativeis com o quadro.",
+        "diagnosis": "Risco de metrite puerperal.",
+        "treatment": "Conduta reprodutiva e suporte.",
+        "procedures": "",
+        "medications": "Conforme prescricao.",
+        "examDetails": "Exames de campo/laboratoriais conforme necessidade.",
+        "notes": "",
+        "returnRecommendation": "Reavaliar em 24 a 72 horas.",
+        "porte": "grande",
+        "specificFields": {
+          "batch": "Lote em acompanhamento",
+          "productionSystem": "Nao informado",
+          "physicalExamDetailed": "Avaliacao clinica de campo realizada."
+        }
+      }
+    },
+    {
+      "id": "mobile_grande_bovino_casco",
+      "mode": "nova",
+      "porte": "grande",
+      "input": "Audio de campo: Bovino mancando com casco quente. Vet: Curativo de casco e analgesia. No exame fisico: Achados de campo compativeis com o quadro. Diagnostico: Pododermatite suspeita. Conduta: Curativo de casco e analgesia. Medicacao: Conforme prescricao. Exames solicitados: Exames de campo/laboratoriais conforme necessidade. Retorno: Reavaliar em 24 a 72 horas. Sistema de producao: Nao informado. Lote: Lote em acompanhamento.",
+      "output": {
+        "chiefComplaint": "Claudicacao por lesao podal.",
+        "anamnesis": "Responsavel relata claudicacao por lesao podal.",
+        "physicalExam": "Achados de campo compativeis com o quadro.",
+        "diagnosis": "Pododermatite suspeita.",
+        "treatment": "Curativo de casco e analgesia.",
+        "procedures": "",
+        "medications": "Conforme prescricao.",
+        "examDetails": "Exames de campo/laboratoriais conforme necessidade.",
+        "notes": "",
+        "returnRecommendation": "Reavaliar em 24 a 72 horas.",
+        "porte": "grande",
+        "specificFields": {
+          "batch": "Lote em acompanhamento",
+          "productionSystem": "Nao informado",
+          "physicalExamDetailed": "Avaliacao clinica de campo realizada."
+        }
+      }
+    },
+    {
+      "id": "mobile_grande_equino_colica_retorno",
+      "mode": "retorno",
+      "porte": "grande",
+      "input": "Audio de campo: Retorno pos-colica sem dor aguda. Vet: Dieta leve e observacao. No exame fisico: Achados de campo compativeis com o quadro. Diagnostico: Evolucao favoravel. Conduta: Dieta leve e observacao. Medicacao: Conforme prescricao. Exames solicitados: Exames de campo/laboratoriais conforme necessidade. Sistema de producao: Nao informado. Lote: Lote em acompanhamento.",
+      "output": {
+        "chiefComplaint": "Pos-colica em melhora.",
+        "anamnesis": "Responsavel relata pos-colica em melhora.",
+        "physicalExam": "Achados de campo compativeis com o quadro.",
+        "diagnosis": "Evolucao favoravel.",
+        "treatment": "Dieta leve e observacao.",
+        "procedures": "",
+        "medications": "Conforme prescricao.",
+        "examDetails": "Exames de campo/laboratoriais conforme necessidade.",
+        "notes": "",
+        "returnRecommendation": "Reavaliar em 24 a 72 horas.",
+        "porte": "grande",
+        "specificFields": {
+          "batch": "Lote em acompanhamento",
+          "productionSystem": "Nao informado",
+          "physicalExamDetailed": "Avaliacao clinica de campo realizada."
+        }
+      }
+    },
+    {
+      "id": "mobile_grande_ovino_diarreia",
+      "mode": "nova",
+      "porte": "grande",
+      "input": "Audio de campo: Lote de ovinos com diarreia e perda de escore. Vet: Manejo e OPG. No exame fisico: Achados de campo compativeis com o quadro. Diagnostico: Parasitose/enteropatia suspeita. Conduta: Manejo e OPG. Medicacao: Conforme prescricao. Retorno: Reavaliar em 24 a 72 horas. Sistema de producao: Nao informado.",
+      "output": {
+        "chiefComplaint": "Diarreia em lote.",
+        "anamnesis": "Responsavel relata diarreia em lote.",
+        "physicalExam": "Achados de campo compativeis com o quadro.",
+        "diagnosis": "Parasitose/enteropatia suspeita.",
+        "treatment": "Manejo e OPG.",
+        "procedures": "",
+        "medications": "Conforme prescricao.",
+        "examDetails": "Exames de campo/laboratoriais conforme necessidade.",
+        "notes": "",
+        "returnRecommendation": "Reavaliar em 24 a 72 horas.",
+        "porte": "grande",
+        "specificFields": {
+          "batch": "Lote em acompanhamento",
+          "productionSystem": "Nao informado",
+          "physicalExamDetailed": "Avaliacao clinica de campo realizada."
+        }
+      }
+    },
+    {
+      "id": "mobile_grande_caprino_respiratorio",
+      "mode": "nova",
+      "porte": "grande",
+      "input": "Audio de campo: Caprinos com tosse em galpao. Vet: Correcao ambiental e tratamento. No exame fisico: Achados de campo compativeis com o quadro. Diagnostico: Broncopneumonia suspeita. Medicacao: Conforme prescricao. Exames solicitados: Exames de campo/laboratoriais conforme necessidade. Retorno: Reavaliar em 24 a 72 horas. Sistema de producao: Nao informado. Lote: Lote em acompanhamento.",
+      "output": {
+        "chiefComplaint": "Sindrome respiratoria de lote.",
+        "anamnesis": "Responsavel relata sindrome respiratoria de lote.",
+        "physicalExam": "Achados de campo compativeis com o quadro.",
+        "diagnosis": "Broncopneumonia suspeita.",
+        "treatment": "Correcao ambiental e tratamento.",
+        "procedures": "",
+        "medications": "Conforme prescricao.",
+        "examDetails": "Exames de campo/laboratoriais conforme necessidade.",
+        "notes": "",
+        "returnRecommendation": "Reavaliar em 24 a 72 horas.",
+        "porte": "grande",
+        "specificFields": {
+          "batch": "Lote em acompanhamento",
+          "productionSystem": "Nao informado",
+          "physicalExamDetailed": "Avaliacao clinica de campo realizada."
+        }
+      }
+    },
+    {
+      "id": "mobile_grande_bovino_ecc_retorno",
+      "mode": "retorno",
+      "porte": "grande",
+      "input": "Audio de campo: Retorno nutricional com ECC em melhora. Vet: Manter suplementacao. No exame fisico: Achados de campo compativeis com o quadro. Diagnostico: Resposta parcial positiva. Conduta: Manter suplementacao. Medicacao: Conforme prescricao. Exames solicitados: Exames de campo/laboratoriais conforme necessidade. Sistema de producao: Nao informado. Lote: Lote em acompanhamento.",
+      "output": {
+        "chiefComplaint": "Acompanhamento de escore corporal.",
+        "anamnesis": "Responsavel relata acompanhamento de escore corporal.",
+        "physicalExam": "Achados de campo compativeis com o quadro.",
+        "diagnosis": "Resposta parcial positiva.",
+        "treatment": "Manter suplementacao.",
+        "procedures": "",
+        "medications": "Conforme prescricao.",
+        "examDetails": "Exames de campo/laboratoriais conforme necessidade.",
+        "notes": "",
+        "returnRecommendation": "Reavaliar em 24 a 72 horas.",
+        "porte": "grande",
+        "specificFields": {
+          "batch": "Lote em acompanhamento",
+          "productionSystem": "Nao informado",
+          "physicalExamDetailed": "Avaliacao clinica de campo realizada."
+        }
+      }
+    },
+    {
+      "id": "mobile_grande_equino_casqueamento_retorno",
+      "mode": "nova",
+      "porte": "grande",
+      "input": "Audio de campo: Retorno apos casqueamento com dor residual. Vet: Trabalho leve e controle. No exame fisico: Achados de campo compativeis com o quadro. Diagnostico: Recuperacao locomotora parcial. Conduta: Trabalho leve e controle. Medicacao: Conforme prescricao. Exames solicitados: Exames de campo/laboratoriais conforme necessidade. Sistema de producao: Nao informado. Lote: Lote em acompanhamento.",
+      "output": {
+        "chiefComplaint": "Claudicacao residual.",
+        "anamnesis": "Responsavel relata claudicacao residual.",
+        "physicalExam": "Achados de campo compativeis com o quadro.",
+        "diagnosis": "Recuperacao locomotora parcial.",
+        "treatment": "Trabalho leve e controle.",
+        "procedures": "",
+        "medications": "Conforme prescricao.",
+        "examDetails": "Exames de campo/laboratoriais conforme necessidade.",
+        "notes": "",
+        "returnRecommendation": "Reavaliar em 24 a 72 horas.",
+        "porte": "grande",
+        "specificFields": {
+          "batch": "Lote em acompanhamento",
+          "productionSystem": "Nao informado",
+          "physicalExamDetailed": "Avaliacao clinica de campo realizada."
+        }
+      }
+    },
+    {
+      "id": "mobile_grande_bovino_abortamento",
+      "mode": "nova",
+      "porte": "grande",
+      "input": "Audio de campo: Vaca com abortamento e febre baixa. Vet: Coleta e suporte. No exame fisico: Achados de campo compativeis com o quadro. Diagnostico: Etiologia infecciosa em investigacao. Conduta: Coleta e suporte. Medicacao: Conforme prescricao. Exames solicitados: Exames de campo/laboratoriais conforme necessidade. Retorno: Reavaliar em 24 a 72 horas. Sistema de producao: Nao informado. Lote: Lote em acompanhamento.",
+      "output": {
+        "chiefComplaint": "Abortamento recente.",
+        "anamnesis": "Responsavel relata abortamento recente.",
+        "physicalExam": "Achados de campo compativeis com o quadro.",
+        "diagnosis": "Etiologia infecciosa em investigacao.",
+        "treatment": "Coleta e suporte.",
+        "procedures": "",
+        "medications": "Conforme prescricao.",
+        "examDetails": "Exames de campo/laboratoriais conforme necessidade.",
+        "notes": "",
+        "returnRecommendation": "Reavaliar em 24 a 72 horas.",
+        "porte": "grande",
+        "specificFields": {
+          "batch": "Lote em acompanhamento",
+          "productionSystem": "Nao informado",
+          "physicalExamDetailed": "Avaliacao clinica de campo realizada."
+        }
+      }
+    },
+    {
+      "id": "mobile_grande_suino_tosse",
+      "mode": "retorno",
+      "porte": "grande",
+      "input": "Audio de campo: Suinos com tosse e baixo ganho. Vet: Ajuste sanitario de lote. No exame fisico: Achados de campo compativeis com o quadro. Diagnostico: Doenca respiratoria enzootica suspeita. Conduta: Ajuste sanitario de lote. Medicacao: Conforme prescricao. Exames solicitados: Exames de campo/laboratoriais conforme necessidade. Retorno: Reavaliar em 24 a 72 horas. Sistema de producao: Nao informado.",
+      "output": {
+        "chiefComplaint": "Sinais respiratorios em suinos.",
+        "anamnesis": "Responsavel relata sinais respiratorios em suinos.",
+        "physicalExam": "Achados de campo compativeis com o quadro.",
+        "diagnosis": "Doenca respiratoria enzootica suspeita.",
+        "treatment": "Ajuste sanitario de lote.",
+        "procedures": "",
+        "medications": "Conforme prescricao.",
+        "examDetails": "Exames de campo/laboratoriais conforme necessidade.",
+        "notes": "",
+        "returnRecommendation": "Reavaliar em 24 a 72 horas.",
+        "porte": "grande",
+        "specificFields": {
+          "batch": "Lote em acompanhamento",
+          "productionSystem": "Nao informado",
+          "physicalExamDetailed": "Avaliacao clinica de campo realizada."
+        }
+      }
+    },
+    {
+      "id": "mobile_grande_bovino_mastite_retorno2",
+      "mode": "nova",
+      "porte": "grande",
+      "input": "Audio de campo: Retorno mastite com CMT ainda positivo. Vet: Manter protocolo 3 dias. No exame fisico: Achados de campo compativeis com o quadro. Diagnostico: Melhora parcial. Conduta: Manter protocolo 3 dias. Medicacao: Conforme prescricao. Sistema de producao: Nao informado. Lote: Lote em acompanhamento.",
+      "output": {
+        "chiefComplaint": "Mastite em acompanhamento.",
+        "anamnesis": "Responsavel relata mastite em acompanhamento.",
+        "physicalExam": "Achados de campo compativeis com o quadro.",
+        "diagnosis": "Melhora parcial.",
+        "treatment": "Manter protocolo 3 dias.",
+        "procedures": "",
+        "medications": "Conforme prescricao.",
+        "examDetails": "Exames de campo/laboratoriais conforme necessidade.",
+        "notes": "",
+        "returnRecommendation": "Reavaliar em 24 a 72 horas.",
+        "porte": "grande",
+        "specificFields": {
+          "batch": "Lote em acompanhamento",
+          "productionSystem": "Nao informado",
+          "physicalExamDetailed": "Avaliacao clinica de campo realizada."
+        }
+      }
+    },
+    {
+      "id": "mobile_grande_equino_miosite",
+      "mode": "nova",
+      "porte": "grande",
+      "input": "Audio de campo: Equino com dor muscular apos treino. Vet: Repouso e anti-inflamatorio. No exame fisico: Achados de campo compativeis com o quadro. Diagnostico: Miosite por sobrecarga. Conduta: Repouso e anti-inflamatorio. Medicacao: Conforme prescricao. Exames solicitados: Exames de campo/laboratoriais conforme necessidade. Retorno: Reavaliar em 24 a 72 horas. Sistema de producao: Nao informado. Lote: Lote em acompanhamento.",
+      "output": {
+        "chiefComplaint": "Dor muscular pos-esforco.",
+        "anamnesis": "Responsavel relata dor muscular pos-esforco.",
+        "physicalExam": "Achados de campo compativeis com o quadro.",
+        "diagnosis": "Miosite por sobrecarga.",
+        "treatment": "Repouso e anti-inflamatorio.",
+        "procedures": "",
+        "medications": "Conforme prescricao.",
+        "examDetails": "Exames de campo/laboratoriais conforme necessidade.",
+        "notes": "",
+        "returnRecommendation": "Reavaliar em 24 a 72 horas.",
+        "porte": "grande",
+        "specificFields": {
+          "batch": "Lote em acompanhamento",
+          "productionSystem": "Nao informado",
+          "physicalExamDetailed": "Avaliacao clinica de campo realizada."
+        }
+      }
+    },
+    {
+      "id": "mobile_grande_bovino_agua",
+      "mode": "retorno",
+      "porte": "grande",
+      "input": "Audio de campo: Lote com baixo consumo de agua e queda de leite. Vet: Correcao de bebedouros. No exame fisico: Achados de campo compativeis com o quadro. Diagnostico: Impacto produtivo por manejo. Conduta: Correcao de bebedouros. Medicacao: Conforme prescricao. Exames solicitados: Exames de campo/laboratoriais conforme necessidade. Retorno: Reavaliar em 24 a 72 horas.",
+      "output": {
+        "chiefComplaint": "Reducao de consumo hidrico.",
+        "anamnesis": "Responsavel relata reducao de consumo hidrico.",
+        "physicalExam": "Achados de campo compativeis com o quadro.",
+        "diagnosis": "Impacto produtivo por manejo.",
+        "treatment": "Correcao de bebedouros.",
+        "procedures": "",
+        "medications": "Conforme prescricao.",
+        "examDetails": "Exames de campo/laboratoriais conforme necessidade.",
+        "notes": "",
+        "returnRecommendation": "Reavaliar em 24 a 72 horas.",
+        "porte": "grande",
+        "specificFields": {
+          "batch": "Lote em acompanhamento",
+          "productionSystem": "Nao informado",
+          "physicalExamDetailed": "Avaliacao clinica de campo realizada."
+        }
+      }
+    },
+    {
+      "id": "mobile_grande_caprino_distocia",
+      "mode": "nova",
+      "porte": "grande",
+      "input": "Audio de campo: Cabra em parto com distocia. Vet: Intervencao obstetrica. No exame fisico: Achados de campo compativeis com o quadro. Diagnostico: Distocia caprina. Conduta: Intervencao obstetrica. Medicacao: Conforme prescricao. Exames solicitados: Exames de campo/laboratoriais conforme necessidade. Retorno: Reavaliar em 24 a 72 horas. Sistema de producao: Nao informado. Lote: Lote em acompanhamento.",
+      "output": {
+        "chiefComplaint": "Parto distocico.",
+        "anamnesis": "Responsavel relata parto distocico.",
+        "physicalExam": "Achados de campo compativeis com o quadro.",
+        "diagnosis": "Distocia caprina.",
+        "treatment": "Intervencao obstetrica.",
+        "procedures": "",
+        "medications": "Conforme prescricao.",
+        "examDetails": "Exames de campo/laboratoriais conforme necessidade.",
+        "notes": "",
+        "returnRecommendation": "Reavaliar em 24 a 72 horas.",
+        "porte": "grande",
+        "specificFields": {
+          "batch": "Lote em acompanhamento",
+          "productionSystem": "Nao informado",
+          "physicalExamDetailed": "Avaliacao clinica de campo realizada."
+        }
+      }
+    },
+    {
+      "id": "mobile_grande_ovino_helminto_retorno",
+      "mode": "nova",
+      "porte": "grande",
+      "input": "Audio de campo: Retorno com melhora apos vermifugacao. Vet: Manter manejo e OPG controle. No exame fisico: Achados de campo compativeis com o quadro. Diagnostico: Resposta parcial. Conduta: Manter manejo e OPG controle. Medicacao: Conforme prescricao. Sistema de producao: Nao informado. Lote: Lote em acompanhamento.",
+      "output": {
+        "chiefComplaint": "Helmintose em controle.",
+        "anamnesis": "Responsavel relata helmintose em controle.",
+        "physicalExam": "Achados de campo compativeis com o quadro.",
+        "diagnosis": "Resposta parcial.",
+        "treatment": "Manter manejo e OPG controle.",
+        "procedures": "",
+        "medications": "Conforme prescricao.",
+        "examDetails": "Exames de campo/laboratoriais conforme necessidade.",
+        "notes": "",
+        "returnRecommendation": "Reavaliar em 24 a 72 horas.",
+        "porte": "grande",
+        "specificFields": {
+          "batch": "Lote em acompanhamento",
+          "productionSystem": "Nao informado",
+          "physicalExamDetailed": "Avaliacao clinica de campo realizada."
+        }
+      }
+    },
+    {
+      "id": "mobile_grande_bovino_repro_retorno2",
+      "mode": "retorno",
+      "porte": "grande",
+      "input": "Audio de campo: Retorno reprodutivo vaca vazia em IATF. Vet: Manter protocolo reprodutivo. No exame fisico: Achados de campo compativeis com o quadro. Diagnostico: Subfertilidade em manejo. Conduta: Manter protocolo reprodutivo. Medicacao: Conforme prescricao. Exames solicitados: Exames de campo/laboratoriais conforme necessidade. Sistema de producao: Nao informado. Lote: Lote em acompanhamento.",
+      "output": {
+        "chiefComplaint": "Acompanhamento reprodutivo.",
+        "anamnesis": "Responsavel relata acompanhamento reprodutivo.",
+        "physicalExam": "Achados de campo compativeis com o quadro.",
+        "diagnosis": "Subfertilidade em manejo.",
+        "treatment": "Manter protocolo reprodutivo.",
+        "procedures": "",
+        "medications": "Conforme prescricao.",
+        "examDetails": "Exames de campo/laboratoriais conforme necessidade.",
+        "notes": "",
+        "returnRecommendation": "Reavaliar em 24 a 72 horas.",
+        "porte": "grande",
+        "specificFields": {
+          "batch": "Lote em acompanhamento",
+          "productionSystem": "Nao informado",
+          "physicalExamDetailed": "Avaliacao clinica de campo realizada."
         }
       }
     }

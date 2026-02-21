@@ -2,10 +2,13 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import api from "../services/api";
 import VoiceTextarea from "./VoiceTextarea";
 import FeedbackBanner from "./FeedbackBanner";
+import LoadingDot from "./LoadingDot";
 import { toUserFriendlyError } from "../utils/errorMessages";
-
-const PORTE_NOTES_MARK_START = "[[PORTE_CLINICO]]";
-const PORTE_NOTES_MARK_END = "[[/PORTE_CLINICO]]";
+import {
+  PORTE_NOTES_MARK_END,
+  PORTE_NOTES_MARK_START,
+  sanitizeConsultationNotesForDisplay,
+} from "../utils/consultationNotes";
 
 const SMALL_ANIMAL_FIELDS = [
   { key: "vaccinationStatus", label: "Vacinacao" },
@@ -79,25 +82,6 @@ const DEFAULT_SMALL_ANIMAL_DATA = {
   currentSupplements: "",
 };
 
-const SMALL_TEXT_FIELDS_FOR_NOT_INFORMED = [
-  "vaccinationProtocol",
-  "lastVaccines",
-  "dewormingStatus",
-  "ectoparasiteControl",
-  "diet",
-  "rationBrand",
-  "feedingFrequency",
-  "housing",
-  "lifestyle",
-  "contactWithAnimals",
-  "reproductiveStatusSmall",
-  "preventiveCare",
-  "behavior",
-  "allergyHistory",
-  "chronicDiseases",
-  "currentSupplements",
-];
-
 const DEFAULT_LARGE_ANIMAL_DATA = {
   farmName: "",
   productionSystem: "",
@@ -127,8 +111,6 @@ const DEFAULT_LARGE_ANIMAL_DATA = {
   physicalExamDetailed: "",
   requestedExamPanel: "",
 };
-
-const LARGE_TEXT_FIELDS_FOR_NOT_INFORMED = Object.keys(DEFAULT_LARGE_ANIMAL_DATA);
 
 function normalizeWords(value = "") {
   return String(value)
@@ -160,7 +142,30 @@ function classifyAnimalPorte(patient) {
   if (largeSignals.some((token) => source.includes(token))) return "grande";
   if (smallSignals.some((token) => source.includes(token))) return "pequeno";
   if (source.includes("ave")) return "pequeno";
-  return "pequeno";
+  return "indefinido";
+}
+
+function inferPorteFromText(text = "") {
+  const source = normalizeWords(text);
+  const largeSignals = [
+    "equino",
+    "cavalo",
+    "egua",
+    "quarto de milha",
+    "bovino",
+    "vaca",
+    "bezerro",
+    "rebanho",
+    "fazenda",
+    "lote",
+    "piquete"
+  ];
+  const smallSignals = ["canino", "cachorro", "cao", "felino", "gato", "pet", "apartamento"];
+  const largeHits = largeSignals.filter((token) => source.includes(token)).length;
+  const smallHits = smallSignals.filter((token) => source.includes(token)).length;
+  if (largeHits > smallHits && largeHits >= 1) return "grande";
+  if (smallHits > largeHits && smallHits >= 1) return "pequeno";
+  return null;
 }
 
 const QuickConsultation = ({
@@ -215,6 +220,8 @@ const QuickConsultation = ({
   const [aiRefining, setAiRefining] = useState(false);
   const [aiConfidenceByField, setAiConfidenceByField] = useState({});
   const [aiMissingFields, setAiMissingFields] = useState({ core: [], specific: [] });
+  const [porteOverride, setPorteOverride] = useState(null);
+  const [selectedPorte, setSelectedPorte] = useState(null);
 
   const keepConversationRecordingRef = useRef(false);
   const transcriptRef = useRef("");
@@ -232,7 +239,9 @@ const QuickConsultation = ({
     if (!patient?.id) return null;
     return `vetpro_draft_quick_${patient.id}_${initialData?.id || "new"}`;
   }, [patient?.id, initialData?.id]);
-  const animalPorte = useMemo(() => classifyAnimalPorte(patient), [patient]);
+  const patientPorte = useMemo(() => classifyAnimalPorte(patient), [patient]);
+  const detectedPorte = porteOverride || (patientPorte === "indefinido" ? null : patientPorte);
+  const animalPorte = selectedPorte || detectedPorte || "pequeno";
   const isLargeAnimal = animalPorte === "grande";
   const isSmallAnimal = !isLargeAnimal;
   const specificFields = isLargeAnimal ? LARGE_ANIMAL_FIELDS : SMALL_ANIMAL_FIELDS;
@@ -269,9 +278,30 @@ const QuickConsultation = ({
     setLargeAnimalData((prev) => ({ ...prev, [key]: value }));
   };
 
+  const isNotInformedValue = (value = "") => {
+    const normalized = normalizeWords(String(value || ""));
+    return normalized === "nao informado" || normalized === "não informado";
+  };
+
   useEffect(() => {
     conversationRecognitionRef.current = conversationRecognition;
   }, [conversationRecognition]);
+
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const section = document.getElementById("porte-section");
+    if (!section) return;
+
+    const targets = section.querySelectorAll("input, textarea, select");
+    targets.forEach((element) => {
+      const value = String(element?.value || "");
+      const notInformed = isNotInformedValue(value);
+      element.classList.toggle("bg-gray-100", notInformed);
+      element.classList.toggle("text-gray-500", notInformed);
+      element.classList.toggle("italic", notInformed);
+      element.classList.toggle("border-gray-400", notInformed);
+    });
+  }, [smallAnimalData, largeAnimalData, isLargeAnimal]);
 
   const normalizeText = (value = "") =>
     value
@@ -461,7 +491,7 @@ const QuickConsultation = ({
         content.slice(0, 220),
       anamnesis: extractByKeywords(tutorContext, ["anamnese", "historico"]),
       physicalExam: extractByKeywords(vetContext, ["exame fisico"]),
-      diagnosis: extractByKeywords(vetContext, ["diagnostico"]),
+      diagnosis: extractByKeywords(vetContext, ["diagnostico", "suspeita"]),
       treatment: extractByKeywords(vetContext, ["tratamento", "conduta"]),
       medication: extractByKeywords(vetContext, [
         "medicacao",
@@ -469,6 +499,250 @@ const QuickConsultation = ({
         "prescrever",
         "receita",
       ]),
+    };
+  };
+
+  const extractSpecificFallbackFromText = (text = "", targetIsLargeAnimal = false) => {
+    const rawMultiLine = String(text || "").replace(/\r/g, "").trim();
+    if (!rawMultiLine) return {};
+    const raw = rawMultiLine.replace(/\n+/g, "\n").trim();
+    const flat = raw.replace(/\n/g, " ").replace(/\s+/g, " ").trim();
+
+    const sentences = splitConversationSentences(flat);
+    const extractSectionByLabels = (labels = []) => {
+      if (!labels.length) return "";
+      const pattern = labels.map((label) => label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
+      const regex = new RegExp(
+        `(?:^|\\n)\\s*(?:${pattern})\\s*:\\s*([\\s\\S]*?)(?=\\n\\s*[A-Za-zÀ-ÿ][^:\\n]{2,50}:|$)`,
+        "i",
+      );
+      const match = raw.match(regex);
+      return match?.[1] ? String(match[1]).replace(/\s+/g, " ").trim() : "";
+    };
+    const pickSentence = (tokens = []) => {
+      const normalizedTokens = tokens.map((token) => normalizeText(token));
+      for (const sentence of sentences) {
+        const source = normalizeText(sentence);
+        if (normalizedTokens.some((token) => token && source.includes(token))) {
+          return sentence.trim();
+        }
+      }
+      return "";
+    };
+    const pick = (regex) => {
+      const match = flat.match(regex);
+      return match?.[1] ? String(match[1]).trim() : "";
+    };
+    const compact = (value) => String(value || "").replace(/\s+/g, " ").trim();
+    const limit = (value, max = 180) => compact(value).slice(0, max);
+    const fields = {};
+
+    if (targetIsLargeAnimal) {
+      const propertyAndManagement = extractSectionByLabels(["Propriedade e Manejo", "Propriedade/Manejo"]);
+      if (propertyAndManagement) fields.propertyAndManagement = limit(propertyAndManagement);
+
+      const animalIdentification = extractSectionByLabels(["Animal atendido"]);
+      if (animalIdentification) fields.animalIdentificationDetails = limit(animalIdentification);
+      const animalNameFromSection = animalIdentification.split(",")[0]?.trim();
+      if (animalNameFromSection && animalNameFromSection.length >= 2) {
+        fields.animalId = limit(animalNameFromSection, 80);
+      }
+
+      const contactAnimals = extractSectionByLabels(["Contactantes"]);
+      if (contactAnimals) fields.contactAnimals = limit(contactAnimals);
+
+      const previousTreatment = extractSectionByLabels(["Tratamento anterior/Sanidade", "Tratamento anterior", "Sanidade"]);
+      if (previousTreatment) fields.previousTreatmentHistory = limit(previousTreatment);
+
+      const historicalDiseases = extractSectionByLabels(["Historico do lote", "Histórico do lote"]);
+      if (historicalDiseases) fields.historicalDiseases = limit(historicalDiseases);
+
+      const physicalExam = extractSectionByLabels(["Exame Fisico", "Exame Físico"]);
+      if (physicalExam) fields.physicalExamDetailed = limit(physicalExam);
+
+      const hoofStatus = extractSectionByLabels(["Casco e locomocao", "Casco e locomoção"]);
+      if (hoofStatus) fields.hoofStatus = limit(hoofStatus);
+
+      const rumenMotility = extractSectionByLabels(["Motilidade", "Motilidade ruminal"]);
+      if (rumenMotility) fields.rumenMotility = limit(rumenMotility);
+
+      const fecesAndUrine = extractSectionByLabels(["Fezes e urina"]);
+      if (fecesAndUrine) fields.fecesAndUrine = limit(fecesAndUrine);
+
+      const requestedExamPanel = extractSectionByLabels(["Conduta"]);
+      if (requestedExamPanel) fields.requestedExamPanel = limit(requestedExamPanel);
+
+      const farmName = pick(/\b((?:Haras|Fazenda|S[ií]tio)\s+[^.,;\n]+)/i);
+      if (farmName) fields.farmName = limit(farmName);
+
+      if (/\bsemi[-\s]?extensiv/i.test(flat)) fields.productionSystem = "Semi-extensivo";
+      else if (/\bconfinad/i.test(flat)) fields.productionSystem = "Confinado";
+      else if (/\bextensiv/i.test(flat)) fields.productionSystem = "Extensivo";
+      else if (/\bintensiv/i.test(flat)) fields.productionSystem = "Intensivo";
+
+      if (/\besporte|prova|laco|la[cç]o/i.test(flat)) fields.animalFunction = "Esporte";
+      else if (/\bleite|lacta[cç][aã]o/i.test(flat)) fields.animalFunction = "Leite";
+      else if (/\bcorte|engorda/i.test(flat)) fields.animalFunction = "Corte";
+      else if (/\breprodu[cç][aã]o/i.test(flat)) fields.animalFunction = "Reproducao";
+
+      const species = pick(/\b(Equino|Bovino|Ovino|Caprino|Suino|Asinino|Muar|Bufalo)\b/i);
+      const breed = pick(/\b(Quarto de Milha|Mangalarga(?: Marchador)?|Crioulo|Nelore|Holandes|Jersey|Angus|Girolando|Simental)\b/i);
+      const sex = pick(/\b(macho|femea)\b/i);
+      const age = pick(/\b(\d{1,2})\s*anos?\b/i);
+      const namedByAge = pick(/\b\d{1,2}\s*anos?,\s*([A-Za-zÀ-ÿ][\wÀ-ÿ-]*)/i);
+      const namedByLabel = pick(/\b(?:nome|animal|paciente)\s*[:\-]?\s*([A-Za-zÀ-ÿ][\wÀ-ÿ-]*)/i);
+      const animalName = animalNameFromSection || namedByAge || namedByLabel;
+      if (animalName && !fields.animalId) fields.animalId = limit(animalName, 80);
+      const identificationParts = [
+        animalName ? `Nome: ${animalName}` : "",
+        species || "",
+        breed || "",
+        sex || "",
+        age ? `${age} anos` : "",
+      ].filter(Boolean);
+      if (identificationParts.length) {
+        fields.animalIdentificationDetails = limit(identificationParts.join(", "));
+      }
+
+      const herdVaccination = pickSentence(["vacina", "vacinas", "raiva", "tetano", "gripe", "encefalo"]);
+      if (herdVaccination) fields.herdVaccination = limit(herdVaccination);
+
+      const herdDeworming = pickSentence(["vermifug", "ivermect"]);
+      if (herdDeworming) fields.herdDeworming = limit(herdDeworming);
+
+      const forage = pickSentence(["volumoso", "silagem", "feno", "pasto", "coast-cross", "coast cross"]);
+      if (forage) fields.forage = limit(forage);
+
+      const concentrate = pickSentence(["concentrado", "racao", "ração", "proteina", "proteína"]);
+      if (concentrate) fields.concentrate = limit(concentrate);
+
+      const waterIntake = pickSentence(["ingestao de agua", "ingestão de água", "consumo de agua", "consumo de água", "agua diminu", "água diminu"]);
+      if (waterIntake) fields.waterIntake = limit(waterIntake);
+
+      const mineral = pickSentence(["sal mineral", "suplementacao mineral", "suplementação mineral"]);
+      if (mineral) fields.mineralSupplementation = limit(mineral);
+
+      const hoof = pickSentence(["casco", "claudic", "locomoc", "flanco"]);
+      if (hoof) fields.hoofStatus = limit(hoof);
+
+      const rumen = pickSentence(["motilidade", "ruminal", "rumen", "hipomotil", "timpanismo"]);
+      if (rumen) fields.rumenMotility = limit(rumen);
+
+      const fecesUrine = pickSentence(["fezes", "urina"]);
+      if (fecesUrine) fields.fecesAndUrine = limit(fecesUrine);
+
+      const historical = pickSentence(["historico", "histórico", "mormo", "aie", "surto", "ocorrencia", "ocorrência"]);
+      if (historical) fields.historicalDiseases = limit(historical);
+
+      const physicalExamDetailed =
+        pick(/(?:exame fisico|exame físico)\s*[:\-]?\s*([^.\n]+)/i) ||
+        pickSentence(["febre", "mucosa", "tpc", "fc ", "fr ", "hipomotilidade"]);
+      if (physicalExamDetailed) fields.physicalExamDetailed = limit(physicalExamDetailed);
+
+      const requestedExams = pickSentence(["hemograma", "bioquim", "aie", "mormo", "ultrassom", "raio x", "rx", "exames"]);
+      if (requestedExams) fields.requestedExamPanel = limit(requestedExams);
+      const previousTreatmentBySentence = pickSentence(["prescrevi", "dipirona", "flunixin", "tratamento anterior", "vermifugacao", "vermifugação"]);
+      if (previousTreatmentBySentence && !fields.previousTreatmentHistory) {
+        fields.previousTreatmentHistory = limit(previousTreatmentBySentence);
+      }
+    } else {
+      if (/\batrasad/i.test(flat)) fields.vaccinationStatus = "Atrasada";
+      else if (/\bem dia\b/i.test(flat)) fields.vaccinationStatus = "Em dia";
+
+      const vaccination = pickSentence(["vacina", "v8", "v10", "antirrab", "raiva", "giardia"]);
+      if (vaccination) fields.vaccinationProtocol = limit(vaccination);
+
+      const deworming = pickSentence(["vermifug", "vermifuga", "vermifugacao", "ivermect"]);
+      if (deworming) fields.dewormingStatus = limit(deworming);
+
+      const ecto = pickSentence(["pulga", "carrapato", "ectoparasita", "pipeta", "coleira"]);
+      if (ecto) fields.ectoparasiteControl = limit(ecto);
+
+      const diet = pickSentence(["racao", "ração", "dieta", "alimentacao", "alimentação", "petisco"]);
+      if (diet) fields.diet = limit(diet);
+
+      const water = pickSentence(["ingestao de agua", "ingestão de água", "bebe agua", "bebe água", "agua", "água"]);
+      if (water) fields.waterIntakeSmall = limit(water);
+
+      const housing = pickSentence(["apartamento", "casa", "quintal", "ambiente", "acesso externo"]);
+      if (housing) fields.housing = limit(housing);
+
+      const lifestyle = pickSentence(["sedentario", "sedentário", "ativo", "passeio", "atividade"]);
+      if (lifestyle) fields.lifestyle = limit(lifestyle);
+
+      const contact = pickSentence(["contato com outros", "convive com", "outros animais", "canil"]);
+      if (contact) fields.contactWithAnimals = limit(contact);
+
+      const behavior = pickSentence(["comportamento", "preguicos", "preguiços", "apatia", "agitado", "letarg"]);
+      if (behavior) fields.behavior = limit(behavior);
+
+      const allergy = pickSentence(["alerg", "prurido", "coceira", "dermatite"]);
+      if (allergy) fields.allergyHistory = limit(allergy);
+
+      const chronic = pickSentence(["cronica", "crônica", "endocrino", "cardio", "renal", "diabetes"]);
+      if (chronic) fields.chronicDiseases = limit(chronic);
+
+      const supplements = pickSentence(["omega", "condro", "probiot", "suplement", "vitamina"]);
+      if (supplements) fields.currentSupplements = limit(supplements);
+    }
+
+    return Object.entries(fields).reduce((acc, [key, value]) => {
+      const cleaned = compact(value);
+      if (cleaned) acc[key] = cleaned;
+      return acc;
+    }, {});
+  };
+
+  const extractVitalSignsFromText = (text = "") => {
+    const raw = String(text || "").replace(/\r/g, " ").replace(/\s+/g, " ");
+    if (!raw.trim()) {
+      return { weight: "", temperature: "", heartRate: "", respiratoryRate: "" };
+    }
+
+    const pickNum = (regex) => {
+      const m = raw.match(regex);
+      return m?.[1] ? String(m[1]).replace(",", ".") : "";
+    };
+
+    const extractWeightValue = () => {
+      const explicitWeight = pickNum(/\b(?:peso|weight)\s*[:=]?\s*(\d{1,4}(?:[.,]\d{1,2})?)\s*kg\b/i);
+      if (explicitWeight) return explicitWeight;
+
+      const candidates = [...raw.matchAll(/\b(\d{1,4}(?:[.,]\d{1,2})?)\s*kg\b/gi)];
+      for (const item of candidates) {
+        const value = String(item?.[1] || "").replace(",", ".");
+        if (!value) continue;
+        const start = item.index || 0;
+        const end = start + String(item[0] || "").length;
+        const context = raw.slice(Math.max(0, start - 24), Math.min(raw.length, end + 24)).toLowerCase();
+
+        const isFeedContext =
+          /kg\s*\/\s*dia|kg\/dia|\/dia|por dia|racao|ração|concentrad|proteina|proteína|ingerida/i.test(context);
+        if (isFeedContext) continue;
+        return value;
+      }
+      return "";
+    };
+
+    const weightValue = extractWeightValue();
+
+    const temperatureValue =
+      pickNum(/\b(?:temperatura|temp|t)\s*[:=]?\s*(\d{2}(?:[.,]\d)?)\s*(?:c|°c)\b/i) ||
+      pickNum(/\b(\d{2}(?:[.,]\d)?)\s*(?:°c|c)\b/i);
+
+    const heartRateValue =
+      pickNum(/\b(?:fc|frequencia cardiaca|freq(?:uencia)? cardiaca)\s*[:=]?\s*(\d{2,3})\s*(?:bpm)?\b/i) ||
+      pickNum(/\b(\d{2,3})\s*bpm\b/i);
+
+    const respiratoryRateValue =
+      pickNum(/\b(?:fr|frequencia respiratoria|freq(?:uencia)? respiratoria)\s*[:=]?\s*(\d{1,3})\s*(?:mrm|min|irpm)?\b/i) ||
+      pickNum(/\b(\d{1,3})\s*(?:mrm|irpm|mr\/min)\b/i);
+
+    return {
+      weight: weightValue,
+      temperature: temperatureValue,
+      heartRate: heartRateValue,
+      respiratoryRate: respiratoryRateValue
     };
   };
 
@@ -546,6 +820,8 @@ const QuickConsultation = ({
     setAiRefining(false);
     setAiConfidenceByField({});
     setAiMissingFields({ core: [], specific: [] });
+    setPorteOverride(null);
+    setSelectedPorte(null);
     liveInterimRef.current = "";
     transcriptRef.current = "";
     keepConversationRecordingRef.current = false;
@@ -584,7 +860,7 @@ const QuickConsultation = ({
       setMedicationDetails(draft.medicationDetails || "");
       setExamRequested(draft.examRequested || "nao");
       setExamDetails(draft.examDetails || "");
-      setNotes(draft.notes || "");
+      setNotes(sanitizeConsultationNotesForDisplay(draft.notes || ""));
       setReturnRecommended(Boolean(draft.returnRecommended));
       setReturnDate(draft.returnDate || "");
       setOpenReturnWithoutDate(Boolean(draft.openReturnWithoutDate));
@@ -603,6 +879,7 @@ const QuickConsultation = ({
       setParsedTranscriptPreview(draft.parsedTranscriptPreview || null);
       setLiveInterimText("");
       setShowTranscriptExpanded(Boolean(draft.showTranscriptExpanded));
+      setSelectedPorte(draft.selectedPorte || null);
       liveInterimRef.current = "";
       transcriptRef.current = draft.conversationTranscript || "";
     } catch (error) {
@@ -642,6 +919,7 @@ const QuickConsultation = ({
       parsedTranscriptPreview,
       liveInterimText,
       showTranscriptExpanded,
+      selectedPorte,
       updatedAt: new Date().toISOString(),
     };
 
@@ -682,6 +960,7 @@ const QuickConsultation = ({
     parsedTranscriptPreview,
     liveInterimText,
     showTranscriptExpanded,
+    selectedPorte,
   ]);
 
   const toggleConversationRecording = () => {
@@ -771,7 +1050,33 @@ const QuickConsultation = ({
     setAiMissingFields({ core: [], specific: [] });
   };
 
-  const analyzeTranscript = () => {
+  const parseTranscriptToSectionsLocal = (text) => {
+    const content = (text || "").trim();
+    if (!content) return null;
+    const dialogue = splitDialogueByRoleLocal(content);
+    const tutorContext = dialogue.tutorText || content;
+    const vetContext = dialogue.vetText || content;
+    const complaintFallback = extractClinicalComplaintSentence(tutorContext || content);
+
+    return {
+      chiefComplaint:
+        extractByKeywords(tutorContext, ["queixa", "motivo da consulta", "motivo"]) ||
+        complaintFallback ||
+        content.slice(0, 220),
+      anamnesis: extractByKeywords(tutorContext, ["anamnese", "historico"]),
+      physicalExam: extractByKeywords(vetContext, ["exame fisico"]),
+      diagnosis: extractByKeywords(vetContext, ["diagnostico", "suspeita"]),
+      treatment: extractByKeywords(vetContext, ["tratamento", "conduta"]),
+      medication: extractByKeywords(vetContext, [
+        "medicacao",
+        "prescricao",
+        "prescrever",
+        "receita",
+      ]),
+    };
+  };
+
+  const analyzeTranscript = async () => {
     const text = transcriptRef.current.trim() || conversationTranscript.trim();
     if (!text) {
       showFeedback(
@@ -781,12 +1086,30 @@ const QuickConsultation = ({
       return null;
     }
 
-    const parsed = parseTranscriptToSections(text);
+    let parsed = null;
+    try {
+      const response = await api.post("/consultations/heuristic-parse", {
+        transcript: text,
+        segments: transcriptSegments
+      });
+      const serverParsed = response?.data?.parsed || {};
+      parsed = {
+        chiefComplaint: String(serverParsed.chiefComplaint || "").trim(),
+        anamnesis: String(serverParsed.anamnesis || "").trim(),
+        physicalExam: String(serverParsed.physicalExam || "").trim(),
+        diagnosis: String(serverParsed.diagnosis || "").trim(),
+        treatment: String(serverParsed.treatment || "").trim(),
+        medication: String(serverParsed.medications || "").trim(),
+      };
+    } catch {
+      parsed = parseTranscriptToSectionsLocal(text);
+    }
+
     setParsedTranscriptPreview(parsed);
     return parsed;
   };
 
-  const applyTranscriptToRecord = () => {
+  const applyTranscriptToRecord = async () => {
     const text = transcriptRef.current.trim() || conversationTranscript.trim();
     if (!text) {
       showFeedback(
@@ -796,7 +1119,7 @@ const QuickConsultation = ({
       return;
     }
 
-    const parsed = parsedTranscriptPreview || analyzeTranscript();
+    const parsed = parsedTranscriptPreview || (await analyzeTranscript());
     if (!parsed) return;
 
     if (!chiefComplaint) setChiefComplaint(parsed.chiefComplaint);
@@ -804,6 +1127,11 @@ const QuickConsultation = ({
     if (!physicalExam && parsed.physicalExam) setPhysicalExam(parsed.physicalExam);
     if (!diagnosis && parsed.diagnosis) setDiagnosis(parsed.diagnosis);
     if (!treatment && parsed.treatment) setTreatment(parsed.treatment);
+    const transcriptVitals = extractVitalSignsFromText(text);
+    if (!weight && transcriptVitals.weight) setWeight(transcriptVitals.weight);
+    if (!temperature && transcriptVitals.temperature) setTemperature(transcriptVitals.temperature);
+    if (!heartRate && transcriptVitals.heartRate) setHeartRate(transcriptVitals.heartRate);
+    if (!respiratoryRate && transcriptVitals.respiratoryRate) setRespiratoryRate(transcriptVitals.respiratoryRate);
 
     if (parsed.medication) {
       setMedicationPrescribed("sim");
@@ -825,8 +1153,15 @@ const QuickConsultation = ({
     showFeedback("success", "Transcricao aplicada aos campos do prontuario.");
   };
 
-  const applyAiDraft = (draft, overwrite = false) => {
+  const applyAiDraft = (draft, overwrite = false, sourceText = "") => {
     if (!draft || typeof draft !== "object") return;
+
+    const draftPorte = String(draft?.porte || "").toLowerCase();
+    if (draftPorte === "grande" || draftPorte === "pequeno") {
+      setPorteOverride(draftPorte);
+    }
+    const targetIsLargeAnimal =
+      draftPorte === "grande" ? true : draftPorte === "pequeno" ? false : isLargeAnimal;
 
     if (overwrite || !chiefComplaint) setChiefComplaint(String(draft.chiefComplaint || ""));
     if (overwrite || !anamnesis) setAnamnesis(String(draft.anamnesis || ""));
@@ -834,20 +1169,57 @@ const QuickConsultation = ({
     if (overwrite || !diagnosis) setDiagnosis(String(draft.diagnosis || ""));
     if (overwrite || !treatment) setTreatment(String(draft.treatment || ""));
 
+    const candidateVitalText = [
+      sourceText,
+      draft.physicalExam,
+      draft.notes,
+      draft.anamnesis,
+      draft.chiefComplaint
+    ]
+      .filter(Boolean)
+      .join(" ");
+    const extractedVitals = extractVitalSignsFromText(candidateVitalText);
+    if ((overwrite || !weight) && extractedVitals.weight) setWeight(extractedVitals.weight);
+    if ((overwrite || !temperature) && extractedVitals.temperature) setTemperature(extractedVitals.temperature);
+    if ((overwrite || !heartRate) && extractedVitals.heartRate) setHeartRate(extractedVitals.heartRate);
+    if ((overwrite || !respiratoryRate) && extractedVitals.respiratoryRate) setRespiratoryRate(extractedVitals.respiratoryRate);
+
+    const extractionBaseText = [
+      sourceText,
+      draft.physicalExam,
+      draft.notes,
+      draft.anamnesis,
+      draft.chiefComplaint,
+      draft.treatment,
+      draft.examDetails,
+      draft.medications,
+      draft.procedures
+    ]
+      .filter(Boolean)
+      .join(" ");
+
     const incomingSpecificFields =
       draft.specificFields && typeof draft.specificFields === "object"
         ? draft.specificFields
         : {};
+    const fallbackSpecificFields = extractSpecificFallbackFromText(
+      extractionBaseText,
+      targetIsLargeAnimal,
+    );
+    const mergedSpecificFields = {
+      ...fallbackSpecificFields,
+      ...incomingSpecificFields,
+    };
 
-    if (Object.keys(incomingSpecificFields).length > 0) {
-      if (isLargeAnimal) {
+    if (Object.keys(mergedSpecificFields).length > 0) {
+      if (targetIsLargeAnimal) {
         setLargeAnimalData((prev) => {
           const next = { ...prev };
-          Object.entries(incomingSpecificFields).forEach(([key, value]) => {
+          Object.entries(mergedSpecificFields).forEach(([key, value]) => {
             if (!(key in next)) return;
             const text = String(value || "").trim();
             if (!text) return;
-            if (overwrite || !String(next[key] || "").trim()) {
+            if (overwrite || !String(next[key] || "").trim() || isNotInformedValue(next[key])) {
               next[key] = text;
             }
           });
@@ -856,11 +1228,11 @@ const QuickConsultation = ({
       } else {
         setSmallAnimalData((prev) => {
           const next = { ...prev };
-          Object.entries(incomingSpecificFields).forEach(([key, value]) => {
+          Object.entries(mergedSpecificFields).forEach(([key, value]) => {
             if (!(key in next)) return;
             const text = String(value || "").trim();
             if (!text) return;
-            if (overwrite || !String(next[key] || "").trim()) {
+            if (overwrite || !String(next[key] || "").trim() || isNotInformedValue(next[key])) {
               next[key] = text;
             }
           });
@@ -869,25 +1241,8 @@ const QuickConsultation = ({
       }
     }
 
-    if (isLargeAnimal) {
-      setLargeAnimalData((prev) => {
-        const next = { ...prev };
-        for (const key of LARGE_TEXT_FIELDS_FOR_NOT_INFORMED) {
-          const current = String(next[key] || "").trim();
-          if (!current) next[key] = "Nao informado";
-        }
-        return next;
-      });
-    } else {
-      setSmallAnimalData((prev) => {
-        const next = { ...prev };
-        for (const key of SMALL_TEXT_FIELDS_FOR_NOT_INFORMED) {
-          const current = String(next[key] || "").trim();
-          if (!current) next[key] = "Nao informado";
-        }
-        return next;
-      });
-    }
+    // Nao preencher automaticamente tudo com "Nao informado":
+    // isso reduz ruido visual e destaca apenas o que a IA realmente extraiu.
 
     const meds = String(draft.medications || "").trim();
     const treatmentSignal = String(draft.treatment || "").trim();
@@ -915,7 +1270,7 @@ const QuickConsultation = ({
       if (overwrite || !examDetails) setExamDetails(exams);
     }
 
-    const aiNotes = String(draft.notes || "").trim();
+    const aiNotes = sanitizeConsultationNotesForDisplay(String(draft.notes || "")).trim();
     if (aiNotes) {
       setNotes((prev) =>
         [prev, `Sugestao IA:\n${aiNotes}`].filter(Boolean).join("\n\n"),
@@ -940,6 +1295,15 @@ const QuickConsultation = ({
       return;
     }
 
+    const textPorte = inferPorteFromText(text);
+    const requestedPorte =
+      selectedPorte ||
+      textPorte ||
+      (patientPorte === "indefinido" ? null : patientPorte) ||
+      animalPorte;
+    const requestSpecificFields =
+      requestedPorte === "grande" ? LARGE_ANIMAL_FIELDS : SMALL_ANIMAL_FIELDS;
+
     try {
       setAiGenerating(true);
       setAiMissingFields({ core: [], specific: [] });
@@ -948,8 +1312,8 @@ const QuickConsultation = ({
         mode: initialData?.consultationType === "retorno" ? "retorno" : "nova",
         text,
         recordProfile: {
-          porte: animalPorte,
-          specificFieldKeys: specificFields.map((item) => item.key),
+          porte: requestedPorte,
+          specificFieldKeys: requestSpecificFields.map((item) => item.key),
           detailLevel
         }
       });
@@ -960,13 +1324,13 @@ const QuickConsultation = ({
       setAiMissingFields(response?.data?.missingFields || { core: [], specific: [] });
       if (!draft || isDraftEffectivelyEmpty(draft)) {
         const emergencyDraft = buildEmergencyDraftFromText(text);
-        applyAiDraft(emergencyDraft, overwrite);
+        applyAiDraft(emergencyDraft, overwrite, text);
         showFeedback(
           "success",
           "IA retornou rascunho incompleto. Aplicado preenchimento local de seguranca.",
         );
       } else {
-        applyAiDraft(draft, overwrite);
+        applyAiDraft(draft, overwrite, text);
         setAiMessages((prev) => [
           ...prev,
           { role: "user", content: text, createdAt: new Date().toISOString() },
@@ -987,7 +1351,7 @@ const QuickConsultation = ({
       console.error("Erro ao gerar rascunho por chat:", error);
       const emergencyDraft = buildEmergencyDraftFromText(text);
       if (!isDraftEffectivelyEmpty(emergencyDraft)) {
-        applyAiDraft(emergencyDraft, overwrite);
+        applyAiDraft(emergencyDraft, overwrite, text);
         showFeedback(
           "success",
           "Falha de comunicacao com IA. Aplicado preenchimento local com base no texto.",
@@ -1068,7 +1432,7 @@ const QuickConsultation = ({
         setMedicationDetails(value);
         break;
       case "notes":
-        setNotes(value);
+        setNotes(sanitizeConsultationNotesForDisplay(value));
         break;
       default:
         break;
@@ -1699,6 +2063,51 @@ const QuickConsultation = ({
     </div>
   );
 
+  const clearAllFields = () => {
+    const confirmed = window.confirm("Deseja limpar todos os campos deste prontuario?");
+    if (!confirmed) return;
+
+    setWeight("");
+    setTemperature("");
+    setHeartRate("");
+    setRespiratoryRate("");
+    setChiefComplaint("");
+    setAnamnesis("");
+    setPhysicalExam("");
+    setDiagnosis("");
+    setTreatment("");
+    setProcedurePerformed("nao");
+    setProcedureDetails("");
+    setMedicationPrescribed("nao");
+    setMedicationDetails("");
+    setExamRequested("nao");
+    setExamDetails("");
+    setNotes("");
+    setReturnRecommended(false);
+    setReturnDate("");
+    setOpenReturnWithoutDate(false);
+    setReturnRecommendation("");
+    setSmallAnimalData(DEFAULT_SMALL_ANIMAL_DATA);
+    setLargeAnimalData(DEFAULT_LARGE_ANIMAL_DATA);
+    setConversationTranscript("");
+    setTranscriptSegments([]);
+    setConversationStartedAt(null);
+    setParsedTranscriptPreview(null);
+    setLiveInterimText("");
+    setShowTranscriptExpanded(false);
+    setAiChatText("");
+    setAiMessages([]);
+    setAiConfidenceByField({});
+    setAiMissingFields({ core: [], specific: [] });
+    setFeedback(null);
+    liveInterimRef.current = "";
+    transcriptRef.current = "";
+
+    if (draftKey) {
+      localStorage.removeItem(draftKey);
+    }
+  };
+
   const saveConsultationWithPrescription = async (download) => {
     if (!patient?.id) {
       showFeedback("error", "Selecione um paciente antes de salvar a consulta.");
@@ -1789,7 +2198,7 @@ const QuickConsultation = ({
   }
 
   return (
-    <div className="max-w-3xl mx-auto space-y-4 pb-24 sm:pb-4">
+    <div className="max-w-3xl mx-auto space-y-4 pb-36 sm:pb-28">
       <button
         type="button"
         onClick={onBack}
@@ -1878,8 +2287,9 @@ const QuickConsultation = ({
               type="button"
               onClick={handleAutoFillWithAI}
               disabled={aiGenerating}
-              className="min-h-[46px] rounded-lg bg-emerald-600 px-3 py-2 text-sm font-bold text-white disabled:opacity-70"
+              className="min-h-[46px] rounded-lg bg-emerald-600 px-3 py-2 text-sm font-bold text-white disabled:opacity-70 inline-flex items-center justify-center gap-2"
             >
+              {aiGenerating && <LoadingDot />}
               {aiGenerating ? "Processando..." : "Preencher com IA (automatico)"}
             </button>
           </div>
@@ -1892,16 +2302,18 @@ const QuickConsultation = ({
                 type="button"
                 onClick={() => generateDraftFromChat(false, "standard")}
                 disabled={aiGenerating}
-                className="min-h-[40px] rounded-lg bg-violet-600 px-3 py-2 text-sm font-bold text-white disabled:opacity-70"
+                className="min-h-[40px] rounded-lg bg-violet-600 px-3 py-2 text-sm font-bold text-white disabled:opacity-70 inline-flex items-center justify-center gap-2"
               >
+                {aiGenerating && <LoadingDot />}
                 {aiGenerating ? "Gerando..." : "Preencher vazios"}
               </button>
               <button
                 type="button"
                 onClick={() => generateDraftFromChat(true, "standard")}
                 disabled={aiGenerating}
-                className="min-h-[40px] rounded-lg border border-violet-300 bg-white px-3 py-2 text-sm font-bold text-violet-800 disabled:opacity-70"
+                className="min-h-[40px] rounded-lg border border-violet-300 bg-white px-3 py-2 text-sm font-bold text-violet-800 disabled:opacity-70 inline-flex items-center justify-center gap-2"
               >
+                {aiGenerating && <LoadingDot className="text-violet-700" />}
                 {aiGenerating ? "Aplicando..." : "Substituir campos"}
               </button>
               <select
@@ -1921,8 +2333,9 @@ const QuickConsultation = ({
                 type="button"
                 onClick={refineSelectedField}
                 disabled={aiRefining}
-                className="min-h-[40px] rounded-lg border border-violet-300 bg-white px-3 py-2 text-sm font-bold text-violet-800 disabled:opacity-70 sm:col-span-3"
+                className="min-h-[40px] rounded-lg border border-violet-300 bg-white px-3 py-2 text-sm font-bold text-violet-800 disabled:opacity-70 sm:col-span-3 inline-flex items-center justify-center gap-2"
               >
+                {aiRefining && <LoadingDot className="text-violet-700" />}
                 {aiRefining ? "Refinando..." : "Refinar campo selecionado"}
               </button>
             </div>
@@ -2104,10 +2517,70 @@ const QuickConsultation = ({
         <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
           Classificacao do prontuario por porte
         </h2>
-        <p className="text-sm text-gray-700">
-          Porte detectado para este paciente:{" "}
-          <strong>{isLargeAnimal ? "Grande porte" : "Pequeno porte"}</strong>
-        </p>
+        <div className="space-y-2">
+          <p className="text-sm text-gray-700">
+            Porte detectado:{" "}
+            <strong>
+              {detectedPorte === "grande"
+                ? "Grande porte"
+                : detectedPorte === "pequeno"
+                  ? "Pequeno porte"
+                  : "Nao detectado automaticamente"}
+            </strong>
+          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setSelectedPorte("pequeno")}
+              className={`rounded-lg border px-3 py-2 text-sm font-semibold transition ${
+                animalPorte === "pequeno"
+                  ? "border-blue-600 bg-blue-600 text-white"
+                  : detectedPorte === "pequeno"
+                    ? "border-blue-300 bg-blue-50 text-blue-700"
+                    : "border-gray-300 bg-white text-gray-700"
+              }`}
+            >
+              Pequeno porte
+              {detectedPorte === "pequeno" && (
+                <span className="ml-2 rounded-full bg-white/70 px-2 py-0.5 text-[10px] font-bold text-blue-700">
+                  Detectado
+                </span>
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={() => setSelectedPorte("grande")}
+              className={`rounded-lg border px-3 py-2 text-sm font-semibold transition ${
+                animalPorte === "grande"
+                  ? "border-amber-600 bg-amber-600 text-white"
+                  : detectedPorte === "grande"
+                    ? "border-amber-300 bg-amber-50 text-amber-800"
+                    : "border-gray-300 bg-white text-gray-700"
+              }`}
+            >
+              Grande porte
+              {detectedPorte === "grande" && (
+                <span className="ml-2 rounded-full bg-white/80 px-2 py-0.5 text-[10px] font-bold text-amber-800">
+                  Detectado
+                </span>
+              )}
+            </button>
+            {selectedPorte && (
+              <button
+                type="button"
+                onClick={() => setSelectedPorte(null)}
+                className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-700"
+              >
+                Usar detectado
+              </button>
+            )}
+          </div>
+          {selectedPorte && detectedPorte && selectedPorte !== detectedPorte && (
+            <p className="text-xs font-medium text-amber-700">
+              Porte selecionado manualmente. A IA usara este porte para preencher a ficha.
+            </p>
+          )}
+        </div>
         <div>
           <div className="mb-1 flex items-center justify-between text-xs text-gray-600">
             <span>Preenchimento da ficha de porte</span>
@@ -2343,24 +2816,36 @@ const QuickConsultation = ({
           )}
         </div>
 
-        <div className="sticky bottom-0 -mx-4 sm:mx-0 border-t border-gray-200 bg-white/95 px-4 sm:px-0 py-3 backdrop-blur">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <div className="fixed left-0 right-0 bottom-14 sm:bottom-4 z-30 px-4 sm:px-0">
+          <div className="mx-auto max-w-3xl rounded-2xl border border-gray-200 bg-white/95 backdrop-blur shadow-lg px-4 py-3 sm:py-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <button
+              type="button"
+              onClick={clearAllFields}
+              disabled={saving}
+              className="min-h-[46px] rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-70"
+            >
+              Limpar campos
+            </button>
             <button
               type="button"
               onClick={() => saveConsultationWithPrescription(false)}
               disabled={saving}
-              className="min-h-[46px] rounded-xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-70"
+              className="min-h-[46px] rounded-xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-70 inline-flex items-center justify-center gap-2"
             >
+              {saving && <LoadingDot />}
               {saving ? "Salvando..." : "Salvar Consulta"}
             </button>
             <button
               type="button"
               onClick={() => saveConsultationWithPrescription(true)}
               disabled={saving}
-              className="min-h-[46px] rounded-xl bg-indigo-600 px-4 py-3 text-sm font-bold text-white hover:bg-indigo-700 disabled:opacity-70"
+              className="min-h-[46px] rounded-xl bg-indigo-600 px-4 py-3 text-sm font-bold text-white hover:bg-indigo-700 disabled:opacity-70 inline-flex items-center justify-center gap-2"
             >
+              {saving && <LoadingDot />}
               {saving ? "Processando..." : "Salvar + Gerar Receita"}
             </button>
+          </div>
           </div>
         </div>
       </div>

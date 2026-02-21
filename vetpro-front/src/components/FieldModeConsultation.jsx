@@ -38,6 +38,8 @@ const FieldModeConsultation = ({ patient, onSave, onBack, onSwitchToManual }) =>
   const audioChunksRef = useRef([]);
   const recordedAudioBlobRef = useRef(null);
   const pauseRequestedRef = useRef(false);
+  const audioFileInputRef = useRef(null);
+  const [uploadedAudioName, setUploadedAudioName] = useState("");
 
   const supportsSpeech = useMemo(
     () =>
@@ -91,6 +93,13 @@ const FieldModeConsultation = ({ patient, onSave, onBack, onSwitchToManual }) =>
     const normalized = normalizeText(phrase || "");
     if (!normalized) return fallbackSpeaker;
 
+    const symptomContext =
+      /\b(nao ta bem|não tá bem|sem apetite|vomit|diarre|febre|dor|apat|prostr|mucosa|coce)\b/.test(normalized);
+    const vetQuestionContext =
+      /\b(desde quando|ha quanto|há quanto|me explica|me conte|me conta|pode me dizer)\b/.test(normalized);
+    const vetActionContext =
+      /\b(vamos|no exame|ao exame|suspeita|diagnost|conduta|tratamento|prescrev|oriento|solicitei|pedi|coletar)\b/.test(normalized);
+
     const tutorSignals = [
       "doutor",
       "doutora",
@@ -130,8 +139,25 @@ const FieldModeConsultation = ({ patient, onSave, onBack, onSwitchToManual }) =>
       "avaliacao clinica",
     ];
 
-    if (tutorSignals.some((signal) => normalized.includes(signal))) return "Tutor";
-    if (medicoSignals.some((signal) => normalized.includes(signal))) return "Medico";
+    let tutorScore = 0;
+    let medicoScore = 0;
+    tutorSignals.forEach((signal) => {
+      if (normalized.includes(signal)) tutorScore += 2;
+    });
+    medicoSignals.forEach((signal) => {
+      if (normalized.includes(signal)) medicoScore += 2;
+    });
+
+    if (/^(dr|dra|doutor|doutora)\b/.test(normalized)) {
+      if (symptomContext) tutorScore += 3;
+      else medicoScore += 1;
+    }
+    if (/\b(meu|minha|aqui em casa|em casa)\b/.test(normalized)) tutorScore += 2;
+    if (vetQuestionContext) medicoScore += 3;
+    if (vetActionContext) medicoScore += 2;
+
+    if (tutorScore > medicoScore) return "Tutor";
+    if (medicoScore > tutorScore) return "Medico";
 
     return fallbackSpeaker;
   };
@@ -598,7 +624,12 @@ const FieldModeConsultation = ({ patient, onSave, onBack, onSwitchToManual }) =>
 
   const runFieldAssist = async (candidateSegments) => {
     const baseTranscript = transcriptRef.current.trim();
-    if (!baseTranscript && (!candidateSegments || candidateSegments.length === 0)) {
+    const audioBlob = recordedAudioBlobRef.current;
+    if (
+      !baseTranscript &&
+      (!candidateSegments || candidateSegments.length === 0) &&
+      !(audioBlob && audioBlob.size > 0)
+    ) {
       return;
     }
 
@@ -608,9 +639,9 @@ const FieldModeConsultation = ({ patient, onSave, onBack, onSwitchToManual }) =>
       formData.append("segments", JSON.stringify(candidateSegments || []));
       formData.append("transcript", baseTranscript);
 
-      const audioBlob = recordedAudioBlobRef.current;
       if (audioBlob && audioBlob.size > 0) {
-        formData.append("audio", audioBlob, "field-audio.webm");
+        const fileName = audioBlob?.name || "field-audio.webm";
+        formData.append("audio", audioBlob, fileName);
         formData.append("mimeType", audioBlob.type || "audio/webm");
       }
 
@@ -625,13 +656,29 @@ const FieldModeConsultation = ({ patient, onSave, onBack, onSwitchToManual }) =>
       if (result.transcript) {
         transcriptRef.current = result.transcript;
       }
+      const fallbackTranscript = String(
+        result.transcript || baseTranscript || "",
+      ).trim();
+      const fallbackSegments =
+        (Array.isArray(result.segments) && result.segments.length > 0
+          ? result.segments
+          : candidateSegments) || [];
       const parsed =
-        result.parsed || parseTranscriptLocal(baseTranscript, candidateSegments);
+        result.parsed || parseTranscriptLocal(fallbackTranscript, fallbackSegments);
       setParsedData(parsed);
       setParsedConfidence(
-        result.parsedConfidence || buildLocalConfidence(parsed, candidateSegments),
+        result.parsedConfidence || buildLocalConfidence(parsed, fallbackSegments),
       );
       setAnalysisSource(result.provider || "heuristic");
+      const hasParsedContent = Object.values(parsed || {}).some((value) =>
+        String(value || "").trim(),
+      );
+      if (!fallbackTranscript && !hasParsedContent) {
+        showFeedback(
+          "error",
+          "Nao foi possivel transcrever o audio. Verifique se o backend tem DEEPGRAM_API_KEY ou OPENAI_API_KEY.",
+        );
+      }
     } catch (error) {
       console.error("Falha no assistente de campo (backend):", error);
       const parsed = parseTranscriptLocal(baseTranscript, candidateSegments);
@@ -645,6 +692,50 @@ const FieldModeConsultation = ({ patient, onSave, onBack, onSwitchToManual }) =>
 
   const analyzeCurrentConversation = async () => {
     await runFieldAssist(segments);
+  };
+
+  const handlePickRecordedAudio = async (event) => {
+    const file = event?.target?.files?.[0];
+    if (!file) return;
+
+    if (!String(file.type || "").startsWith("audio/")) {
+      showFeedback("error", "Selecione um arquivo de audio valido.");
+      return;
+    }
+
+    if (file.size > 25 * 1024 * 1024) {
+      showFeedback("error", "Arquivo maior que 25MB. Reduza o audio e tente novamente.");
+      return;
+    }
+
+    keepRecordingRef.current = false;
+    setIsRecording(false);
+    setIsPaused(false);
+    setShowPausedActions(false);
+    setSegments([]);
+    setParsedData(null);
+    setParsedConfidence(null);
+    setElapsedSeconds(0);
+    setStartedAt(null);
+    transcriptRef.current = "";
+    liveInterimRef.current = "";
+    setLiveInterim("");
+    audioChunksRef.current = [];
+    recordedAudioBlobRef.current = file;
+    setUploadedAudioName(file.name);
+
+    try {
+      await stopAudioCapture({ releaseStream: false });
+    } catch {
+      // noop
+    }
+
+    showFeedback("success", "Audio carregado. Processando com IA de campo...");
+    await runFieldAssist([]);
+
+    if (audioFileInputRef.current) {
+      audioFileInputRef.current.value = "";
+    }
   };
 
   const toggleRecording = async () => {
@@ -778,6 +869,8 @@ const FieldModeConsultation = ({ patient, onSave, onBack, onSwitchToManual }) =>
     setElapsedSeconds(0);
     setStartedAt(null);
     transcriptRef.current = "";
+    recordedAudioBlobRef.current = null;
+    setUploadedAudioName("");
     liveInterimRef.current = "";
     recordedAudioBlobRef.current = null;
     stopAudioCapture({ releaseStream: true });
@@ -1007,6 +1100,26 @@ const FieldModeConsultation = ({ patient, onSave, onBack, onSwitchToManual }) =>
           <p className="text-[11px] text-cyan-700 font-semibold">
             Analise: {analysisSource === "deepgram" ? "Diarizacao Deepgram" : "Heuristica local"}
           </p>
+          <div className="w-full max-w-md rounded-lg border border-cyan-200 bg-white p-2">
+            <input
+              ref={audioFileInputRef}
+              type="file"
+              accept="audio/*"
+              onChange={handlePickRecordedAudio}
+              className="hidden"
+            />
+            <button
+              type="button"
+              onClick={() => audioFileInputRef.current?.click()}
+              disabled={analyzing || isRecording}
+              className="w-full rounded-lg border border-cyan-300 bg-cyan-50 px-3 py-2 text-xs font-bold text-cyan-800 disabled:opacity-70"
+            >
+              Usar audio gravado
+            </button>
+            <p className="mt-1 text-[11px] text-gray-500">
+              {uploadedAudioName ? `Arquivo: ${uploadedAudioName}` : "Selecione um arquivo de audio do celular/computador (max. 25MB)."}
+            </p>
+          </div>
         </div>
 
         <div className="rounded-lg border border-cyan-200 bg-cyan-50 p-3 space-y-2">
@@ -1194,6 +1307,8 @@ const FieldModeConsultation = ({ patient, onSave, onBack, onSwitchToManual }) =>
               setParsedData(null);
               setParsedConfidence(null);
               transcriptRef.current = "";
+              recordedAudioBlobRef.current = null;
+              setUploadedAudioName("");
             }}
             className="min-h-[46px] rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm font-bold text-gray-700"
           >

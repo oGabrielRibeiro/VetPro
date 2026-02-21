@@ -9,8 +9,11 @@ function normalize(value = "") {
 }
 
 const EXAMPLES_FILE_PATH = path.join(__dirname, "..", "ai", "recordChatExamples.json");
+const PORTE_DICTIONARY_FILE_PATH = path.join(__dirname, "..", "ai", "porteDetectionDictionary.json");
 let examplesCache = null;
 let examplesCacheMtime = 0;
+let porteDictionaryCache = null;
+let porteDictionaryCacheMtime = 0;
 
 function safeReadExamplesFile() {
   if (!fs.existsSync(EXAMPLES_FILE_PATH)) return [];
@@ -32,6 +35,70 @@ function safeReadExamplesFile() {
     console.error("Falha ao carregar exemplos de IA:", error.message);
     return [];
   }
+}
+
+function defaultPorteDictionary() {
+  return {
+    large: [
+      { token: "equino", weight: 5 },
+      { token: "cavalo", weight: 5 },
+      { token: "quarto de milha", weight: 6 },
+      { token: "bovino", weight: 5 },
+      { token: "vaca", weight: 5 },
+      { token: "bezerro", weight: 5 },
+      { token: "rebanho", weight: 5 },
+      { token: "fazenda", weight: 4 }
+    ],
+    small: [
+      { token: "canino", weight: 4 },
+      { token: "cachorro", weight: 4 },
+      { token: "felino", weight: 4 },
+      { token: "gato", weight: 4 },
+      { token: "pet", weight: 3 }
+    ],
+    conflict_resolution: {
+      strong_threshold: 6,
+      minimum_margin: 2
+    }
+  };
+}
+
+function safeReadPorteDictionaryFile() {
+  if (!fs.existsSync(PORTE_DICTIONARY_FILE_PATH)) return defaultPorteDictionary();
+
+  try {
+    const stat = fs.statSync(PORTE_DICTIONARY_FILE_PATH);
+    const mtime = Number(stat.mtimeMs || 0);
+    if (porteDictionaryCache && mtime === porteDictionaryCacheMtime) {
+      return porteDictionaryCache;
+    }
+
+    const raw = fs.readFileSync(PORTE_DICTIONARY_FILE_PATH, "utf8");
+    const parsed = JSON.parse(raw);
+    const dictionary = {
+      large: Array.isArray(parsed?.large) ? parsed.large : [],
+      small: Array.isArray(parsed?.small) ? parsed.small : [],
+      conflict_resolution: parsed?.conflict_resolution || {}
+    };
+
+    porteDictionaryCache = dictionary;
+    porteDictionaryCacheMtime = mtime;
+    return dictionary;
+  } catch (error) {
+    console.error("Falha ao carregar dicionario de porte:", error.message);
+    return defaultPorteDictionary();
+  }
+}
+
+function scorePorteByDictionary(source = "", terms = []) {
+  const text = normalize(source);
+  if (!text) return 0;
+  return terms.reduce((sum, item) => {
+    const token = normalize(item?.token || "");
+    const weight = Number(item?.weight || 0) || 0;
+    if (!token || !weight) return sum;
+    return text.includes(token) ? sum + weight : sum;
+  }, 0);
 }
 
 function tokenizeForSimilarity(text = "") {
@@ -208,13 +275,29 @@ const SPECIFIC_FIELD_LABELS = {
 
 function classifyPorteFromContext(patient = null, sourceText = "", recordProfile = null) {
   const profilePorte = String(recordProfile?.porte || "").trim().toLowerCase();
-  if (profilePorte === "grande" || profilePorte === "pequeno") return profilePorte;
-
   const source = normalize(
     `${patient?.species || patient?.specie || ""} ${patient?.breed || ""} ${sourceText || ""}`
   );
-  const largeSignals = ["equino", "bovino", "caprino", "ovino", "suino", "bufalo", "rebanho", "fazenda"];
-  if (largeSignals.some((signal) => source.includes(signal))) return "grande";
+  const dictionary = safeReadPorteDictionaryFile();
+  const largeScore = scorePorteByDictionary(source, dictionary.large);
+  const smallScore = scorePorteByDictionary(source, dictionary.small);
+  const strongThreshold = Number(dictionary?.conflict_resolution?.strong_threshold || 6) || 6;
+  const minMargin = Number(dictionary?.conflict_resolution?.minimum_margin || 2) || 2;
+
+  if (profilePorte === "grande" || profilePorte === "pequeno") {
+    // Se o perfil vier conflitante, mas o texto trouxer forte evidencia do porte oposto,
+    // priorizamos a evidencia clinica do contexto para evitar ficha errada.
+    if (profilePorte === "pequeno" && largeScore >= strongThreshold && largeScore - smallScore >= minMargin) {
+      return "grande";
+    }
+    if (profilePorte === "grande" && smallScore >= strongThreshold && smallScore - largeScore >= minMargin) {
+      return "pequeno";
+    }
+    return profilePorte;
+  }
+
+  if (largeScore > smallScore) return "grande";
+  if (smallScore > largeScore) return "pequeno";
   return "pequeno";
 }
 
@@ -1161,6 +1244,16 @@ function trimByPlanningTail(value = "") {
   return clean.slice(0, cut).trim();
 }
 
+function safeFieldSentence(value = "", maxLen = 140) {
+  return truncateText(trimByPlanningTail(trimBySentenceBoundary(value)), maxLen);
+}
+
+function extractFirstMatch(text = "", regex) {
+  if (!text || !regex) return "";
+  const match = String(text).match(regex);
+  return match?.[1] ? String(match[1]).trim() : "";
+}
+
 function looksLikeNoisyConversation(value = "") {
   const normalized = normalize(value);
   if (!normalized) return false;
@@ -1208,18 +1301,23 @@ function normalizeSpecificValueByKey(key, value = "") {
   }
 
   if (key === "rationBrand") {
-    clean = trimByPlanningTail(trimBySentenceBoundary(clean));
-    return truncateText(clean, 90);
+    clean = safeFieldSentence(clean, 90);
+    const normalizedRation = normalize(clean);
+    const looksLikeRation =
+      /\b(racao|ração|premium|seca|umida|úmida|marca|dieta)\b/.test(normalizedRation);
+    return looksLikeRation ? clean : "";
   }
 
   if (key === "allergyHistory") {
-    clean = trimByPlanningTail(trimBySentenceBoundary(clean));
-    return truncateText(clean, 120);
+    clean = safeFieldSentence(clean, 120);
+    const normalizedAllergy = normalize(clean);
+    const looksLikeAllergy =
+      /\b(alerg|atopi|sazonal|reacao|prurido)\b/.test(normalizedAllergy);
+    return looksLikeAllergy ? clean : "";
   }
 
   if (["diet", "dewormingStatus", "ectoparasiteControl", "chronicDiseases"].includes(key)) {
-    clean = trimByPlanningTail(trimBySentenceBoundary(clean));
-    return truncateText(clean, 120);
+    return safeFieldSentence(clean, 120);
   }
 
   if (["daysInMilk", "parity", "bodyConditionScore"].includes(key)) {
@@ -1270,6 +1368,53 @@ function inferSpecificFieldValueFromContext(key, sourceText = "", chiefComplaint
     );
   }
 
+  if (key === "rationBrand") {
+    const brandSentence = extractClinicalSentenceByTerms(text, [
+      "racao",
+      "ração",
+      "marca",
+      "premium",
+      "super premium",
+      "seca",
+      "umida",
+      "ração seca",
+      "ração umida"
+    ]);
+    return normalizeSpecificValueByKey(key, brandSentence);
+  }
+
+  if (key === "vaccinationProtocol") {
+    const protocolMatch = text.match(/\b(v8|v10|v11|antirrabic[ao]?|giardia|kc|pneumodog)\b/gi);
+    if (protocolMatch?.length) {
+      return normalizeSpecificValueByKey(key, Array.from(new Set(protocolMatch.map((item) => item.toUpperCase()))).join(", "));
+    }
+    const protocolSentence = extractClinicalSentenceByTerms(text, ["protocolo vacinal", "vacina", "vacinacao"]);
+    return normalizeSpecificValueByKey(key, protocolSentence);
+  }
+
+  if (key === "lastVaccines") {
+    const sentence = extractClinicalSentenceByTerms(text, [
+      "ultima vacina",
+      "ultimas vacinas",
+      "vacina aplicada",
+      "reforco vacinal",
+      "vacinacao recente"
+    ]);
+    return normalizeSpecificValueByKey(key, sentence);
+  }
+
+  if (key === "allergyHistory") {
+    const sentence = extractClinicalSentenceByTerms(text, [
+      "alergia",
+      "alergico",
+      "sazonal",
+      "atopia",
+      "coceira recorrente",
+      "reacao"
+    ]);
+    return normalizeSpecificValueByKey(key, sentence);
+  }
+
   if (key === "ectoparasiteControl") {
     return normalizeSpecificValueByKey(
       key,
@@ -1280,6 +1425,9 @@ function inferSpecificFieldValueFromContext(key, sourceText = "", chiefComplaint
   if (key === "productionSystem") {
     if (/\b(lactacao|leite|producao leiteira)\b/.test(normalized)) return "Leite";
     if (/\b(corte|engorda)\b/.test(normalized)) return "Corte";
+    if (/\b(confinado|confinamento)\b/.test(normalized)) return "Confinado";
+    if (/\b(semi[- ]?extensivo)\b/.test(normalized)) return "Semi-extensivo";
+    if (/\b(extensivo|pasto)\b/.test(normalized)) return "Extensivo";
   }
 
   if (key === "milkProduction") {
@@ -1306,10 +1454,81 @@ function inferSpecificFieldValueFromContext(key, sourceText = "", chiefComplaint
   if (key === "animalFunction") {
     if (/\b(esporte|trabalho)\b/.test(normalized)) return "Esporte";
     if (/\b(leite|lactacao)\b/.test(normalized)) return "Producao leiteira";
+    if (/\b(corte|engorda)\b/.test(normalized)) return "Corte";
   }
 
   if (key === "batch") {
-    return normalizeSpecificValueByKey(key, extractClinicalSentenceByTerms(text, ["lote", "rebanho"]));
+    const explicitBatch = extractFirstMatch(text, /\b(?:lote|grupo|piquete)\s*(?:n[ºo]\s*)?([a-z0-9\-]+)/i);
+    if (explicitBatch) return normalizeSpecificValueByKey(key, `Lote ${explicitBatch}`);
+    return normalizeSpecificValueByKey(key, extractClinicalSentenceByTerms(text, ["lote", "rebanho", "grupo", "piquete"]));
+  }
+
+  if (key === "animalId") {
+    const explicitId = extractFirstMatch(text, /\b(?:vaca|boi|bezerro|equino|animal|brinco|id)\s*[:#]?\s*([a-z0-9\-]{2,})/i);
+    return normalizeSpecificValueByKey(key, explicitId);
+  }
+
+  if (key === "bodyConditionScore") {
+    const bcs = extractFirstMatch(text, /\b(?:ecc|escore corporal)\s*[:=]?\s*([1-5](?:[.,]\d)?)/i);
+    return normalizeSpecificValueByKey(key, bcs);
+  }
+
+  if (key === "daysInMilk") {
+    const del = extractFirstMatch(text, /\b(?:del|dias?\s+em\s+lactacao|dias?\s+lactacao)\s*[:=]?\s*(\d{1,4})/i);
+    return normalizeSpecificValueByKey(key, del);
+  }
+
+  if (key === "parity") {
+    const parity = extractFirstMatch(text, /\b(?:paridade|partos?)\s*[:=]?\s*(\d{1,2})/i);
+    return normalizeSpecificValueByKey(key, parity);
+  }
+
+  if (key === "reproductiveStatus") {
+    if (/\b(prenh|gestante)\b/.test(normalized)) return "Prenhe";
+    if (/\b(vazia|nao prenhe)\b/.test(normalized)) return "Vazia";
+    if (/\b(lacta)\b/.test(normalized)) return "Lactacao";
+  }
+
+  if (key === "reproductiveStatusSmall") {
+    if (/\b(castrad)\b/.test(normalized)) return "Castrado(a)";
+    if (/\b(inteir|nao castrad)\b/.test(normalized)) return "Inteiro(a)";
+    if (/\b(cio)\b/.test(normalized)) return "Em cio";
+    if (/\b(gestante|prenhe)\b/.test(normalized)) return "Gestante";
+  }
+
+  if (key === "housing") {
+    const sentence = extractClinicalSentenceByTerms(text, ["apartamento", "casa", "quintal", "acesso externo", "canil", "gatil"]);
+    return normalizeSpecificValueByKey(key, sentence);
+  }
+
+  if (key === "lifestyle") {
+    const sentence = extractClinicalSentenceByTerms(text, ["sedentario", "ativo", "enriquecimento", "passeio", "atividade fisica"]);
+    return normalizeSpecificValueByKey(key, sentence);
+  }
+
+  if (key === "contactWithAnimals") {
+    const sentence = extractClinicalSentenceByTerms(text, ["contato com outros animais", "convive", "hotel", "creche", "canil"]);
+    return normalizeSpecificValueByKey(key, sentence);
+  }
+
+  if (key === "currentSupplements") {
+    const sentence = extractClinicalSentenceByTerms(text, ["omega", "condroprotetor", "probiotico", "vitamina", "suplemento"]);
+    return normalizeSpecificValueByKey(key, sentence);
+  }
+
+  if (key === "requestedExamPanel") {
+    const sentence = extractClinicalSentenceByTerms(text, ["hemograma", "radiografia", "ultrassom", "cultura", "sorologia", "copro"]);
+    return normalizeSpecificValueByKey(key, sentence);
+  }
+
+  if (key === "previousTreatmentHistory") {
+    const sentence = extractClinicalSentenceByTerms(text, ["tratamento anterior", "ja usou", "historico de tratamento", "terapia previa"]);
+    return normalizeSpecificValueByKey(key, sentence);
+  }
+
+  if (key === "historicalDiseases") {
+    const sentence = extractClinicalSentenceByTerms(text, ["historico sanitario", "doenca anterior", "episodio anterior", "recorrente"]);
+    return normalizeSpecificValueByKey(key, sentence);
   }
 
   if (key === "mineralSupplementation") {

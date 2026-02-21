@@ -3,9 +3,10 @@ import api, { buildApiUrl } from "../services/api";
 import { useAuth } from "../contexts/AuthContext";
 import BeforeAfterSlider from "../components/BeforeAfterSlider";
 import AppIcon from "./AppIcon";
-
-const PORTE_NOTES_MARK_START = "[[PORTE_CLINICO]]";
-const PORTE_NOTES_MARK_END = "[[/PORTE_CLINICO]]";
+import {
+  parsePorteDataFromNotes,
+  sanitizeConsultationNotesForDisplay,
+} from "../utils/consultationNotes";
 
 const PORTE_FIELD_LABELS = {
   vaccinationStatus: "Vacinacao",
@@ -55,30 +56,6 @@ const PORTE_FIELD_LABELS = {
   requestedExamPanel: "Exames complementares solicitados",
 };
 
-function parsePorteDataFromNotes(notes = "") {
-  const text = String(notes || "");
-  const start = text.indexOf(PORTE_NOTES_MARK_START);
-  const end = text.indexOf(PORTE_NOTES_MARK_END);
-  if (start < 0 || end <= start) return null;
-
-  const raw = text
-    .slice(start + PORTE_NOTES_MARK_START.length, end)
-    .trim();
-  if (!raw) return null;
-
-  try {
-    const parsed = JSON.parse(raw);
-    const fields = parsed?.fields && typeof parsed.fields === "object" ? parsed.fields : null;
-    if (!fields) return null;
-    return {
-      porte: parsed?.porte === "grande" ? "grande" : "pequeno",
-      fields,
-    };
-  } catch {
-    return null;
-  }
-}
-
 const ConsultationPreview = ({
   consultation,
   patient,
@@ -126,6 +103,9 @@ const ConsultationPreview = ({
     consultation.template ||
     (consultation.consultationType === "retorno" ? "return" : "general");
   const porteData = parsePorteDataFromNotes(consultation.notes);
+  const visibleObservations = sanitizeConsultationNotesForDisplay(
+    consultation.observations || consultation.notes || "",
+  );
 
   const formatDateBR = (dateString) => {
     const date = new Date(dateString);
@@ -397,13 +377,13 @@ const ConsultationPreview = ({
               </div>
             )}
 
-            {consultation.observations && (
+            {visibleObservations && (
               <div>
                 <h3 className="font-bold text-gray-800 text-lg mb-2">
                   OBSERVAÇÕES
                 </h3>
                 <p className="text-gray-700 whitespace-pre-line">
-                  {consultation.observations}
+                  {visibleObservations}
                 </p>
               </div>
             )}

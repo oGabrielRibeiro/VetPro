@@ -99,102 +99,6 @@
       }
     },
     {
-      "id": "grande_bovino_mastite",
-      "mode": "nova",
-      "porte": "grande",
-      "input": "Vaca em lactação com queda de produção e edema de quarto mamário posterior direito há 2 dias. Exame físico com dor local e alteração do leite. Suspeita de mastite clínica. Coletada amostra para CMT/cultura e instituído protocolo terapêutico. Conduta: Instituído protocolo terapêutico para mastite conforme avaliação clínica e rotina da propriedade. Exames solicitados: Solicitado CMT e cultura microbiológica do leite. Retorno: Reavaliar em 48-72 horas e acompanhar produção.",
-      "output": {
-        "chiefComplaint": "Queda de produção leiteira com edema em quarto mamário posterior direito.",
-        "anamnesis": "Responsável relata início há 2 dias de edema mamário, dor local e redução de produção.",
-        "physicalExam": "Dor à palpação do quarto posterior direito e alteração macroscópica do leite.",
-        "diagnosis": "Suspeita de mastite clínica.",
-        "treatment": "Instituído protocolo terapêutico para mastite conforme avaliação clínica e rotina da propriedade.",
-        "procedures": "Coleta de amostra de leite para CMT/cultura.",
-        "medications": "",
-        "examDetails": "Solicitado CMT e cultura microbiológica do leite.",
-        "notes": "",
-        "returnRecommendation": "Reavaliar em 48-72 horas e acompanhar produção.",
-        "porte": "grande",
-        "specificFields": {
-          "productionSystem": "Leite",
-          "daysInMilk": "120",
-          "milkProduction": "Queda de produção observada no último controle."
-        }
-      }
-    },
-    {
-      "id": "grande_equino_claudicacao",
-      "mode": "nova",
-      "porte": "grande",
-      "input": "Equino de esporte com claudicação de membro torácico esquerdo após treino. Exame com dor em flexão distal e sensibilidade em casco. Recomendada redução de carga, anti-inflamatório e avaliação de casqueamento. No exame físico: Dor em flexão distal e sensibilidade no casco do membro torácico esquerdo. Diagnóstico: Claudicação locomotora com suspeita de sobrecarga distal. Conduta: Recomendada redução de carga de trabalho, anti-inflamatório e manejo locomotor. Medicação: Anti-inflamatório conforme prescrição. Retorno: Reavaliar evolução em 5 a 7 dias.",
-      "output": {
-        "chiefComplaint": "Claudicação em membro torácico esquerdo após exercício.",
-        "anamnesis": "Responsável relata início após treino com piora à movimentação.",
-        "physicalExam": "Dor em flexão distal e sensibilidade no casco do membro torácico esquerdo.",
-        "diagnosis": "Claudicação locomotora com suspeita de sobrecarga distal.",
-        "treatment": "Recomendada redução de carga de trabalho, anti-inflamatório e manejo locomotor.",
-        "procedures": "",
-        "medications": "Anti-inflamatório conforme prescrição.",
-        "examDetails": "",
-        "notes": "",
-        "returnRecommendation": "Reavaliar evolução em 5 a 7 dias.",
-        "porte": "grande",
-        "specificFields": {
-          "animalFunction": "Esporte",
-          "hoofStatus": "Sensibilidade em casco e necessidade de revisão do casqueamento.",
-          "physicalExamDetailed": "Avaliação locomotora com dor em flexão distal."
-        }
-      }
-    },
-    {
-      "id": "grande_bezerro_diarreia",
-      "mode": "nova",
-      "porte": "grande",
-      "input": "Bezerro com diarreia aquosa e apatia desde ontem. Responsável informa redução de sucção e desidratação leve. Exame com mucosas discretamente secas. Conduta com suporte hídrico e ajuste nutricional; solicitado exame coproparasitológico. No exame físico: Mucosas discretamente secas ao exame físico. Diagnóstico: Síndrome entérica aguda em bezerro. Retorno: Reavaliar em 24-48 horas ou antes se piora.",
-      "output": {
-        "chiefComplaint": "Diarreia aquosa com apatia em bezerro.",
-        "anamnesis": "Responsável relata início em 24 horas com redução de sucção e sinais de desidratação leve.",
-        "physicalExam": "Mucosas discretamente secas ao exame físico.",
-        "diagnosis": "Síndrome entérica aguda em bezerro.",
-        "treatment": "Conduta de suporte hídrico e ajuste nutricional.",
-        "procedures": "",
-        "medications": "",
-        "examDetails": "Solicitado exame coproparasitológico.",
-        "notes": "",
-        "returnRecommendation": "Reavaliar em 24-48 horas ou antes se piora.",
-        "porte": "grande",
-        "specificFields": {
-          "animalIdentificationDetails": "Bezerro em fase de aleitamento.",
-          "neonateAndReproduction": "Neonato com histórico recente de colostragem.",
-          "fecesAndUrine": "Fezes aquosas; monitorar frequência e volume."
-        }
-      }
-    },
-    {
-      "id": "grande_retorno_rebanho",
-      "mode": "retorno",
-      "porte": "grande",
-      "input": "Retorno sanitário em lote de vacas. Houve melhora geral após ajuste de manejo, mas ainda com dois animais com escore corporal baixo. Reforçadas medidas de suplementação mineral e monitoramento de consumo. No exame físico: Animais do lote com condição geral estável, mantendo atenção para escore corporal reduzido em parte do grupo. Diagnóstico: Evolução favorável do lote com necessidade de correção nutricional pontual. Conduta: Reforçadas medidas de suplementação mineral e monitoramento de consumo.",
-      "output": {
-        "chiefComplaint": "Retorno de lote com melhora geral e persistência de baixo escore corporal em dois animais.",
-        "anamnesis": "Responsável relata evolução positiva após ajuste de manejo, com pontos pendentes nutricionais.",
-        "physicalExam": "Animais do lote com condição geral estável, mantendo atenção para escore corporal reduzido em parte do grupo.",
-        "diagnosis": "Evolução favorável do lote com necessidade de correção nutricional pontual.",
-        "treatment": "Reforçadas medidas de suplementação mineral e monitoramento de consumo.",
-        "procedures": "",
-        "medications": "",
-        "examDetails": "",
-        "notes": "",
-        "returnRecommendation": "Novo retorno programado em 15 dias para reavaliação do lote.",
-        "porte": "grande",
-        "specificFields": {
-          "batch": "Lote de vacas em produção.",
-          "bodyConditionScore": "Parte do lote com escore corporal abaixo do ideal.",
-          "mineralSupplementation": "Suplementação reforçada e monitorada."
-        }
-      }
-    },
-    {
       "id": "peq_canino_neuro_1",
       "mode": "nova",
       "porte": "pequeno",
@@ -579,98 +483,482 @@
       }
     },
     {
-      "id": "peq_canino_pancreatite",
+      "id": "grande_bovino_mastite",
       "mode": "nova",
-      "porte": "pequeno",
-      "input": "O meu cachorro comeu um monte de gordura de churrasco ontem. Hoje ele está vomitando muito, com a barriga muito dura e parece que está rezando, com o peito no chão e a bunda levantada. No exame físico: Dor severa em abdômen cranial, desidratação, mucosas congestas. Diagnóstico: Suspeita de Pancreatite Aguda. Conduta: Internação para controle de dor e hidratação. Procedimento: Ultrassonografia abdominal e teste de Lipase Pancreática Específica (cPL). Medicação: Analgesia potente (opioides), antieméticos e jejum alimentar. Exames solicitados: Hemograma e perfil bioquímico (enzimas hepáticas e renais). Retorno: Internação imediata. Vacinação: Em dia. Ingestão de água: Recusa.",
+      "porte": "grande",
+      "input": "Vaca em lactação com queda de produção e edema de quarto mamário posterior direito há 2 dias. Exame físico com dor local e alteração do leite. Suspeita de mastite clínica. Coletada amostra para CMT/cultura e instituído protocolo terapêutico. Conduta: Instituído protocolo terapêutico para mastite conforme avaliação clínica e rotina da propriedade. Exames solicitados: Solicitado CMT e cultura microbiológica do leite. Retorno: Reavaliar em 48-72 horas e acompanhar produção.",
       "output": {
-        "chiefComplaint": "Êmese profusa e dor abdominal intensa pós-ingestão de gordura.",
-        "anamnesis": "Histórico de transgressão alimentar gordurosa. Apresenta postura de \"prece\" (alívio de dor abdominal).",
-        "physicalExam": "Dor severa em abdômen cranial, desidratação, mucosas congestas.",
-        "diagnosis": "Suspeita de Pancreatite Aguda.",
-        "treatment": "Internação para controle de dor e hidratação.",
-        "procedures": "Ultrassonografia abdominal e teste de Lipase Pancreática Específica (cPL).",
-        "medications": "Analgesia potente (opioides), antieméticos e jejum alimentar.",
-        "examDetails": "Hemograma e perfil bioquímico (enzimas hepáticas e renais).",
-        "notes": "Condição potencialmente fatal.",
-        "returnRecommendation": "Internação imediata.",
-        "porte": "pequeno",
+        "chiefComplaint": "Queda de produção leiteira com edema em quarto mamário posterior direito.",
+        "anamnesis": "Responsável relata início há 2 dias de edema mamário, dor local e redução de produção.",
+        "physicalExam": "Dor à palpação do quarto posterior direito e alteração macroscópica do leite.",
+        "diagnosis": "Suspeita de mastite clínica.",
+        "treatment": "Instituído protocolo terapêutico para mastite conforme avaliação clínica e rotina da propriedade.",
+        "procedures": "Coleta de amostra de leite para CMT/cultura.",
+        "medications": "",
+        "examDetails": "Solicitado CMT e cultura microbiológica do leite.",
+        "notes": "",
+        "returnRecommendation": "Reavaliar em 48-72 horas e acompanhar produção.",
+        "porte": "grande",
         "specificFields": {
-          "behavior": "Álgico/Prostrado.",
-          "waterIntakeSmall": "Recusa",
-          "vaccinationStatus": "Em dia"
+          "productionSystem": "Leite",
+          "daysInMilk": "120",
+          "milkProduction": "Queda de produção observada no último controle."
         }
       }
     },
     {
-      "id": "peq_canino_osteosar",
+      "id": "grande_equino_claudicacao",
       "mode": "nova",
-      "porte": "pequeno",
-      "input": "O Thor (Rottweiler, 6 anos) está mancando muito da pata da frente. Perto do \"pulso\" dele está muito inchado, duro e quente. Ele está chorando de dor e não quer mais apoiar a pata. No exame físico: Edema rígido em metáfise óssea, calor local e sensibilidade extrema à palpação. Diagnóstico: Suspeita de Osteossarcoma. Conduta: Manejo de dor e avaliação de amputação/quimioterapia. Procedimento: Radiografia de membro afetado e tórax (pesquisa de metástase). Medicação: Analgesia multimodal (AINEs + Opioides). Exames solicitados: Biópsia óssea para confirmação histopatológica. Retorno: Retorno após radiografias. Vacinação: Em dia. Ingestão de água: Normal.",
+      "porte": "grande",
+      "input": "Equino de esporte com claudicação de membro torácico esquerdo após treino. Exame com dor em flexão distal e sensibilidade em casco. Recomendada redução de carga, anti-inflamatório e avaliação de casqueamento. No exame físico: Dor em flexão distal e sensibilidade no casco do membro torácico esquerdo. Diagnóstico: Claudicação locomotora com suspeita de sobrecarga distal. Conduta: Recomendada redução de carga de trabalho, anti-inflamatório e manejo locomotor. Medicação: Anti-inflamatório conforme prescrição. Retorno: Reavaliar evolução em 5 a 7 dias.",
       "output": {
-        "chiefComplaint": "Claudicação severa e aumento de volume ósseo.",
-        "anamnesis": "Cão de raça grande com aumento de volume firme em rádio distal (\"pulso\"). Evolução rápida com dor intensa.",
-        "physicalExam": "Edema rígido em metáfise óssea, calor local e sensibilidade extrema à palpação.",
-        "diagnosis": "Suspeita de Osteossarcoma.",
-        "treatment": "Manejo de dor e avaliação de amputação/quimioterapia.",
-        "procedures": "Radiografia de membro afetado e tórax (pesquisa de metástase).",
-        "medications": "Analgesia multimodal (AINEs + Opioides).",
-        "examDetails": "Biópsia óssea para confirmação histopatológica.",
-        "notes": "Neoplasia óssea altamente agressiva.",
-        "returnRecommendation": "Retorno após radiografias.",
-        "porte": "pequeno",
-        "specificFields": {
-          "behavior": "Muito álgico.",
-          "waterIntakeSmall": "Normal",
-          "vaccinationStatus": "Em dia"
-        }
-      }
-    },
-    {
-      "id": "peq_felino_fivfelv",
-      "mode": "nova",
-      "porte": "pequeno",
-      "input": "O meu gato não melhora dessa gripe. Ele está sempre com o nariz escorrendo, os olhos sujos e a gengiva muito vermelha e sangrando. Ele está ficando muito magro. No exame físico: Gengivite proliferativa, secreção nasal bilateral, linfonodomegalia e baixo escore corporal. Diagnóstico: Suspeita de Imunodeficiência Felina (FIV) e/ou Leucemia Felina (FeLV). Conduta: Tratamento de suporte e controle de infecções secundárias. Procedimento: Teste rápido (SNAP) FIV/FeLV. Medicação: Antibioticoterapia para estomatite e imunoestimulantes. Exames solicitados: Hemograma completo para avaliar anemias ou leucemias. Retorno: Retorno após resultado do teste viral. Vacinação: Não informado. Ingestão de água: Normal.",
-      "output": {
-        "chiefComplaint": "Complexo respiratório crônico e gengivostomatite.",
-        "anamnesis": "Feline com sintomas respiratórios persistentes e inflamação oral severa. Tutor relata emagrecimento progressivo.",
-        "physicalExam": "Gengivite proliferativa, secreção nasal bilateral, linfonodomegalia e baixo escore corporal.",
-        "diagnosis": "Suspeita de Imunodeficiência Felina (FIV) e/ou Leucemia Felina (FeLV).",
-        "treatment": "Tratamento de suporte e controle de infecções secundárias.",
-        "procedures": "Teste rápido (SNAP) FIV/FeLV.",
-        "medications": "Antibioticoterapia para estomatite e imunoestimulantes.",
-        "examDetails": "Hemograma completo para avaliar anemias ou leucemias.",
-        "notes": "Doenças virais crônicas com impacto no sistema imune.",
-        "returnRecommendation": "Retorno após resultado do teste viral.",
-        "porte": "pequeno",
-        "specificFields": {
-          "behavior": "Apático.",
-          "waterIntakeSmall": "Normal",
-          "vaccinationStatus": "Não informado"
-        }
-      }
-    },
-    {
-      "id": "peq_canino_tosse_canis",
-      "mode": "nova",
-      "porte": "pequeno",
-      "input": "Levei o meu cachorro para um hotelzinho semana passada. Agora ele está com uma tosse seca, parece que tem algo entalado, e as vezes parece que ele vai vomitar uma espuma branca de tanto tossir. No exame físico: Reflexo tussígeno exacerbado à palpação traqueal, pulmões limpos à auscultação. Diagnóstico: Traqueobronquite Infecciosa Canina (Tosse dos Canis). Conduta: Isolamento de outros cães e repouso. Medicação: Mucolíticos e, se necessário, antibioticoterapia (Doxiciclina). Retorno: Retorno em 7 dias se não houver melhora. Vacinação: Desatualizado (falta Pneumodog/KC). Ingestão de água: Normal.",
-      "output": {
-        "chiefComplaint": "Tosse seca paroxística pós-exposição a aglomeração.",
-        "anamnesis": "Histórico recente de contato com outros animais (hotelzinho). Apresenta tosse produtiva (expectoração de muco branco).",
-        "physicalExam": "Reflexo tussígeno exacerbado à palpação traqueal, pulmões limpos à auscultação.",
-        "diagnosis": "Traqueobronquite Infecciosa Canina (Tosse dos Canis).",
-        "treatment": "Isolamento de outros cães e repouso.",
+        "chiefComplaint": "Claudicação em membro torácico esquerdo após exercício.",
+        "anamnesis": "Responsável relata início após treino com piora à movimentação.",
+        "physicalExam": "Dor em flexão distal e sensibilidade no casco do membro torácico esquerdo.",
+        "diagnosis": "Claudicação locomotora com suspeita de sobrecarga distal.",
+        "treatment": "Recomendada redução de carga de trabalho, anti-inflamatório e manejo locomotor.",
         "procedures": "",
-        "medications": "Mucolíticos e, se necessário, antibioticoterapia (Doxiciclina).",
+        "medications": "Anti-inflamatório conforme prescrição.",
         "examDetails": "",
-        "notes": "Doença altamente contagiosa.",
-        "returnRecommendation": "Retorno em 7 dias se não houver melhora.",
-        "porte": "pequeno",
+        "notes": "",
+        "returnRecommendation": "Reavaliar evolução em 5 a 7 dias.",
+        "porte": "grande",
         "specificFields": {
-          "behavior": "Ativo, mas cansado pela tosse.",
-          "waterIntakeSmall": "Normal",
-          "vaccinationStatus": "Desatualizado (falta Pneumodog/KC)"
+          "animalFunction": "Esporte",
+          "hoofStatus": "Sensibilidade em casco e necessidade de revisão do casqueamento.",
+          "physicalExamDetailed": "Avaliação locomotora com dor em flexão distal."
+        }
+      }
+    },
+    {
+      "id": "grande_bezerro_diarreia",
+      "mode": "nova",
+      "porte": "grande",
+      "input": "Bezerro com diarreia aquosa e apatia desde ontem. Responsável informa redução de sucção e desidratação leve. Exame com mucosas discretamente secas. Conduta com suporte hídrico e ajuste nutricional; solicitado exame coproparasitológico. No exame físico: Mucosas discretamente secas ao exame físico. Diagnóstico: Síndrome entérica aguda em bezerro. Retorno: Reavaliar em 24-48 horas ou antes se piora.",
+      "output": {
+        "chiefComplaint": "Diarreia aquosa com apatia em bezerro.",
+        "anamnesis": "Responsável relata início em 24 horas com redução de sucção e sinais de desidratação leve.",
+        "physicalExam": "Mucosas discretamente secas ao exame físico.",
+        "diagnosis": "Síndrome entérica aguda em bezerro.",
+        "treatment": "Conduta de suporte hídrico e ajuste nutricional.",
+        "procedures": "",
+        "medications": "",
+        "examDetails": "Solicitado exame coproparasitológico.",
+        "notes": "",
+        "returnRecommendation": "Reavaliar em 24-48 horas ou antes se piora.",
+        "porte": "grande",
+        "specificFields": {
+          "animalIdentificationDetails": "Bezerro em fase de aleitamento.",
+          "neonateAndReproduction": "Neonato com histórico recente de colostragem.",
+          "fecesAndUrine": "Fezes aquosas; monitorar frequência e volume."
+        }
+      }
+    },
+    {
+      "id": "grande_retorno_rebanho",
+      "mode": "retorno",
+      "porte": "grande",
+      "input": "Retorno sanitário em lote de vacas. Houve melhora geral após ajuste de manejo, mas ainda com dois animais com escore corporal baixo. Reforçadas medidas de suplementação mineral e monitoramento de consumo. No exame físico: Animais do lote com condição geral estável, mantendo atenção para escore corporal reduzido em parte do grupo. Diagnóstico: Evolução favorável do lote com necessidade de correção nutricional pontual. Conduta: Reforçadas medidas de suplementação mineral e monitoramento de consumo.",
+      "output": {
+        "chiefComplaint": "Retorno de lote com melhora geral e persistência de baixo escore corporal em dois animais.",
+        "anamnesis": "Responsável relata evolução positiva após ajuste de manejo, com pontos pendentes nutricionais.",
+        "physicalExam": "Animais do lote com condição geral estável, mantendo atenção para escore corporal reduzido em parte do grupo.",
+        "diagnosis": "Evolução favorável do lote com necessidade de correção nutricional pontual.",
+        "treatment": "Reforçadas medidas de suplementação mineral e monitoramento de consumo.",
+        "procedures": "",
+        "medications": "",
+        "examDetails": "",
+        "notes": "",
+        "returnRecommendation": "Novo retorno programado em 15 dias para reavaliação do lote.",
+        "porte": "grande",
+        "specificFields": {
+          "batch": "Lote de vacas em produção.",
+          "bodyConditionScore": "Parte do lote com escore corporal abaixo do ideal.",
+          "mineralSupplementation": "Suplementação reforçada e monitorada."
+        }
+      }
+    },
+    {
+      "id": "grande_bovino_metrite_posparto",
+      "mode": "nova",
+      "porte": "grande",
+      "input": "Vaca leiteira 35 dias pos-parto com queda de producao, secrecao uterina fetida e febre. Ao exame, utero aumentado e doloroso. Suspeita de metrite puerperal. Solicitado hemograma e ultrassonografia uterina. Conduta com terapia sistemica e suporte.",
+      "output": {
+        "chiefComplaint": "Queda de producao leiteira com secrecao uterina fetida no pos-parto.",
+        "anamnesis": "Responsavel relata reducao de apetite, febre e secrecao uterina desde os ultimos dias.",
+        "physicalExam": "Temperatura elevada, utero aumentado e sensivel a palpacao.",
+        "diagnosis": "Suspeita de metrite puerperal.",
+        "treatment": "Instituida terapia sistemica e suporte clinico com monitoramento diario.",
+        "procedures": "Avaliacao reprodutiva completa no atendimento.",
+        "medications": "Protocolo medicamentoso conforme prescricao veterinaria.",
+        "examDetails": "Solicitado hemograma e ultrassonografia uterina.",
+        "notes": "",
+        "returnRecommendation": "Reavaliar em 48 horas e acompanhar resposta clinica.",
+        "porte": "grande",
+        "specificFields": {
+          "productionSystem": "Leite",
+          "reproductiveStatus": "Pos-parto",
+          "daysInMilk": "35"
+        }
+      }
+    },
+    {
+      "id": "grande_bovino_cetose",
+      "mode": "nova",
+      "porte": "grande",
+      "input": "Vaca de alta producao com hiporexia, queda brusca de leite e odor cetonico no leite. DEL 18. ECC 2.5. Suspeita de cetose. Solicitado BHBA e perfil metabolico. Ajuste nutricional imediato.",
+      "output": {
+        "chiefComplaint": "Hiporexia e queda brusca da producao leiteira.",
+        "anamnesis": "Inicio no inicio de lactacao com reducao de consumo e apatia.",
+        "physicalExam": "Odor cetonico, condicao corporal moderada e rumen hipomotil.",
+        "diagnosis": "Suspeita de cetose subclinica/clinica.",
+        "treatment": "Correcao energetica e ajuste da dieta com acompanhamento.",
+        "procedures": "Coleta de amostras para monitoramento metabolico.",
+        "medications": "Terapia de suporte metabolico conforme protocolo.",
+        "examDetails": "Solicitado BHBA e perfil metabolico.",
+        "notes": "",
+        "returnRecommendation": "Reavaliar em 24 a 48 horas com novo controle produtivo.",
+        "porte": "grande",
+        "specificFields": {
+          "productionSystem": "Leite",
+          "daysInMilk": "18",
+          "bodyConditionScore": "2.5"
+        }
+      }
+    },
+    {
+      "id": "grande_bovino_pneumonia_lote",
+      "mode": "nova",
+      "porte": "grande",
+      "input": "Lote de bezerros em confinamento com tosse, febre e secrecao nasal. Tres animais com taquipneia. Suspeita de doenca respiratoria bovina. Solicitado painel respiratorio e hemograma.",
+      "output": {
+        "chiefComplaint": "Surto respiratorio em lote de bezerros com tosse e febre.",
+        "anamnesis": "Responsavel relata piora progressiva em 3 dias no confinamento.",
+        "physicalExam": "Taquipneia, secrecao nasal e febre em parte do lote.",
+        "diagnosis": "Suspeita de doenca respiratoria bovina (DRB).",
+        "treatment": "Implementado isolamento de sintomaticos e protocolo terapeutico do lote.",
+        "procedures": "Triagem clinica dos animais afetados.",
+        "medications": "Antimicrobiano e anti-inflamatorio conforme prescricao.",
+        "examDetails": "Solicitado hemograma e painel respiratorio.",
+        "notes": "",
+        "returnRecommendation": "Retorno em 48 horas para reavaliacao do lote.",
+        "porte": "grande",
+        "specificFields": {
+          "batch": "Lote de bezerros confinados",
+          "productionSystem": "Corte",
+          "contactAnimals": "Animais contactantes no mesmo galpao"
+        }
+      }
+    },
+    {
+      "id": "grande_equino_laminite",
+      "mode": "nova",
+      "porte": "grande",
+      "input": "Equino com claudicacao bilateral de membros toracicos, postura antalgica e calor de casco apos excesso de concentrado. Suspeita de laminite. Recomendado repouso em cama profunda e radiografia de casco.",
+      "output": {
+        "chiefComplaint": "Claudicacao bilateral anterior com dor intensa de casco.",
+        "anamnesis": "Inicio apos sobrecarga alimentar com concentrado.",
+        "physicalExam": "Pulso digital aumentado, calor de casco e postura de alivio.",
+        "diagnosis": "Suspeita de laminite aguda.",
+        "treatment": "Repouso, controle de dor e manejo nutricional imediato.",
+        "procedures": "Avaliacao locomotora completa.",
+        "medications": "Analgesia e anti-inflamatorio conforme prescricao.",
+        "examDetails": "Solicitada radiografia de cascos.",
+        "notes": "",
+        "returnRecommendation": "Reavaliar em 24 horas e ajustar manejo.",
+        "porte": "grande",
+        "specificFields": {
+          "animalFunction": "Esporte",
+          "hoofStatus": "Calor e dor em cascos anteriores",
+          "concentrate": "Excesso recente de concentrado"
+        }
+      }
+    },
+    {
+      "id": "grande_equino_colica_gasosa",
+      "mode": "nova",
+      "porte": "grande",
+      "input": "Cavalo com inquietacao, olhar para flanco e rolar no chao apos troca de feno. Motilidade reduzida e dor moderada. Suspeita de colica gasosa. Feita sondagem e fluidoterapia.",
+      "output": {
+        "chiefComplaint": "Dor abdominal aguda com comportamento de colica.",
+        "anamnesis": "Inicio apos mudanca alimentar com feno novo.",
+        "physicalExam": "Motilidade intestinal reduzida e sinais moderados de dor.",
+        "diagnosis": "Suspeita de colica gasosa.",
+        "treatment": "Suporte clinico, analgesia e ajuste alimentar.",
+        "procedures": "Sondagem nasogastrica realizada.",
+        "medications": "Analgesia e antiespasmodico conforme prescricao.",
+        "examDetails": "Monitoramento clinico seriado; exames se nao houver resposta.",
+        "notes": "",
+        "returnRecommendation": "Reavaliacao nas proximas horas.",
+        "porte": "grande",
+        "specificFields": {
+          "animalFunction": "Trabalho",
+          "forage": "Troca recente de feno",
+          "physicalExamDetailed": "Quadro compativel com colica sem sinais de peritonite"
+        }
+      }
+    },
+    {
+      "id": "grande_equino_retorno_tendinite",
+      "mode": "retorno",
+      "porte": "grande",
+      "input": "Retorno de equino atleta com tendinite de flexor. Houve melhora da claudicacao em linha reta, mas ainda sensivel ao trote. Mantido repouso e fisioterapia, com ultrassom de controle em 15 dias.",
+      "output": {
+        "chiefComplaint": "Retorno por tendinite com melhora parcial da claudicacao.",
+        "anamnesis": "Responsavel relata evolucao favoravel sem piora aguda.",
+        "physicalExam": "Sensibilidade residual ao trote e edema discreto.",
+        "diagnosis": "Tendinite em recuperacao com resposta parcial.",
+        "treatment": "Mantido repouso controlado e fisioterapia.",
+        "procedures": "Reavaliacao locomotora no retorno.",
+        "medications": "",
+        "examDetails": "Ultrassonografia de controle programada.",
+        "notes": "",
+        "returnRecommendation": "Novo retorno em 15 dias.",
+        "porte": "grande",
+        "specificFields": {
+          "animalFunction": "Esporte",
+          "hoofStatus": "Sem piora de casco",
+          "previousTreatmentHistory": "Repouso e fisioterapia em andamento"
+        }
+      }
+    },
+    {
+      "id": "grande_ovino_helmintose",
+      "mode": "nova",
+      "porte": "grande",
+      "input": "Ovinos com emagrecimento progressivo, mucosas palidas e diarreia intermitente. Vermifugacao irregular. Suspeita de helmintose. Solicitado OPG e reforco de manejo de pastagem.",
+      "output": {
+        "chiefComplaint": "Emagrecimento e palidez em lote de ovinos.",
+        "anamnesis": "Responsavel relata perda de escore corporal e episodios de diarreia.",
+        "physicalExam": "Mucosas hipocoradas e condicao corporal reduzida.",
+        "diagnosis": "Suspeita de helmintose gastrintestinal.",
+        "treatment": "Implementado protocolo anti-helmintico e manejo de pastagem.",
+        "procedures": "Avaliacao de lote e classificacao por escore.",
+        "medications": "Vermifugo conforme protocolo tecnico.",
+        "examDetails": "Solicitado OPG (ovos por grama de fezes).",
+        "notes": "",
+        "returnRecommendation": "Reavaliar em 10 dias com novo OPG.",
+        "porte": "grande",
+        "specificFields": {
+          "batch": "Lote de ovinos",
+          "herdDeworming": "Irregular",
+          "fecesAndUrine": "Diarreia intermitente"
+        }
+      }
+    },
+    {
+      "id": "grande_caprino_mastite",
+      "mode": "nova",
+      "porte": "grande",
+      "input": "Cabra em lactacao com assimetria mamaria, calor local e queda de producao. Leite com grumos. Suspeita de mastite caprina. Coleta para cultura e CMT.",
+      "output": {
+        "chiefComplaint": "Alteracao mamaria com queda de producao em cabra lactante.",
+        "anamnesis": "Responsavel percebeu calor, dor e leite alterado.",
+        "physicalExam": "Assimetria de ubere, calor local e dor a palpacao.",
+        "diagnosis": "Suspeita de mastite caprina.",
+        "treatment": "Tratamento intramamario/sistemico conforme avaliacao.",
+        "procedures": "Coleta de leite para cultura e CMT.",
+        "medications": "Protocolo antimicrobiano conforme prescricao.",
+        "examDetails": "Cultura microbiologica e CMT.",
+        "notes": "",
+        "returnRecommendation": "Reavaliar em 48 horas.",
+        "porte": "grande",
+        "specificFields": {
+          "productionSystem": "Leite",
+          "animalId": "Cabra lactante",
+          "milkProduction": "Queda de producao observada"
+        }
+      }
+    },
+    {
+      "id": "grande_suino_enterite",
+      "mode": "nova",
+      "porte": "grande",
+      "input": "Leitoes com diarreia aquosa e desuniformidade de crescimento. Suspeita de enterite infecciosa. Solicitado painel fecal e revisao de biosseguridade.",
+      "output": {
+        "chiefComplaint": "Diarreia aquosa em lote de leitoes.",
+        "anamnesis": "Evolucao coletiva com perda de desempenho no lote.",
+        "physicalExam": "Desidratacao leve e fezes liquidas em animais afetados.",
+        "diagnosis": "Suspeita de enterite infecciosa em suinos.",
+        "treatment": "Suporte hidroeletrolitico e medidas sanitarias no lote.",
+        "procedures": "Triagem de leitoes sintomaticos.",
+        "medications": "Terapia de suporte conforme protocolo.",
+        "examDetails": "Solicitado painel fecal e cultura.",
+        "notes": "",
+        "returnRecommendation": "Reavaliar em 24-48 horas.",
+        "porte": "grande",
+        "specificFields": {
+          "batch": "Lote de leitoes",
+          "productionSystem": "Confinado",
+          "propertyAndManagement": "Revisar biosseguridade e higiene"
+        }
+      }
+    },
+    {
+      "id": "grande_bovino_hipocalcemia",
+      "mode": "nova",
+      "porte": "grande",
+      "input": "Vaca recem-parida em decubito, apatica e com extremidades frias. Suspeita de hipocalcemia puerperal. Resposta parcial apos calcio IV. Monitoramento intensivo.",
+      "output": {
+        "chiefComplaint": "Decubito pos-parto com apatia e fraqueza muscular.",
+        "anamnesis": "Inicio no periodo puerperal imediato.",
+        "physicalExam": "Decubito esternal, extremidades frias e hipomotilidade.",
+        "diagnosis": "Suspeita de hipocalcemia puerperal.",
+        "treatment": "Reposicao de calcio e suporte clinico.",
+        "procedures": "Atendimento emergencial em campo.",
+        "medications": "Calcio intravenoso conforme protocolo.",
+        "examDetails": "Monitorar calcio e parametros metabolicos.",
+        "notes": "",
+        "returnRecommendation": "Reavaliar em 12 a 24 horas.",
+        "porte": "grande",
+        "specificFields": {
+          "reproductiveStatus": "Pos-parto",
+          "productionSystem": "Leite",
+          "previousTreatmentHistory": "Calcio IV com resposta parcial"
+        }
+      }
+    },
+    {
+      "id": "grande_bovino_retorno_mastite",
+      "mode": "retorno",
+      "porte": "grande",
+      "input": "Retorno de vaca com mastite clinica: houve melhora do edema e reducao de grumos no leite. Mantido protocolo e orientada ordem de ordenha segregada.",
+      "output": {
+        "chiefComplaint": "Retorno de mastite com melhora parcial dos sinais mamarios.",
+        "anamnesis": "Responsavel relata reducao de edema e melhora da secrecao.",
+        "physicalExam": "Menor sensibilidade mamaria e leite menos alterado.",
+        "diagnosis": "Mastite em evolucao favoravel.",
+        "treatment": "Mantido protocolo terapeutico e manejo de ordenha.",
+        "procedures": "Reavaliacao do quarto mamario afetado.",
+        "medications": "Continuar medicacao conforme prescricao.",
+        "examDetails": "Aguardar resultado final da cultura.",
+        "notes": "",
+        "returnRecommendation": "Novo retorno em 3 a 5 dias.",
+        "porte": "grande",
+        "specificFields": {
+          "productionSystem": "Leite",
+          "previousTreatmentHistory": "Em tratamento para mastite",
+          "requestedExamPanel": "Cultura microbiologica em andamento"
+        }
+      }
+    },
+    {
+      "id": "grande_equino_anemia_infecciosa",
+      "mode": "nova",
+      "porte": "grande",
+      "input": "Equino para triagem sanitaria de propriedade com febre baixa e perda de desempenho. Solicitado teste para AIE e mormo por exigencia de transito e competicao.",
+      "output": {
+        "chiefComplaint": "Avaliacao sanitaria com queda de desempenho em equino.",
+        "anamnesis": "Responsavel solicita investigacao para doencas de controle oficial.",
+        "physicalExam": "Estado geral regular com febre baixa.",
+        "diagnosis": "Quadro inespecifico; investigar AIE/Mormo.",
+        "treatment": "Conduta de isolamento preventivo ate resultados.",
+        "procedures": "Coleta de material para exames oficiais.",
+        "medications": "",
+        "examDetails": "Solicitado AIE e Mormo.",
+        "notes": "",
+        "returnRecommendation": "Retorno apos resultados laboratoriais.",
+        "porte": "grande",
+        "specificFields": {
+          "animalFunction": "Esporte",
+          "requestedExamPanel": "AIE e Mormo",
+          "propertyAndManagement": "Controle de transito sanitariamente orientado"
+        }
+      }
+    },
+    {
+      "id": "grande_caprino_retorno_parasitose",
+      "mode": "retorno",
+      "porte": "grande",
+      "input": "Retorno de caprinos apos protocolo antiparasitario. Houve melhora de escore corporal e reducao de diarreia, mantendo alguns animais atrasados.",
+      "output": {
+        "chiefComplaint": "Retorno de lote caprino com melhora parcial apos vermifugacao.",
+        "anamnesis": "Responsavel relata evolucao favoravel na maioria do lote.",
+        "physicalExam": "Condicao corporal em melhora, poucos animais ainda abaixo do ideal.",
+        "diagnosis": "Parasitose em controle com resposta parcial.",
+        "treatment": "Manter manejo integrado e rotacao de pasto.",
+        "procedures": "Reavaliacao de escore corporal do lote.",
+        "medications": "",
+        "examDetails": "Novo OPG programado.",
+        "notes": "",
+        "returnRecommendation": "Retorno em 15 dias.",
+        "porte": "grande",
+        "specificFields": {
+          "batch": "Lote caprino",
+          "herdDeworming": "Realizada no protocolo anterior",
+          "bodyConditionScore": "Melhora parcial do lote"
+        }
+      }
+    },
+    {
+      "id": "grande_bovino_pododermatite",
+      "mode": "nova",
+      "porte": "grande",
+      "input": "Bovino de corte com claudicacao severa em membro posterior direito. Lesao interdigital com odor e dor intensa. Suspeita de pododermatite infecciosa. Realizado curativo e bloqueio.",
+      "output": {
+        "chiefComplaint": "Claudicacao severa associada a lesao podal.",
+        "anamnesis": "Inicio agudo de mancar com piora em 48 horas.",
+        "physicalExam": "Lesao interdigital dolorosa com odor fetido.",
+        "diagnosis": "Suspeita de pododermatite infecciosa.",
+        "treatment": "Curativo local, analgesia e manejo de piso.",
+        "procedures": "Higienizacao e curativo do casco.",
+        "medications": "Antimicrobiano/anti-inflamatorio conforme prescricao.",
+        "examDetails": "",
+        "notes": "",
+        "returnRecommendation": "Reavaliar em 3 dias.",
+        "porte": "grande",
+        "specificFields": {
+          "productionSystem": "Corte",
+          "hoofStatus": "Lesao interdigital no posterior direito",
+          "propertyAndManagement": "Orientado manejo de piso e umidade"
+        }
+      }
+    },
+    {
+      "id": "grande_equino_uveite",
+      "mode": "nova",
+      "porte": "grande",
+      "input": "Equino com blefaroespasmo, epifora e fotofobia em olho esquerdo. Exame oftalmico sugere uveite anterior. Conduta com anti-inflamatorio e colirio, com reavaliacao em 48h.",
+      "output": {
+        "chiefComplaint": "Desconforto ocular agudo em olho esquerdo.",
+        "anamnesis": "Responsavel notou lacrimejamento e sensibilidade a luz.",
+        "physicalExam": "Blefaroespasmo, epifora e hiperemia ocular.",
+        "diagnosis": "Suspeita de uveite anterior.",
+        "treatment": "Terapia anti-inflamatoria sistemica/topica e repouso.",
+        "procedures": "Exame oftalmico direcionado.",
+        "medications": "Colirio e anti-inflamatorio conforme prescricao.",
+        "examDetails": "",
+        "notes": "",
+        "returnRecommendation": "Retorno em 48 horas.",
+        "porte": "grande",
+        "specificFields": {
+          "animalFunction": "Esporte",
+          "physicalExamDetailed": "Achados oftalmicos compativeis com uveite",
+          "previousTreatmentHistory": "Sem tratamento previo informado"
+        }
+      }
+    },
+    {
+      "id": "grande_bovino_repro_infertilidade",
+      "mode": "nova",
+      "porte": "grande",
+      "input": "Vaca com repeticao de cio e baixa taxa de concepcao no lote. Avaliacao ginecologica sem prenhez. Solicitado protocolo reprodutivo e revisao nutricional.",
+      "output": {
+        "chiefComplaint": "Repeticao de cio e falha reprodutiva.",
+        "anamnesis": "Historico de baixa taxa de concepcao na propriedade.",
+        "physicalExam": "Sem prenhez ao exame reprodutivo atual.",
+        "diagnosis": "Subfertilidade em avaliacao etiologica.",
+        "treatment": "Planejado protocolo reprodutivo e ajuste nutricional.",
+        "procedures": "Exame ginecologico de campo.",
+        "medications": "",
+        "examDetails": "Solicitado painel reprodutivo e metabolico.",
+        "notes": "",
+        "returnRecommendation": "Retorno no proximo ciclo.",
+        "porte": "grande",
+        "specificFields": {
+          "reproductiveStatus": "Vazia",
+          "parity": "3",
+          "propertyAndManagement": "Revisao de manejo reprodutivo do lote"
         }
       }
     }

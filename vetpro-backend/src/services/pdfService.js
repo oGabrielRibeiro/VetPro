@@ -4,6 +4,8 @@ const fs = require("fs");
 
 const PORTE_NOTES_MARK_START = "[[PORTE_CLINICO]]";
 const PORTE_NOTES_MARK_END = "[[/PORTE_CLINICO]]";
+const CHAT_NOTES_MARK_START = "[[AI_CHAT_HISTORY]]";
+const CHAT_NOTES_MARK_END = "[[/AI_CHAT_HISTORY]]";
 
 const PORTE_FIELD_LABELS = {
   vaccinationStatus: "Vacinacao",
@@ -119,6 +121,25 @@ function parsePorteDataFromNotes(notes = "") {
   } catch {
     return null;
   }
+}
+
+function removeMarkedBlock(text = "", startMarker = "", endMarker = "") {
+  let content = String(text || "");
+  while (true) {
+    const start = content.indexOf(startMarker);
+    const end = content.indexOf(endMarker);
+    if (start < 0 || end <= start) break;
+    const before = content.slice(0, start).trimEnd();
+    const after = content.slice(end + endMarker.length).trimStart();
+    content = [before, after].filter(Boolean).join("\n\n").trim();
+  }
+  return content;
+}
+
+function sanitizeNotesForPdf(notes = "") {
+  const noPorte = removeMarkedBlock(notes, PORTE_NOTES_MARK_START, PORTE_NOTES_MARK_END);
+  const noChat = removeMarkedBlock(noPorte, CHAT_NOTES_MARK_START, CHAT_NOTES_MARK_END);
+  return String(noChat || "").trim();
 }
 
 function resolveClinicLogoPath(clinic = {}) {
@@ -309,6 +330,7 @@ function generateConsultationPDF(consultation, res) {
   const patient = consultation.patient || {};
   const clinic = consultation.clinic || {};
   const vet = consultation.user || {};
+  const sanitizedNotes = sanitizeNotesForPdf(consultation.notes);
 
   res.setHeader("Content-Type", "application/pdf");
   res.setHeader(
@@ -408,7 +430,7 @@ function generateConsultationPDF(consultation, res) {
   drawKeyValue(doc, "Conduta / tratamento", consultation.treatment);
   drawKeyValue(doc, "Procedimentos", consultation.procedures);
   drawKeyValue(doc, "Medicacoes", consultation.medications);
-  drawKeyValue(doc, "Observacoes", consultation.notes);
+  drawKeyValue(doc, "Observacoes", sanitizedNotes);
   drawKeyValue(doc, "Recomendacao de retorno", consultation.returnRecommendation);
   const porteData = parsePorteDataFromNotes(consultation.notes);
   if (porteData) {

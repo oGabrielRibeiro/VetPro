@@ -19,6 +19,7 @@ import api, { buildApiUrl } from "./services/api";
 import { addToQueue } from "./services/offlineQueue";
 import { getQueue, clearQueue } from "./services/offlineQueue";
 import { toUserFriendlyError } from "./utils/errorMessages";
+import { sanitizeConsultationNotesForDisplay } from "./utils/consultationNotes";
 
 // Componente principal com roteamento baseado em estado
 const MainApp = () => {
@@ -96,7 +97,9 @@ const MainApp = () => {
       (consultation.consultationType === "retorno" ? "return" : "general"),
     clinicalAssessment:
       consultation.clinicalAssessment || consultation.physicalExam || "",
-    observations: consultation.observations || consultation.notes || "",
+    observations: sanitizeConsultationNotesForDisplay(
+      consultation.observations || consultation.notes || "",
+    ),
   });
 
   const showActionError = useCallback((message) => {

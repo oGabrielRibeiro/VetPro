@@ -4,7 +4,14 @@ const {
   generatePrescriptionBuffer,
   sendPrescriptionDownload
 } = require("../services/prescriptionService");
-const { analyzeFieldConversation } = require("../services/fieldAssistService");
+const {
+  analyzeFieldConversation,
+  parseClinicalFieldsFromSegments,
+  extractTranscriptFromNotes,
+  normalizeTimestampedTranscript,
+  readHeuristicMemory,
+  writeHeuristicMemory
+} = require("../services/fieldAssistService");
 const {
   generateRecordDraftFromChat,
   refineRecordField
@@ -196,6 +203,32 @@ async function create(req, res) {
       clinicId: req.user.clinicId
     });
 
+    try {
+      const notesTranscript = extractTranscriptFromNotes(data?.notes || data?.observations || "");
+      const sourceText = normalizeTimestampedTranscript(notesTranscript || data?.transcript || "");
+      const parsed = {
+        chiefComplaint: String(data?.chiefComplaint || "").trim(),
+        anamnesis: String(data?.anamnesis || "").trim(),
+        physicalExam: String(data?.physicalExam || data?.clinicalAssessment || "").trim(),
+        diagnosis: String(data?.diagnosis || "").trim(),
+        treatment: String(data?.treatment || "").trim(),
+        medications: String(data?.medications || "").trim()
+      };
+
+      const populatedCount = Object.values(parsed).filter((value) => String(value || "").trim()).length;
+      if (sourceText.length >= 40 && populatedCount >= 2) {
+        const current = readHeuristicMemory();
+        current.push({
+          createdAt: new Date().toISOString(),
+          sourceText,
+          parsed
+        });
+        writeHeuristicMemory(current);
+      }
+    } catch (learnError) {
+      console.error("Falha ao registrar memoria heuristica:", learnError.message);
+    }
+
     return res.status(201).json(consultation);
   } catch (error) {
     console.error(error);
@@ -311,6 +344,7 @@ async function fieldAssist(req, res) {
     const result = await analyzeFieldConversation({
       audioBuffer,
       mimeType,
+      filename: req.file?.originalname || "field-audio.webm",
       segments,
       transcript
     });
@@ -319,6 +353,46 @@ async function fieldAssist(req, res) {
   } catch (error) {
     console.error(error);
     return res.status(500).json({ error: "Erro ao analisar conversa de campo" });
+  }
+}
+
+async function heuristicParse(req, res) {
+  try {
+    const segmentsRaw = req.body?.segments || "[]";
+    const transcript = String(req.body?.transcript || "").trim();
+
+    let segments = [];
+    try {
+      segments = JSON.parse(segmentsRaw);
+    } catch {
+      segments = [];
+    }
+
+    const normalizedSegments = Array.isArray(segments)
+      ? segments.map((segment) => ({
+          stamp: segment?.stamp || "00:00",
+          speaker: segment?.speaker || "Tutor",
+          text: String(segment?.text || "").trim()
+        }))
+      : [];
+
+    const sourceText =
+      transcript || normalizedSegments.map((segment) => segment.text).join(" ").trim();
+    const { parsed, context } = parseClinicalFieldsFromSegments(
+      normalizedSegments,
+      sourceText
+    );
+
+    return res.json({
+      provider: "heuristic",
+      transcript: sourceText,
+      segments: normalizedSegments,
+      parsed,
+      context
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Erro ao aplicar heuristica clinica." });
   }
 }
 
@@ -494,6 +568,7 @@ module.exports = {
   generatePrescriptionPDF,
   createReturn,
   fieldAssist,
+  heuristicParse,
   chatAssist,
   refineField,
   getChatHistory,
