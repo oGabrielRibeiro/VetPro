@@ -17,6 +17,80 @@ function buildPatientSyncDataFromConsultation(normalizedData = {}, currentPatien
   return { weight: nextWeight };
 }
 
+function normalizeText(value = "") {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
+function isMeaningfulProfileValue(value = "") {
+  const normalized = normalizeText(value);
+  if (!normalized) return false;
+  if (normalized === "nao informado" || normalized === "não informado") return false;
+  return true;
+}
+
+const PERSISTENT_SPECIFIC_KEYS = {
+  pequeno: new Set([
+    "allergyHistory",
+    "chronicDiseases",
+    "contactWithAnimals",
+    "reproductiveStatusSmall"
+  ]),
+  grande: new Set([
+    "farmName",
+    "productionSystem",
+    "animalFunction",
+    "propertyAndManagement",
+    "contactAnimals"
+  ])
+};
+
+function sanitizePersistentProfileUpdate(raw = {}) {
+  if (!raw || typeof raw !== "object") return null;
+  const porte = String(raw?.porte || "").toLowerCase() === "grande" ? "grande" : "pequeno";
+  const fields = raw?.fields && typeof raw.fields === "object" ? raw.fields : {};
+  const allowedKeys = PERSISTENT_SPECIFIC_KEYS[porte] || new Set();
+
+  const cleanedFields = Object.entries(fields).reduce((acc, [key, value]) => {
+    if (!allowedKeys.has(String(key || ""))) return acc;
+    const text = String(value || "").trim();
+    if (!isMeaningfulProfileValue(text)) return acc;
+    acc[key] = text;
+    return acc;
+  }, {});
+
+  if (!Object.keys(cleanedFields).length) return null;
+  return { porte, fields: cleanedFields };
+}
+
+function mergePatientPersistentProfile(currentProfile, nextUpdate) {
+  const base =
+    currentProfile && typeof currentProfile === "object"
+      ? currentProfile
+      : {};
+  const sanitized = sanitizePersistentProfileUpdate(nextUpdate);
+  if (!sanitized) return null;
+
+  const porte = sanitized.porte;
+  const previousPorte = base?.[porte]?.fields && typeof base[porte].fields === "object"
+    ? base[porte].fields
+    : {};
+
+  return {
+    ...base,
+    updatedAt: new Date().toISOString(),
+    [porte]: {
+      fields: {
+        ...previousPorte,
+        ...sanitized.fields
+      }
+    }
+  };
+}
+
 function normalizeConsultationData(data = {}) {
   const normalized = {
     consultationType: data.consultationType || (data.template === "return" ? "retorno" : "nova"),
@@ -126,6 +200,16 @@ async function createConsultation({
     });
 
     const patientSyncData = buildPatientSyncDataFromConsultation(normalizedData, patient);
+    const nextPersistentProfile = mergePatientPersistentProfile(
+      patient?.persistentProfile,
+      data?.persistentProfileUpdate
+    );
+    if (nextPersistentProfile) {
+      patientSyncData.persistentProfile = nextPersistentProfile;
+      patientSyncData.porte = String(data?.persistentProfileUpdate?.porte || "").toLowerCase() === "grande"
+        ? "grande"
+        : "pequeno";
+    }
     if (Object.keys(patientSyncData).length) {
       await tx.patient.update({
         where: { id: patient.id },
@@ -173,6 +257,10 @@ async function getConsultationById(userId, consultationId) {
           numeroProntuario: true,
           createdAt: true,
           chiefComplaint: true,
+          weight: true,
+          temperature: true,
+          heartRate: true,
+          respiratoryRate: true,
           diagnosis: true,
           treatment: true,
           medications: true,
@@ -192,7 +280,43 @@ async function getConsultationById(userId, consultationId) {
     throw new Error("Consulta nao encontrada");
   }
 
-  return consultation;
+  const hasMissingVitals =
+    consultation.weight == null ||
+    consultation.temperature == null ||
+    consultation.heartRate == null ||
+    consultation.respiratoryRate == null;
+
+  if (!hasMissingVitals) {
+    return consultation;
+  }
+
+  const latestVitals = await prisma.consultation.findFirst({
+    where: {
+      userId,
+      patientId: consultation.patientId,
+      id: { not: consultation.id },
+      OR: [
+        { weight: { not: null } },
+        { temperature: { not: null } },
+        { heartRate: { not: null } },
+        { respiratoryRate: { not: null } }
+      ]
+    },
+    orderBy: { createdAt: "desc" },
+    select: {
+      id: true,
+      createdAt: true,
+      weight: true,
+      temperature: true,
+      heartRate: true,
+      respiratoryRate: true
+    }
+  });
+
+  return {
+    ...consultation,
+    latestVitals
+  };
 }
 
 async function createReturnFromConsultation(userId, clinicId, consultationId) {

@@ -1,11 +1,100 @@
 const fs = require("fs");
 const path = require("path");
+const { parseClinicalFieldsFromSegments } = require("./fieldAssistService");
+const {
+  CLINICAL_SCHEMA_VERSION,
+  validateStructuredClinicalRecord
+} = require("../ai/clinicalStructuredSchema");
 
 function normalize(value = "") {
   return String(value)
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase();
+}
+
+function normalizeSpeakerFromRole(role = "") {
+  const raw = String(role || "").trim().toLowerCase();
+  if (raw === "assistant" || raw === "medico" || raw === "veterinario" || raw === "vet") return "Medico";
+  return "Tutor";
+}
+
+function splitLinesAsSegments(content = "", speaker = "Tutor", startAt = 0) {
+  const lines = String(content || "")
+    .replace(/\r/g, "\n")
+    .split(/\n+/g)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  if (!lines.length) return [];
+
+  let seconds = startAt;
+  return lines.map((line) => {
+    const stamp = `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
+    seconds += Math.max(4, Math.ceil(line.split(/\s+/g).length / 2));
+    return { stamp, speaker, text: line };
+  });
+}
+
+function buildClinicalSegmentsFromMessages(messages = []) {
+  const safeMessages = Array.isArray(messages) ? messages : [];
+  let elapsed = 0;
+  const segments = [];
+
+  for (const item of safeMessages) {
+    const content = String(item?.content || "").trim();
+    if (!content) continue;
+    const defaultSpeaker = normalizeSpeakerFromRole(item?.role);
+
+    const explicitLines = content
+      .replace(/\r/g, "\n")
+      .split(/\n+/g)
+      .map((line) => line.trim())
+      .filter(Boolean);
+
+    let consumedExplicit = false;
+    for (const line of explicitLines) {
+      const match = line.match(/^(Tutor|Medico|Médico|Veterinario|Vet)\s*:\s*(.+)$/i);
+      if (!match) continue;
+      consumedExplicit = true;
+      const who = normalizeSpeakerFromRole(match[1]);
+      const text = String(match[2] || "").trim();
+      if (!text) continue;
+      const stamp = `${String(Math.floor(elapsed / 60)).padStart(2, "0")}:${String(elapsed % 60).padStart(2, "0")}`;
+      segments.push({ stamp, speaker: who, text });
+      elapsed += Math.max(4, Math.ceil(text.split(/\s+/g).length / 2));
+    }
+
+    if (!consumedExplicit) {
+      const lineSegments = splitLinesAsSegments(content, defaultSpeaker, elapsed);
+      if (lineSegments.length) {
+        segments.push(...lineSegments);
+        const tail = lineSegments[lineSegments.length - 1];
+        const [mm, ss] = String(tail.stamp || "00:00").split(":").map((n) => Number(n) || 0);
+        elapsed = mm * 60 + ss + Math.max(4, Math.ceil(String(tail.text || "").split(/\s+/g).length / 2));
+      }
+    }
+  }
+
+  return segments;
+}
+
+function runUnifiedClinicalBrain(messages = []) {
+  const sourceText = (Array.isArray(messages) ? messages : [])
+    .map((item) => String(item?.content || "").trim())
+    .filter(Boolean)
+    .join(" ")
+    .trim();
+
+  const segments = buildClinicalSegmentsFromMessages(messages);
+  const parsedResult = parseClinicalFieldsFromSegments(segments, sourceText);
+
+  return {
+    sourceText,
+    segments,
+    parsed: parsedResult?.parsed || {},
+    context: parsedResult?.context || {},
+    pipeline: parsedResult?.pipeline || {}
+  };
 }
 
 const EXAMPLES_FILE_PATH = path.join(__dirname, "..", "ai", "recordChatExamples.json");
@@ -890,6 +979,214 @@ function parseJsonObject(rawText = "") {
   }
 }
 
+function parseJsonObjectSafe(rawText = "") {
+  const text = String(rawText || "").trim();
+  if (!text) {
+    return { parsed: null, error: "empty_response" };
+  }
+
+  try {
+    return { parsed: JSON.parse(text), error: null };
+  } catch (error) {
+    const start = text.indexOf("{");
+    const end = text.lastIndexOf("}");
+    if (start >= 0 && end > start) {
+      try {
+        return { parsed: JSON.parse(text.slice(start, end + 1)), error: null };
+      } catch {
+        return { parsed: null, error: "invalid_json_object" };
+      }
+    }
+    return { parsed: null, error: "no_json_found" };
+  }
+}
+
+function isNotInformedText(value = "") {
+  const normalized = normalize(String(value || "")).trim();
+  return (
+    !normalized ||
+    normalized === "nao informado" ||
+    normalized === "não informado"
+  );
+}
+
+function joinNonEmpty(items = []) {
+  return items
+    .map((item) => String(item || "").trim())
+    .filter((item) => item && !isNotInformedText(item))
+    .join(". ")
+    .trim();
+}
+
+function summarizeExamFromStructured(exame = {}) {
+  if (!exame || typeof exame !== "object") return "";
+  const parts = [
+    exame.estado_geral,
+    exame.ecc ? `ECC ${exame.ecc}` : "",
+    exame.fc ? `FC ${exame.fc}` : "",
+    exame.fr ? `FR ${exame.fr}` : "",
+    exame.temperatura ? `Temperatura ${exame.temperatura}` : "",
+    exame.mucosas ? `Mucosas ${exame.mucosas}` : "",
+    exame.tpc ? `TPC ${exame.tpc}` : "",
+    exame.rumen ? `Rumen ${exame.rumen}` : ""
+  ];
+  return joinNonEmpty(parts);
+}
+
+function mapStructuredRecordToDraft(structured = {}, porte = "pequeno", specificFieldKeys = []) {
+  const source = structured && typeof structured === "object" ? structured : {};
+  const propriedade = source.propriedade && typeof source.propriedade === "object" ? source.propriedade : {};
+  const animal = source.animal && typeof source.animal === "object" ? source.animal : {};
+  const sinais = source.sinais_clinicos && typeof source.sinais_clinicos === "object" ? source.sinais_clinicos : {};
+  const exame = source.exame_fisico && typeof source.exame_fisico === "object" ? source.exame_fisico : {};
+
+  const mapped = {
+    chiefComplaint: String(source?.queixa_principal?.descricao || "").trim(),
+    anamnesis: String(source?.anamnese || "").trim(),
+    physicalExam: joinNonEmpty([summarizeExamFromStructured(exame), source?.achados]),
+    diagnosis: String(source?.diagnostico_sugestivo || "").trim(),
+    treatment: joinNonEmpty(source?.tratamento || []),
+    procedures: joinNonEmpty([source?.tratamento_anterior]),
+    medications: joinNonEmpty((source?.tratamento || []).filter((item) =>
+      /\b(mg|ml|iv|im|sc|oral|dose|antibi|analgesi|anti[\s-]?inflam|dipirona|amoxic|flunixin)\b/i.test(String(item || ""))
+    )),
+    examDetails: joinNonEmpty(source?.exames_solicitados || []),
+    notes: joinNonEmpty([
+      Array.isArray(source?.diagnosticos_diferenciais) ? `Diagnosticos diferenciais: ${source.diagnosticos_diferenciais.join(", ")}` : "",
+      source?.analise_avancada?.gravidade ? `Gravidade: ${source.analise_avancada.gravidade}` : "",
+      source?.analise_avancada?.prioridade_triagem ? `Prioridade triagem: ${source.analise_avancada.prioridade_triagem}` : "",
+      source?.analise_avancada?.risco_morte ? `Risco de morte: ${source.analise_avancada.risco_morte}` : ""
+    ]),
+    returnRecommendation: joinNonEmpty(source?.recomendacoes || []),
+    specificFields: {}
+  };
+
+  const mappedSpecificByPorte =
+    porte === "grande"
+      ? {
+          farmName: propriedade.fazenda || propriedade.proprietario || "",
+          productionSystem: propriedade.tipo_criacao || "",
+          herdVaccination: Array.isArray(propriedade.vacinacao_rebanho)
+            ? propriedade.vacinacao_rebanho.join(", ")
+            : "",
+          herdDeworming: source.vermifugacao || "",
+          waterIntake: sinais.agua || "",
+          contactAnimals: Array.isArray(propriedade.contactantes)
+            ? propriedade.contactantes.join(", ")
+            : "",
+          animalId: animal.identificacao || animal.nome || "",
+          animalIdentificationDetails: joinNonEmpty([
+            animal.nome ? `Nome: ${animal.nome}` : "",
+            animal.especie || "",
+            animal.raca || "",
+            animal.sexo || "",
+            animal.idade || "",
+            animal.pelagem ? `Pelagem: ${animal.pelagem}` : ""
+          ]),
+          previousTreatmentHistory: source.tratamento_anterior || "",
+          physicalExamDetailed: summarizeExamFromStructured(exame),
+          requestedExamPanel: joinNonEmpty(source.exames_solicitados || []),
+          rumenMotility: exame.rumen || ""
+        }
+      : {
+          vaccinationProtocol: source.vacinacao || "",
+          vaccinationStatus: source.vacinacao || "",
+          dewormingStatus: source.vermifugacao || "",
+          diet: propriedade.alimentacao || "",
+          waterIntakeSmall: sinais.agua || "",
+          contactWithAnimals: Array.isArray(propriedade.contactantes)
+            ? propriedade.contactantes.join(", ")
+            : "",
+          behavior: String(source?.anamnese || "").trim(),
+          preventiveCare: propriedade.sal_mineral || ""
+        };
+
+  for (const key of specificFieldKeys) {
+    mapped.specificFields[key] = String(mappedSpecificByPorte[key] || "").trim();
+  }
+
+  return mapped;
+}
+
+function groundingScore(value = "", sourceText = "") {
+  const fieldText = String(value || "").trim();
+  const source = String(sourceText || "").trim();
+  if (!fieldText || !source) return 0;
+
+  const score = jaccardSimilarityScore(fieldText, source);
+  if (score > 0) return score;
+
+  const numberMatches = fieldText.match(/\d+(?:[.,]\d+)?/g) || [];
+  if (numberMatches.length && numberMatches.some((num) => source.includes(num))) {
+    return 0.16;
+  }
+
+  return 0;
+}
+
+function runDraftSanityCheck({ draft = {}, sourceText = "", heuristicDraft = {}, specificFieldKeys = [] }) {
+  const coreFields = [
+    "chiefComplaint",
+    "anamnesis",
+    "physicalExam",
+    "diagnosis",
+    "treatment",
+    "procedures",
+    "medications",
+    "examDetails",
+    "returnRecommendation"
+  ];
+
+  const reviewed = {
+    ...draft,
+    specificFields: { ...(draft?.specificFields || {}) }
+  };
+  const issues = [];
+  let checked = 0;
+
+  for (const key of coreFields) {
+    const value = String(reviewed[key] || "").trim();
+    if (!value || isNotInformedText(value)) continue;
+    checked += 1;
+    const score = groundingScore(value, sourceText);
+    if (score < 0.04 && looksLikeNoisyConversation(value)) {
+      const fallback = String(heuristicDraft?.[key] || "").trim();
+      reviewed[key] = fallback;
+      issues.push({ field: key, reason: "conteudo_ruidoso_substituido" });
+      continue;
+    }
+    if (score < 0.015) {
+      const fallback = String(heuristicDraft?.[key] || "").trim();
+      reviewed[key] = fallback || "";
+      issues.push({ field: key, reason: "baixa_aderencia_ao_texto" });
+    }
+  }
+
+  for (const key of specificFieldKeys) {
+    const value = String(reviewed?.specificFields?.[key] || "").trim();
+    if (!value || isNotInformedText(value)) continue;
+    checked += 1;
+    const score = groundingScore(value, sourceText);
+    if (score < 0.01 && looksLikeNoisyConversation(value)) {
+      reviewed.specificFields[key] = String(heuristicDraft?.specificFields?.[key] || "").trim();
+      issues.push({ field: `specificFields.${key}`, reason: "campo_especifico_ruidoso" });
+    }
+  }
+
+  const score = checked
+    ? Number(Math.max(0, 1 - issues.length / checked).toFixed(2))
+    : 0.8;
+
+  return {
+    draft: reviewed,
+    qualityCheck: {
+      score,
+      status: score >= 0.8 ? "ok" : score >= 0.55 ? "revisar" : "baixo",
+      issues
+    }
+  };
+}
+
 function ensureDraftShape(raw = {}, mode = "nova", allowedSpecificFieldKeys = [], porte = "pequeno") {
   const consultationType = mode === "retorno" ? "retorno" : "nova";
   const rawSpecific = raw.specificFields || raw.specific_fields || {};
@@ -913,15 +1210,13 @@ function ensureDraftShape(raw = {}, mode = "nova", allowedSpecificFieldKeys = []
 }
 
 function buildHeuristicDraft(messages = [], mode = "nova", patient = null, recordProfile = null) {
-  const sourceText = messages
-    .map((item) => String(item?.content || ""))
-    .join(" ")
-    .trim();
+  const unified = runUnifiedClinicalBrain(messages);
+  const sourceText = unified.sourceText;
   const dialogue = splitDialogueByRole(
     messages.map((item) => String(item?.content || "")).join("\n")
   );
-  const tutorContext = (dialogue.tutorText || sourceText).trim();
-  const vetContext = (dialogue.vetText || sourceText).trim();
+  const tutorContext = (unified.context?.tutorContent || dialogue.tutorText || sourceText).trim();
+  const vetContext = (unified.context?.medicoContent || dialogue.vetText || sourceText).trim();
   const speciesProfile = detectSpeciesProfile(patient, sourceText);
   const porte = classifyPorteFromContext(patient, sourceText, recordProfile);
   const specificFieldKeys = resolveSpecificFieldKeys(recordProfile, porte);
@@ -992,20 +1287,34 @@ function buildHeuristicDraft(messages = [], mode = "nova", patient = null, recor
   const specificFields = extractSpecificFieldsHeuristic(sourceText, specificFieldKeys);
 
   const draftRaw = {
-    chiefComplaint: clinicalChiefComplaint || firstSentence(chiefSource || sourceText, 220),
-    anamnesis: buildHeuristicAnamnesis(
-      extractByKeywords(tutorContext || sourceText, ["anamnese", "historico"]),
-      clinicalChiefComplaint || firstSentence(chiefSource || sourceText, 220)
-    ),
-    physicalExam: extractByKeywords(vetContext || sourceText, ["exame fisico"]),
-    diagnosis: buildHeuristicDiagnosis(
-      diagnosisByLabel || extractByKeywords(vetContext || sourceText, ["diagnostico"])
-    ),
-    treatment: buildHeuristicTreatment(
-      treatmentByLabel || extractByKeywords(vetContext || sourceText, ["tratamento", "conduta"])
-    ),
+    chiefComplaint:
+      String(unified.parsed?.chiefComplaint || "").trim() ||
+      clinicalChiefComplaint ||
+      firstSentence(chiefSource || sourceText, 220),
+    anamnesis:
+      String(unified.parsed?.anamnesis || "").trim() ||
+      buildHeuristicAnamnesis(
+        extractByKeywords(tutorContext || sourceText, ["anamnese", "historico"]),
+        clinicalChiefComplaint || firstSentence(chiefSource || sourceText, 220)
+      ),
+    physicalExam:
+      String(unified.parsed?.physicalExam || "").trim() ||
+      extractByKeywords(vetContext || sourceText, ["exame fisico"]),
+    diagnosis:
+      String(unified.parsed?.diagnosis || "").trim() ||
+      buildHeuristicDiagnosis(
+        diagnosisByLabel || extractByKeywords(vetContext || sourceText, ["diagnostico"])
+      ),
+    treatment:
+      String(unified.parsed?.treatment || "").trim() ||
+      buildHeuristicTreatment(
+        treatmentByLabel || extractByKeywords(vetContext || sourceText, ["tratamento", "conduta"])
+      ),
     procedures: proceduresByLabel,
-    medications: medicationsByLabel || extractByKeywords(vetContext || sourceText, ["medicacao", "prescricao", "receita"]),
+    medications:
+      String(unified.parsed?.medications || "").trim() ||
+      medicationsByLabel ||
+      extractByKeywords(vetContext || sourceText, ["medicacao", "prescricao", "receita"]),
     examDetails: examByLabel,
     notes: explicitNotes,
     returnRecommendation: buildHeuristicReturnRecommendation(
@@ -1168,7 +1477,11 @@ function buildHeuristicDraft(messages = [], mode = "nova", patient = null, recor
       speciesProfile: speciesProfile?.id || "geral",
       porte,
       specificFieldKeys,
-      dialogueTurnsDetected: dialogue.turns.length
+      dialogueTurnsDetected: dialogue.turns.length,
+      unifiedBrain: {
+        semanticAlerts: unified.pipeline?.semanticRules?.alerts || [],
+        roleReliability: unified.context?.roleReliability || null
+      }
     }
   };
 }
@@ -1611,10 +1924,11 @@ async function generateWithOpenAI({ messages, mode, patient, recordProfile = nul
   if (!apiKey) return null;
 
   const model = process.env.OPENAI_MODEL || "gpt-4o-mini";
-  const sourceText = messages.map((item) => String(item?.content || "")).join(" ");
+  const unified = runUnifiedClinicalBrain(messages);
+  const sourceText = unified.sourceText;
   const dialogue = splitDialogueByRole(messages.map((item) => String(item?.content || "")).join("\n"));
-  const tutorContext = dialogue.tutorText || sourceText;
-  const vetContext = dialogue.vetText || sourceText;
+  const tutorContext = unified.context?.tutorContent || dialogue.tutorText || sourceText;
+  const vetContext = unified.context?.medicoContent || dialogue.vetText || sourceText;
   const porte = classifyPorteFromContext(patient, sourceText, recordProfile);
   const specificFieldKeys = resolveSpecificFieldKeys(recordProfile, porte);
   const patientContext = patient
@@ -1644,6 +1958,11 @@ async function generateWithOpenAI({ messages, mode, patient, recordProfile = nul
     "Voce e um assistente especializado em preenchimento de prontuario veterinario.",
     "OBJETIVO: extrair informacoes clinicas do dialogo e preencher corretamente os campos do prontuario.",
     "REGRAS CRITICAS:",
+    "- Use apenas dados presentes na conversa. Nunca invente.",
+    '- Se nao houver evidencia para um dado no bloco estruturado, use "Não informado".',
+    '- Se inferir com alta confianca, marque com sufixo "(inferido)".',
+    "- Prioridade de conflitos: exame fisico > veterinario > tutor.",
+    "- Detecte sinais de urgencia e classifique gravidade quando possivel.",
     "- Ignore saudacoes e conversa social sem valor clinico.",
     "- Priorize sinais relatados pelo tutor para queixa/anamnese.",
     "- Priorize condutas e observacoes tecnicas do veterinario para exame/diagnostico/tratamento.",
@@ -1668,8 +1987,10 @@ async function generateWithOpenAI({ messages, mode, patient, recordProfile = nul
     '  "notes": "string",',
     '  "returnRecommendation": "string",',
     `  "porte": "${porte}",`,
-    '  "specificFields": { ... }',
+    '  "specificFields": { ... },',
+    '  "structuredClinicalRecord": { ... }',
     "}",
+    "No bloco structuredClinicalRecord, use este formato: propriedade, animal, neonato_info, queixa_principal, anamnese, tratamento_anterior, vacinacao, vermifugacao, sinais_clinicos, exame_fisico, achados, exames_solicitados, diagnostico_sugestivo, diagnosticos_diferenciais, tratamento, recomendacoes, urgencia, analise_avancada.",
     `No objeto "specificFields", use APENAS estas chaves: ${specificKeysPrompt}.`,
     "Para cada chave sem informacao no chat, retorne string vazia.",
     "Se algum campo nao existir no chat, mantenha string vazia.",
@@ -1677,6 +1998,15 @@ async function generateWithOpenAI({ messages, mode, patient, recordProfile = nul
     patientContext,
     `CONTEXTO TUTOR: ${tutorContext}`,
     `CONTEXTO VETERINARIO: ${vetContext}`,
+    `PRE-PARSE UNIFICADO (mesmo cerebro campo/manual): ${JSON.stringify({
+      chiefComplaint: unified.parsed?.chiefComplaint || "",
+      anamnesis: unified.parsed?.anamnesis || "",
+      physicalExam: unified.parsed?.physicalExam || "",
+      diagnosis: unified.parsed?.diagnosis || "",
+      treatment: unified.parsed?.treatment || "",
+      medications: unified.parsed?.medications || "",
+      alerts: unified.pipeline?.semanticRules?.alerts || []
+    })}`,
     `CHAT ORIGINAL:\n${normalizedChat}`,
     fewShotExamples.length
       ? `EXEMPLOS GUIA DISPONIVEIS: ${fewShotExamples.length}. Siga o formato de saída dos exemplos.`
@@ -1727,18 +2057,45 @@ async function generateWithOpenAI({ messages, mode, patient, recordProfile = nul
 
   const payload = await response.json();
   const content = payload?.choices?.[0]?.message?.content || "";
-  const parsed = parseJsonObject(content);
+  const parsedResult = parseJsonObjectSafe(content);
+  const parsed = parsedResult.parsed;
   if (!parsed || typeof parsed !== "object") {
-    throw new Error("Resposta da IA sem JSON valido.");
+    const reason = parsedResult.error || "invalid_json";
+    throw new Error(`Resposta da IA sem JSON valido (${reason}).`);
   }
+  const structuredRaw =
+    parsed?.structuredClinicalRecord ||
+    parsed?.prontuarioEstruturado ||
+    parsed?.prontuario_estruturado ||
+    {};
+  const structuredClinicalRecord = validateStructuredClinicalRecord(structuredRaw);
+  const structuredMapped = mapStructuredRecordToDraft(
+    structuredClinicalRecord,
+    porte,
+    specificFieldKeys
+  );
+  const mergedAiRaw = {
+    ...structuredMapped,
+    ...parsed,
+    specificFields: {
+      ...(structuredMapped.specificFields || {}),
+      ...(parsed.specificFields || parsed.specific_fields || {})
+    }
+  };
 
   return {
-    draft: ensureDraftShape(parsed, mode, specificFieldKeys, porte),
+    draft: ensureDraftShape(mergedAiRaw, mode, specificFieldKeys, porte),
     provider: "openai",
     confidence: 0.8,
+    structuredClinicalRecord,
+    schemaVersion: CLINICAL_SCHEMA_VERSION,
     context: {
       porte,
-      specificFieldKeys
+      specificFieldKeys,
+      unifiedBrain: {
+        semanticAlerts: unified.pipeline?.semanticRules?.alerts || [],
+        roleReliability: unified.context?.roleReliability || null
+      }
     }
   };
 }
@@ -1771,6 +2128,7 @@ async function generateRecordDraftFromChat({ messages, mode = "nova", patient = 
 
   const speciesProfile = detectSpeciesProfile(patient, sourceText);
   const heuristic = buildHeuristicDraft(safeMessages, mode, patient, recordProfile);
+  let aiErrorMessage = null;
 
   try {
     const ai = await generateWithOpenAI({
@@ -1789,26 +2147,51 @@ async function generateRecordDraftFromChat({ messages, mode = "nova", patient = 
       );
       const confidence = buildConfidenceByField(mergedDraft, speciesProfile, specificFieldKeys);
       const missingFields = buildMissingFields(mergedDraft, specificFieldKeys);
+      const reviewed = runDraftSanityCheck({
+        draft: mergedDraft,
+        sourceText,
+        heuristicDraft: heuristic.draft,
+        specificFieldKeys
+      });
       return {
         ...ai,
-        draft: mergedDraft,
+        draft: reviewed.draft,
         confidence: ai.confidence || confidence.overall,
         confidenceByField: confidence.byField,
         missingFields,
+        qualityCheck: reviewed.qualityCheck,
         context: {
           modeTitle: titleByMode(mode),
           speciesProfile: speciesProfile?.id || "geral",
           porte,
           specificFieldKeys,
+          schemaVersion: ai?.schemaVersion || CLINICAL_SCHEMA_VERSION,
           mergedWithHeuristic: true
         }
       };
     }
   } catch (error) {
-    console.error("Falha na geracao de rascunho via OpenAI:", error.message);
+    aiErrorMessage = String(error?.message || "unknown_openai_error");
+    console.error("Falha na geracao de rascunho via OpenAI:", aiErrorMessage);
   }
 
-  return heuristic;
+  const reviewedHeuristic = runDraftSanityCheck({
+    draft: heuristic.draft,
+    sourceText,
+    heuristicDraft: heuristic.draft,
+    specificFieldKeys
+  });
+
+  return {
+    ...heuristic,
+    draft: reviewedHeuristic.draft,
+    qualityCheck: reviewedHeuristic.qualityCheck,
+    context: {
+      ...(heuristic.context || {}),
+      schemaVersion: CLINICAL_SCHEMA_VERSION,
+      aiFallbackReason: aiErrorMessage || "openai_unavailable_or_failed"
+    }
+  };
 }
 
 function localRefineField(field, text) {

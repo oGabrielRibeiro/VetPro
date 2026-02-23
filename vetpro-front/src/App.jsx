@@ -103,6 +103,97 @@ const MainApp = () => {
     ),
   });
 
+  const cleanPersistentValue = (value) => {
+    const text = String(value || "").trim();
+    if (!text) return "";
+    const normalized = text
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase();
+    if (normalized === "nao informado" || normalized === "não informado") {
+      return "";
+    }
+    return text;
+  };
+
+  const buildPersistentProfileFromPatientForm = (form, existingProfile = {}) => {
+    const listFromCsv = (value) =>
+      String(value || "")
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean);
+
+    const propertyAndManagementParts = [
+      cleanPersistentValue(form.pp_responsavel_local?.value),
+      cleanPersistentValue(form.pp_contato_propriedade?.value)
+        ? `Contato: ${cleanPersistentValue(form.pp_contato_propriedade?.value)}`
+        : "",
+      cleanPersistentValue(form.pp_fazenda?.value)
+        ? `Fazenda: ${cleanPersistentValue(form.pp_fazenda?.value)}`
+        : "",
+      cleanPersistentValue(form.pp_endereco_propriedade?.value)
+        ? `Endereco: ${cleanPersistentValue(form.pp_endereco_propriedade?.value)}`
+        : "",
+      cleanPersistentValue(form.pp_tipo_criacao?.value)
+        ? `Tipo criacao: ${cleanPersistentValue(form.pp_tipo_criacao?.value)}`
+        : "",
+      cleanPersistentValue(form.pp_tipo_alimentacao?.value)
+        ? `Alimentacao: ${cleanPersistentValue(form.pp_tipo_alimentacao?.value)}`
+        : "",
+      cleanPersistentValue(form.pp_sal_mineral?.value)
+        ? `Sal mineral: ${cleanPersistentValue(form.pp_sal_mineral?.value)}`
+        : "",
+    ].filter(Boolean);
+
+    // Persistimos apenas dados realmente estaveis entre consultas.
+    // Apenas dados estaveis da ficha base (propriedade e manejo).
+    const contactantes = cleanPersistentValue(form.pp_contactantes?.value);
+    const largeFieldsRaw = {
+      farmName: cleanPersistentValue(form.pp_fazenda?.value),
+      productionSystem: cleanPersistentValue(form.pp_tipo_criacao?.value),
+      animalFunction: cleanPersistentValue(form.pp_animal_function?.value),
+      contactAnimals: contactantes,
+      propertyAndManagement: propertyAndManagementParts.join("; "),
+    };
+
+    const smallFields = {
+      contactWithAnimals: contactantes,
+    };
+    const largeFields = Object.entries(largeFieldsRaw).reduce((acc, [key, value]) => {
+      if (!value) return acc;
+      acc[key] = value;
+      return acc;
+    }, {});
+
+    const contactantesList = listFromCsv(contactantes);
+    if (contactantesList.length) {
+      largeFields.contactAnimals = contactantesList.join(", ");
+    }
+
+    const nextProfile = {
+      ...(existingProfile && typeof existingProfile === "object" ? existingProfile : {}),
+      updatedAt: new Date().toISOString(),
+      pequeno: {
+        fields: {
+          ...((existingProfile?.pequeno?.fields && typeof existingProfile.pequeno.fields === "object")
+            ? existingProfile.pequeno.fields
+            : {}),
+          ...smallFields,
+        },
+      },
+      grande: {
+        fields: {
+          ...((existingProfile?.grande?.fields && typeof existingProfile.grande.fields === "object")
+            ? existingProfile.grande.fields
+            : {}),
+          ...largeFields,
+        },
+      },
+    };
+
+    return nextProfile;
+  };
+
   const showActionError = useCallback((message) => {
     setActionFeedback({ type: "error", message });
   }, []);
@@ -399,20 +490,60 @@ const MainApp = () => {
     logout("Conta excluida com sucesso.");
   };
 
-  const handleViewConsultation = async (consultationId) => {
-    try {
-      const response = await api.get(`/consultations/${consultationId}`);
-      const consultation = normalizeConsultation(response.data);
-      setCurrentConsultation(consultation);
-      if (consultation.patient) {
-        setCurrentConsultationPatient(normalizePatient(consultation.patient));
+  const handleViewConsultation = async (consultationInput) => {
+    const consultationId =
+      (typeof consultationInput === "object" && consultationInput
+        ? consultationInput.id || consultationInput.consultationId
+        : consultationInput) || null;
+    const localConsultation =
+      typeof consultationInput === "object" && consultationInput
+        ? normalizeConsultation(consultationInput)
+        : consultations.find((item) => String(item.id) === String(consultationId));
+
+    const openPreview = (consultationData) => {
+      const normalized = normalizeConsultation(consultationData);
+      setCurrentConsultation(normalized);
+      if (normalized.patient) {
+        setCurrentConsultationPatient(normalizePatient(normalized.patient));
+      } else {
+        const patientId = normalized.patientId || localConsultation?.patientId;
+        if (patientId) {
+          const matchedPatient = patients.find(
+            (patient) => String(patient.id) === String(patientId),
+          );
+          if (matchedPatient) {
+            setCurrentConsultationPatient(normalizePatient(matchedPatient));
+          }
+        }
       }
       setCurrentView("consultation-preview");
+    };
+
+    if (!consultationId && localConsultation) {
+      openPreview(localConsultation);
+      return;
+    }
+
+    if (!consultationId) {
+      showActionError("Nao foi possivel identificar o prontuario.");
+      return;
+    }
+
+    try {
+      const response = await api.get(`/consultations/${consultationId}`);
+      openPreview(response.data);
     } catch (err) {
       console.error("Erro ao buscar consulta:", err);
-      showActionError(
-        toUserFriendlyError(err, "Não foi possível abrir o prontuário."),
-      );
+      if (localConsultation) {
+        openPreview(localConsultation);
+        showActionError(
+          "Prontuario aberto em modo local. Nao foi possivel carregar dados completos do servidor.",
+        );
+      } else {
+        showActionError(
+          toUserFriendlyError(err, "Não foi possível abrir o prontuário."),
+        );
+      }
     }
   };
 
@@ -666,6 +797,10 @@ const MainApp = () => {
                     responsibleVet: form.responsibleVet?.value?.trim() || "",
                     originClinic: form.originClinic?.value?.trim() || "",
                     anestheticRiskScore: form.anestheticRiskScore?.value || "",
+                    persistentProfile: buildPersistentProfileFromPatientForm(
+                      form,
+                      editingPatient?.persistentProfile || {},
+                    ),
                     createdAt:
                       editingPatient?.createdAt || new Date().toISOString(),
                   };
@@ -970,6 +1105,107 @@ const MainApp = () => {
                   </div>
                 </div>
 
+                <details className="rounded-lg border border-cyan-200 bg-cyan-50 p-3 space-y-3">
+                  <summary className="cursor-pointer text-xs sm:text-sm font-semibold text-cyan-900">
+                    Dados persistentes da ficha (base formulario)
+                  </summary>
+                  <p className="mt-2 text-[11px] sm:text-xs text-cyan-800">
+                    Esses dados entram como base nas proximas consultas e podem ser atualizados pelo prontuario.
+                  </p>
+                  <p className="text-[11px] sm:text-xs text-cyan-700">
+                    Preencha apenas informacoes estaveis (identificacao, manejo base e historico cronico).
+                  </p>
+
+                  <div className="rounded-lg border border-cyan-200 bg-white p-3 space-y-3">
+                    <p className="text-xs sm:text-sm font-semibold text-gray-700">Propriedade e manejo</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Responsavel local</label>
+                        <input
+                          type="text"
+                          name="pp_responsavel_local"
+                          defaultValue=""
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Contato propriedade</label>
+                        <input
+                          type="text"
+                          name="pp_contato_propriedade"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                          placeholder="(00) 00000-0000"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Fazenda / sitio</label>
+                        <input
+                          type="text"
+                          name="pp_fazenda"
+                          defaultValue={editingPatient?.persistentProfile?.grande?.fields?.farmName || ""}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Endereco da propriedade</label>
+                        <input
+                          type="text"
+                          name="pp_endereco_propriedade"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Tipo de criacao</label>
+                        <input
+                          type="text"
+                          name="pp_tipo_criacao"
+                          defaultValue={editingPatient?.persistentProfile?.grande?.fields?.productionSystem || ""}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                          placeholder="Leite, corte, confinado, semi-extensivo..."
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Finalidade zootecnica</label>
+                        <input
+                          type="text"
+                          name="pp_animal_function"
+                          defaultValue={editingPatient?.persistentProfile?.grande?.fields?.animalFunction || ""}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                          placeholder="Leite, corte, esporte, reproducao..."
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Tipo de alimentacao</label>
+                        <input
+                          type="text"
+                          name="pp_tipo_alimentacao"
+                          defaultValue=""
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Sal mineral</label>
+                        <input
+                          type="text"
+                          name="pp_sal_mineral"
+                          defaultValue=""
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Contactantes (csv)</label>
+                        <input
+                          type="text"
+                          name="pp_contactantes"
+                          defaultValue={editingPatient?.persistentProfile?.grande?.fields?.contactAnimals || ""}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                          placeholder="Bovinos, Equinos, Ovinos..."
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </details>
+
                 <div className="flex flex-col sm:flex-row sm:justify-between space-y-2 sm:space-y-0 sm:space-x-3 pt-3 sm:pt-4 border-t border-gray-200">
                   <button
                     type="button"
@@ -998,6 +1234,7 @@ const MainApp = () => {
             consultations={consultations}
             patients={patients}
             onNewConsultation={() => handleGoToNewConsultation(true)}
+            onViewConsultation={handleViewConsultation}
             onViewPatientConsultations={(patient) => {
               setCurrentConsultationPatient(patient);
               setCurrentView("patient-consultations");
@@ -1191,21 +1428,7 @@ const MainApp = () => {
       case "profile":
         return (
           <Profile
-            profile={
-              user || {
-                name: "Dra. Juliana Mendes",
-                email: "juliana@vetpro.com",
-                phone: "(11) 99999-9999",
-                crmvNumber: "12345",
-                crmvState: "SP",
-                specialty: "Clinica Geral e Medicina Preventiva",
-                clinicName: "Clinica VetCare",
-                clinicAddress: "Av. Paulista, 1000 - Sao Paulo/SP",
-                clinicCNPJ: "12.345.678/0001-90",
-                profilePhotoPreview: "",
-                signaturePreview: "",
-              }
-            }
+            profile={user || {}}
             onSave={async (updatedProfile) => {
               let clinicLogoUrl =
                 updatedProfile.clinicLogoPreview ||

@@ -43,7 +43,7 @@ const FloatingFormActions = ({
     return (
       <div className="mt-3 px-1">
         <div
-          className={`mx-auto ${maxWidthClass} rounded-xl border border-gray-200 bg-white px-2 py-2 shadow-sm`}
+          className={`mx-auto ${maxWidthClass} rounded-xl border border-slate-200 bg-white px-2 py-2 shadow-[0_6px_18px_rgba(15,23,42,0.08)]`}
         >
           {children}
         </div>
@@ -57,7 +57,7 @@ const FloatingFormActions = ({
       {attachedToEnd ? (
         <div className="mt-4 px-4 sm:px-0">
           <div
-            className={`mx-auto ${maxWidthClass} rounded-2xl border border-gray-200 bg-white/95 backdrop-blur shadow-lg px-4 py-3 sm:py-4`}
+            className={`mx-auto ${maxWidthClass} rounded-2xl border border-slate-200 bg-white/95 backdrop-blur shadow-[0_10px_26px_rgba(15,23,42,0.12)] px-4 py-3 sm:py-4`}
           >
             {children}
           </div>
@@ -65,7 +65,7 @@ const FloatingFormActions = ({
       ) : (
         <div className={`fixed left-0 right-0 ${bottomOffsetClass} z-30 px-4 sm:px-0`}>
           <div
-            className={`mx-auto ${maxWidthClass} rounded-2xl border border-gray-200 bg-white/95 backdrop-blur shadow-lg px-4 py-3 sm:py-4`}
+            className={`mx-auto ${maxWidthClass} rounded-2xl border border-slate-200 bg-white/95 backdrop-blur shadow-[0_10px_26px_rgba(15,23,42,0.12)] px-4 py-3 sm:py-4`}
           >
             {children}
           </div>

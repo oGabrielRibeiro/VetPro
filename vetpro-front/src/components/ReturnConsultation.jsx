@@ -1207,7 +1207,7 @@ const ReturnConsultation = ({
         <FloatingFormActions maxWidthClass="max-w-3xl">
           <div className="sm:hidden space-y-2">
             <div className="grid grid-cols-2 gap-2">
-              <button type="button" disabled={saving} onClick={() => handleSave(false)} className="min-h-[44px] rounded-xl bg-emerald-600 px-3 py-2 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-70 inline-flex items-center justify-center gap-2">
+              <button type="button" disabled={saving} onClick={() => handleSave(false)} className="btn btn-success btn-md btn-block">
                 {saving && <LoadingDot />}
                 {saving ? "Salvando..." : "Salvar"}
               </button>
@@ -1215,24 +1215,24 @@ const ReturnConsultation = ({
                 type="button"
                 disabled={saving}
                 onClick={() => setShowMobileMoreActions((prev) => !prev)}
-                className="min-h-[44px] rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm font-bold text-gray-700"
+                className="btn btn-neutral btn-md btn-block"
               >
                 {showMobileMoreActions ? "Fechar" : "Mais"}
               </button>
             </div>
             {showMobileMoreActions && (
-              <button type="button" disabled={saving} onClick={() => handleSave(true)} className="w-full min-h-[42px] rounded-xl bg-indigo-600 px-3 py-2 text-sm font-bold text-white hover:bg-indigo-700 disabled:opacity-70 inline-flex items-center justify-center gap-2">
+              <button type="button" disabled={saving} onClick={() => handleSave(true)} className="btn btn-primary btn-sm btn-block">
                 {saving && <LoadingDot />}
                 {saving ? "Processando..." : "Salvar + Receita"}
               </button>
             )}
           </div>
           <div className="hidden sm:grid grid-cols-2 gap-2">
-            <button type="button" disabled={saving} onClick={() => handleSave(false)} className="min-h-[46px] rounded-xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-70 inline-flex items-center justify-center gap-2">
+            <button type="button" disabled={saving} onClick={() => handleSave(false)} className="btn btn-success btn-lg btn-block">
               {saving && <LoadingDot />}
               {saving ? "Salvando..." : "Salvar Retorno"}
             </button>
-            <button type="button" disabled={saving} onClick={() => handleSave(true)} className="min-h-[46px] rounded-xl bg-indigo-600 px-4 py-3 text-sm font-bold text-white hover:bg-indigo-700 disabled:opacity-70 inline-flex items-center justify-center gap-2">
+            <button type="button" disabled={saving} onClick={() => handleSave(true)} className="btn btn-primary btn-lg btn-block">
               {saving && <LoadingDot />}
               {saving ? "Processando..." : "Salvar + Gerar Receita"}
             </button>

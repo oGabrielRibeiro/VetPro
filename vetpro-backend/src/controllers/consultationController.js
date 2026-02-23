@@ -401,12 +401,32 @@ async function chatAssist(req, res) {
     const mode = req.body?.mode === "retorno" ? "retorno" : "nova";
     const patientId = req.body?.patientId || null;
     const text = String(req.body?.text || "").trim();
+    const transcript = String(req.body?.transcript || "").trim();
     const messagesRaw = Array.isArray(req.body?.messages) ? req.body.messages : [];
+    const segmentsRaw = Array.isArray(req.body?.segments) ? req.body.segments : [];
+
+    const messagesFromSegments = segmentsRaw
+      .map((segment) => {
+        const speaker = String(segment?.speaker || "").trim().toLowerCase();
+        const content = String(segment?.text || "").trim();
+        if (!content) return null;
+        return {
+          role: speaker === "medico" || speaker === "médico" || speaker === "vet" || speaker === "veterinario"
+            ? "assistant"
+            : "user",
+          content
+        };
+      })
+      .filter(Boolean);
 
     const messages = messagesRaw.length
       ? messagesRaw
+      : messagesFromSegments.length
+        ? messagesFromSegments
       : text
         ? [{ role: "user", content: text }]
+      : transcript
+        ? [{ role: "user", content: transcript }]
         : [];
     const recordProfileRaw = req.body?.recordProfile;
     const recordProfile =

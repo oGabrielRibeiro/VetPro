@@ -113,6 +113,22 @@ const DEFAULT_LARGE_ANIMAL_DATA = {
   requestedExamPanel: "",
 };
 
+const PERSISTENT_SPECIFIC_KEYS = {
+  pequeno: new Set([
+    "allergyHistory",
+    "chronicDiseases",
+    "contactWithAnimals",
+    "reproductiveStatusSmall",
+  ]),
+  grande: new Set([
+    "farmName",
+    "productionSystem",
+    "animalFunction",
+    "propertyAndManagement",
+    "contactAnimals",
+  ]),
+};
+
 function normalizeWords(value = "") {
   return String(value)
     .normalize("NFD")
@@ -185,6 +201,21 @@ function inferPorteFromText(text = "") {
   return null;
 }
 
+function isNotInformed(value = "") {
+  const normalized = normalizeWords(String(value || ""));
+  return normalized === "nao informado" || normalized === "não informado";
+}
+
+function sanitizeSpecificFields(source = {}) {
+  if (!source || typeof source !== "object") return {};
+  return Object.entries(source).reduce((acc, [key, value]) => {
+    const text = String(value || "").trim();
+    if (!text || isNotInformed(text)) return acc;
+    acc[key] = text;
+    return acc;
+  }, {});
+}
+
 const QuickConsultation = ({
   patient,
   onSave,
@@ -192,7 +223,7 @@ const QuickConsultation = ({
   initialData = null,
   fieldMode = false,
 }) => {
-  const [weight, setWeight] = useState(initialData?.weight || "");
+  const [weight, setWeight] = useState(initialData?.weight || patient?.weight || "");
   const [temperature, setTemperature] = useState("");
   const [heartRate, setHeartRate] = useState("");
   const [respiratoryRate, setRespiratoryRate] = useState("");
@@ -300,6 +331,21 @@ const QuickConsultation = ({
     const normalized = normalizeWords(String(value || ""));
     return normalized === "nao informado" || normalized === "não informado";
   };
+
+  const patientPersistentProfile = useMemo(() => {
+    const source = patient?.persistentProfile;
+    return source && typeof source === "object" ? source : {};
+  }, [patient?.persistentProfile]);
+
+  const patientSmallProfile = useMemo(() => {
+    const fields = patientPersistentProfile?.pequeno?.fields;
+    return fields && typeof fields === "object" ? fields : {};
+  }, [patientPersistentProfile]);
+
+  const patientLargeProfile = useMemo(() => {
+    const fields = patientPersistentProfile?.grande?.fields;
+    return fields && typeof fields === "object" ? fields : {};
+  }, [patientPersistentProfile]);
 
   useEffect(() => {
     conversationRecognitionRef.current = conversationRecognition;
@@ -813,10 +859,10 @@ const QuickConsultation = ({
           : null;
     const initialSpecificFields =
       initialData?.specificFields && typeof initialData.specificFields === "object"
-        ? initialData.specificFields
+        ? sanitizeSpecificFields(initialData.specificFields)
         : {};
 
-    setWeight(initialData?.weight || "");
+    setWeight(initialData?.weight || patient?.weight || "");
     setTemperature(initialData?.temperature || "");
     setHeartRate(initialData?.heartRate || "");
     setRespiratoryRate(initialData?.respiratoryRate || "");
@@ -842,17 +888,17 @@ const QuickConsultation = ({
     setOpenReturnWithoutDate(false);
     setReturnRecommendation(initialData?.returnRecommendation || "");
     setSmallAnimalData(() => {
-      if (initialPorte !== "pequeno") return DEFAULT_SMALL_ANIMAL_DATA;
       return {
         ...DEFAULT_SMALL_ANIMAL_DATA,
-        ...initialSpecificFields,
+        ...sanitizeSpecificFields(patientSmallProfile),
+        ...(initialPorte === "pequeno" ? initialSpecificFields : {}),
       };
     });
     setLargeAnimalData(() => {
-      if (initialPorte !== "grande") return DEFAULT_LARGE_ANIMAL_DATA;
       return {
         ...DEFAULT_LARGE_ANIMAL_DATA,
-        ...initialSpecificFields,
+        ...sanitizeSpecificFields(patientLargeProfile),
+        ...(initialPorte === "grande" ? initialSpecificFields : {}),
       };
     });
     setConversationTranscript("");
@@ -886,7 +932,7 @@ const QuickConsultation = ({
         }
       });
     }
-  }, [patient?.id, initialData]);
+  }, [patient?.id, initialData, patientSmallProfile, patientLargeProfile, patient?.weight]);
 
   useEffect(() => {
     return () => {
@@ -904,7 +950,7 @@ const QuickConsultation = ({
       if (!raw) return;
 
       const draft = JSON.parse(raw);
-      setWeight(draft.weight || "");
+      setWeight(draft.weight || patient?.weight || "");
       setTemperature(draft.temperature || "");
       setHeartRate(draft.heartRate || "");
       setRespiratoryRate(draft.respiratoryRate || "");
@@ -926,11 +972,11 @@ const QuickConsultation = ({
       setReturnRecommendation(draft.returnRecommendation || "");
       setSmallAnimalData({
         ...DEFAULT_SMALL_ANIMAL_DATA,
-        ...(draft.smallAnimalData || {}),
+        ...sanitizeSpecificFields(draft.smallAnimalData || {}),
       });
       setLargeAnimalData({
         ...DEFAULT_LARGE_ANIMAL_DATA,
-        ...(draft.largeAnimalData || {}),
+        ...sanitizeSpecificFields(draft.largeAnimalData || {}),
       });
       setConversationTranscript(draft.conversationTranscript || "");
       setTranscriptSegments(draft.transcriptSegments || []);
@@ -944,7 +990,7 @@ const QuickConsultation = ({
     } catch (error) {
       console.error("Erro ao restaurar rascunho da consulta:", error);
     }
-  }, [draftKey, initialData?.fromFieldMode]);
+  }, [draftKey, initialData?.fromFieldMode, patient?.weight]);
 
   useEffect(() => {
     if (!draftKey || saving) return;
@@ -1277,7 +1323,7 @@ const QuickConsultation = ({
           Object.entries(mergedSpecificFields).forEach(([key, value]) => {
             if (!(key in next)) return;
             const text = String(value || "").trim();
-            if (!text) return;
+            if (!text || isNotInformedValue(text)) return;
             if (overwrite || !String(next[key] || "").trim() || isNotInformedValue(next[key])) {
               next[key] = text;
             }
@@ -1290,7 +1336,7 @@ const QuickConsultation = ({
           Object.entries(mergedSpecificFields).forEach(([key, value]) => {
             if (!(key in next)) return;
             const text = String(value || "").trim();
-            if (!text) return;
+            if (!text || isNotInformedValue(text)) return;
             if (overwrite || !String(next[key] || "").trim() || isNotInformedValue(next[key])) {
               next[key] = text;
             }
@@ -1568,6 +1614,17 @@ const QuickConsultation = ({
           }, {}),
         })}\n${PORTE_NOTES_MARK_END}`
       : "";
+    const persistentFields = filledSpecificItems.reduce((acc, item) => {
+      const text = String(item.value || "").trim();
+      if (!text || isNotInformed(text)) return acc;
+      const allowedByPorte =
+        animalPorte === "grande"
+          ? PERSISTENT_SPECIFIC_KEYS.grande
+          : PERSISTENT_SPECIFIC_KEYS.pequeno;
+      if (!allowedByPorte.has(item.key)) return acc;
+      acc[item.key] = text;
+      return acc;
+    }, {});
 
     return {
     patientId: patient.id,
@@ -1603,6 +1660,12 @@ const QuickConsultation = ({
       .filter(Boolean)
       .join("\n\n"),
     returnRecommendation,
+    persistentProfileUpdate: Object.keys(persistentFields).length
+      ? {
+          porte: animalPorte,
+          fields: persistentFields,
+        }
+      : null,
     returnPlan: returnRecommended
       ? {
           recommended: true,
@@ -2883,7 +2946,7 @@ const QuickConsultation = ({
                 type="button"
                 onClick={() => saveConsultationWithPrescription(false)}
                 disabled={saving}
-                className="min-h-[44px] rounded-xl bg-emerald-600 px-3 py-2 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-70 inline-flex items-center justify-center gap-2"
+                className="btn btn-success btn-md btn-block"
               >
                 {saving && <LoadingDot />}
                 {saving ? "Salvando..." : "Salvar"}
@@ -2892,7 +2955,7 @@ const QuickConsultation = ({
                 type="button"
                 onClick={() => setShowMobileMoreActions((prev) => !prev)}
                 disabled={saving}
-                className="min-h-[44px] rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm font-bold text-gray-700"
+                className="btn btn-neutral btn-md btn-block"
               >
                 {showMobileMoreActions ? "Fechar" : "Mais"}
               </button>
@@ -2903,7 +2966,7 @@ const QuickConsultation = ({
                   type="button"
                   onClick={() => saveConsultationWithPrescription(true)}
                   disabled={saving}
-                  className="min-h-[42px] rounded-xl bg-indigo-600 px-3 py-2 text-sm font-bold text-white hover:bg-indigo-700 disabled:opacity-70 inline-flex items-center justify-center gap-2"
+                  className="btn btn-primary btn-sm btn-block"
                 >
                   {saving && <LoadingDot />}
                   {saving ? "Processando..." : "Salvar + Receita"}
@@ -2912,7 +2975,7 @@ const QuickConsultation = ({
                   type="button"
                   onClick={clearAllFields}
                   disabled={saving}
-                  className="min-h-[42px] rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-70"
+                  className="btn btn-neutral btn-sm btn-block"
                 >
                   Limpar campos
                 </button>
@@ -2925,7 +2988,7 @@ const QuickConsultation = ({
               type="button"
               onClick={clearAllFields}
               disabled={saving}
-              className="min-h-[46px] rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-70"
+              className="btn btn-neutral btn-lg btn-block"
             >
               Limpar campos
             </button>
@@ -2933,7 +2996,7 @@ const QuickConsultation = ({
               type="button"
               onClick={() => saveConsultationWithPrescription(false)}
               disabled={saving}
-              className="min-h-[46px] rounded-xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-70 inline-flex items-center justify-center gap-2"
+              className="btn btn-success btn-lg btn-block"
             >
               {saving && <LoadingDot />}
               {saving ? "Salvando..." : "Salvar Consulta"}
@@ -2942,7 +3005,7 @@ const QuickConsultation = ({
               type="button"
               onClick={() => saveConsultationWithPrescription(true)}
               disabled={saving}
-              className="min-h-[46px] rounded-xl bg-indigo-600 px-4 py-3 text-sm font-bold text-white hover:bg-indigo-700 disabled:opacity-70 inline-flex items-center justify-center gap-2"
+              className="btn btn-primary btn-lg btn-block"
             >
               {saving && <LoadingDot />}
               {saving ? "Processando..." : "Salvar + Gerar Receita"}

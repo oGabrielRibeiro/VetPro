@@ -17,6 +17,48 @@ function Test-DockerDaemon {
   return ($LASTEXITCODE -eq 0)
 }
 
+function Get-NodeMajorVersion {
+  $nodeCmd = Get-Command node -ErrorAction SilentlyContinue
+  if (-not $nodeCmd) {
+    return $null
+  }
+
+  $nodeVersion = node -v 2>$null
+  if ($LASTEXITCODE -ne 0 -or -not $nodeVersion) {
+    return $null
+  }
+
+  $versionText = $nodeVersion.Trim().TrimStart("v")
+  $parts = $versionText.Split(".")
+  if ($parts.Length -lt 1) {
+    return $null
+  }
+
+  $major = 0
+  if (-not [int]::TryParse($parts[0], [ref]$major)) {
+    return $null
+  }
+
+  return $major
+}
+
+function Show-NodeVersionStatus {
+  $major = Get-NodeMajorVersion
+  if ($null -eq $major) {
+    Write-Host "Node.js nao encontrado no host. Isso nao impede o Docker, mas para rodar frontend local use Node 20.x." -ForegroundColor Yellow
+    return
+  }
+
+  if ($major -eq 20) {
+    Write-Host "Node.js no host: OK (20.x)." -ForegroundColor Green
+    return
+  }
+
+  $rawVersion = node -v 2>$null
+  Write-Host "Node.js no host: $rawVersion (recomendado: 20.x)." -ForegroundColor Yellow
+  Write-Host "Para build local do frontend, use Node 20.x para evitar falhas de compilacao." -ForegroundColor Yellow
+}
+
 function Start-DockerDesktopIfNeeded {
   if (Test-DockerDaemon) {
     return
@@ -55,6 +97,7 @@ Verifique o Docker Desktop e tente novamente:
 
 Write-Host "Subindo VetPro via Docker..." -ForegroundColor Cyan
 
+Show-NodeVersionStatus
 Start-DockerDesktopIfNeeded
 
 docker compose up --build -d

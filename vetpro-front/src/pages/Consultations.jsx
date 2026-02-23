@@ -3,7 +3,13 @@ import { formatDateTimeBR } from "../utils";
 import AppIcon from "../components/AppIcon";
 import SpeciesIcon from "../components/SpeciesIcon";
 
-const Consultations = ({ consultations, patients, onNewConsultation, onViewPatientConsultations }) => {
+const Consultations = ({
+  consultations,
+  patients,
+  onNewConsultation,
+  onViewPatientConsultations,
+  onViewConsultation
+}) => {
   const [filterPatientId, setFilterPatientId] = useState("");
   const [filterDateRange, setFilterDateRange] = useState({ start: "", end: "" });
   const [filteredConsultations, setFilteredConsultations] = useState([]);
@@ -62,7 +68,9 @@ const Consultations = ({ consultations, patients, onNewConsultation, onViewPatie
   };
 
   const viewConsultationPreview = (consultation) => {
-    window.dispatchEvent(new CustomEvent("preview-consultation", { detail: consultation }));
+    if (typeof onViewConsultation === "function") {
+      onViewConsultation(consultation);
+    }
   };
 
   return (
@@ -133,7 +141,7 @@ const Consultations = ({ consultations, patients, onNewConsultation, onViewPatie
                   <div className="mb-2 sm:mb-0">
                     <div className="flex items-center space-x-3">
                       <div className="w-10 h-10 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center flex-shrink-0">
-                        <SpeciesIcon species={patient.species} subcategory={patient.subcategory} className="h-5 w-5" />
+                        <SpeciesIcon species={patient.species} subcategory={patient.subcategory} breed={patient.breed} className="h-5 w-5" />
                       </div>
                       <div>
                         <h3 className="font-bold text-gray-800">{patient.name}</h3>
@@ -186,7 +194,9 @@ const Consultations = ({ consultations, patients, onNewConsultation, onViewPatie
                         <span>Ver Historico</span>
                       </button>
                     </div>
-                    <div className="text-xs text-gray-500">Dr(a). {consultation.veterinarianName}</div>
+                    <div className="text-xs text-gray-500">
+                      {consultation.veterinarianName || "Veterinário não informado"}
+                    </div>
                   </div>
                 </div>
               </div>

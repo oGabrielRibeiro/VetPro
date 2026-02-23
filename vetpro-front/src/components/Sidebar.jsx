@@ -95,7 +95,7 @@ const Sidebar = ({ currentUser, currentView, setCurrentView, onLogout }) => {
 
         <button
           onClick={() => onLogout()}
-          className="w-full mt-3 bg-red-50 text-red-700 font-medium py-2 px-3 rounded-lg hover:bg-red-100 transition-colors text-xs sm:text-sm flex items-center justify-center"
+          className="btn btn-danger-soft btn-md btn-block mt-3 text-xs sm:text-sm"
         >
           <span className="mr-2">
             <AppIcon name="logout" />

@@ -35,7 +35,7 @@ const Patients = ({ patients, onEditPatient, onAddPatient, onViewConsultations }
 
           <button
             onClick={onAddPatient}
-            className="min-h-[44px] bg-emerald-600 text-white font-bold py-2 sm:py-2.5 px-4 sm:px-6 rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center text-sm"
+            className="btn btn-success btn-md"
           >
             <span className="mr-1 sm:mr-2">
               <AppIcon name="plus" className="h-4 w-4" />
@@ -55,7 +55,7 @@ const Patients = ({ patients, onEditPatient, onAddPatient, onViewConsultations }
               <div className="p-3 sm:p-4 md:p-5">
                 <div className="flex items-start space-x-2 sm:space-x-3 md:space-x-4">
                   <div className="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center flex-shrink-0">
-                    <SpeciesIcon species={patient.species} subcategory={patient.subcategory} className="h-6 w-6" />
+                    <SpeciesIcon species={patient.species} subcategory={patient.subcategory} breed={patient.breed} className="h-6 w-6" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <h3 className="font-bold text-sm sm:text-base md:text-lg text-gray-800 truncate">{patient.name}</h3>
@@ -75,13 +75,13 @@ const Patients = ({ patients, onEditPatient, onAddPatient, onViewConsultations }
                 <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-gray-100 grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <button
                     onClick={() => onEditPatient(patient)}
-                    className="min-h-[42px] rounded-lg border border-emerald-200 bg-emerald-50 text-sm text-emerald-700 hover:bg-emerald-100 font-semibold flex items-center justify-center"
+                    className="btn btn-info-soft btn-sm btn-block"
                   >
                     Editar
                   </button>
                   <button
                     onClick={() => onViewConsultations(patient)}
-                    className="min-h-[42px] rounded-lg border border-blue-200 bg-blue-50 text-sm text-blue-700 hover:bg-blue-100 font-semibold flex items-center justify-center"
+                    className="btn btn-primary btn-sm btn-block"
                   >
                     Prontuario
                   </button>
@@ -105,7 +105,7 @@ const Patients = ({ patients, onEditPatient, onAddPatient, onViewConsultations }
           </p>
           <button
             onClick={onAddPatient}
-            className="bg-emerald-600 text-white font-bold py-2 sm:py-3 px-6 sm:px-8 rounded-xl shadow-md hover:shadow-lg transition-all text-xs sm:text-sm"
+            className="btn btn-success btn-lg"
           >
             Adicionar Paciente
           </button>

@@ -2,6 +2,51 @@ const PDFDocument = require("pdfkit");
 const path = require("path");
 const fs = require("fs");
 
+function normalizePrescriptionText(value = "") {
+  return String(value || "")
+    .replace(/\r/g, "\n")
+    .replace(/[ \t]+/g, " ")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+function fitTextToHeight(doc, text, options = {}) {
+  const source = normalizePrescriptionText(text);
+  if (!source) return "";
+
+  const width = Number(options.width || 0);
+  const height = Number(options.height || 0);
+  if (!width || !height) return source;
+
+  const baseOptions = {
+    width,
+    align: options.align || "left",
+    lineGap: options.lineGap == null ? 1 : options.lineGap
+  };
+
+  const fullHeight = doc.heightOfString(source, baseOptions);
+  if (fullHeight <= height) return source;
+
+  const ellipsis = " (...)";
+  let low = 0;
+  let high = source.length;
+  let best = "";
+
+  while (low <= high) {
+    const mid = Math.floor((low + high) / 2);
+    const candidate = `${source.slice(0, mid).trim()}${ellipsis}`;
+    const candidateHeight = doc.heightOfString(candidate, baseOptions);
+    if (candidateHeight <= height) {
+      best = candidate;
+      low = mid + 1;
+    } else {
+      high = mid - 1;
+    }
+  }
+
+  return best || source.slice(0, 180).trim();
+}
+
 function resolveClinicLogoPath(clinic = {}) {
   const candidates = [];
 
@@ -165,7 +210,12 @@ function renderPrescription(doc, data) {
     .moveTo(bodyLeft, y + 24)
     .lineTo(bodyRight, y + 24)
     .stroke();
-  const diagnosis = data.consultation?.diagnosis || "-";
+  const diagnosis = fitTextToHeight(doc, data.consultation?.diagnosis || "-", {
+    width: bodyWidth,
+    height: 14,
+    align: "left",
+    lineGap: 0
+  });
   doc.font("Helvetica-Bold").fontSize(8.5).fillColor(dark).text(diagnosis, bodyLeft, y + 10, {
     width: bodyWidth,
     align: "left"
@@ -176,20 +226,28 @@ function renderPrescription(doc, data) {
   const boxX = bodyLeft;
   const boxY = y;
   const boxW = bodyWidth;
-  const boxH = 220;
+  const boxH = 186;
   doc.roundedRect(boxX, boxY, boxW, boxH, 9).lineWidth(1).strokeColor("#d9e3ec").stroke();
   doc.fillColor(accentDark).font("Helvetica-Bold").fontSize(10).text("Prescricao", boxX + 12, boxY + 10);
+  const prescriptionRaw =
+    data.consultation.medications ||
+    data.consultation.treatment ||
+    "Conforme orientacao clinica.";
+  const prescriptionText = fitTextToHeight(doc, prescriptionRaw, {
+    width: boxW - 24,
+    height: boxH - 44,
+    align: "left",
+    lineGap: 1
+  });
   doc
     .font("Helvetica")
     .fillColor(dark)
-    .fontSize(11.5)
+    .fontSize(10.5)
     .text(
-      data.consultation.medications ||
-        data.consultation.treatment ||
-        "Conforme orientacao clinica.",
+      prescriptionText,
       boxX + 12,
       boxY + 30,
-      { width: boxW - 24, height: boxH - 44, ellipsis: true }
+      { width: boxW - 24, align: "left", lineGap: 1 }
     );
 
   // Footer line and signature
@@ -240,7 +298,12 @@ function renderPrescription(doc, data) {
 
 function generatePrescriptionBuffer(data) {
   return new Promise((resolve, reject) => {
-    const doc = new PDFDocument({ margin: 50 });
+    const doc = new PDFDocument({
+      size: "A4",
+      margin: 0,
+      autoFirstPage: true,
+      bufferPages: false
+    });
     const chunks = [];
 
     doc.on("data", (chunk) => chunks.push(chunk));

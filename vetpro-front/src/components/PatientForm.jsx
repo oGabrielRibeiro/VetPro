@@ -168,13 +168,13 @@ const PatientForm = ({ patient, onSubmit, onCancel, isEditing }) => {
               <button
                 type="button"
                 onClick={onCancel}
-                className="w-full min-h-[46px] bg-gray-200 text-gray-800 font-bold py-2.5 sm:py-3 px-4 sm:px-6 rounded-xl hover:bg-gray-300 transition-colors text-sm"
+                className="btn btn-neutral btn-lg btn-block"
               >
                 Cancelar
               </button>
               <button
                 type="submit"
-                className="w-full min-h-[46px] bg-gradient-to-r from-emerald-600 to-cyan-700 text-white font-bold py-2.5 sm:py-3 px-4 sm:px-6 rounded-xl shadow-md hover:shadow-lg transition-all text-sm"
+                className="btn btn-success btn-lg btn-block"
               >
                 {isEditing ? "Atualizar Paciente" : "Cadastrar Paciente"}
               </button>

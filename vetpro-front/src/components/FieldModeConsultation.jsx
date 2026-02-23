@@ -57,6 +57,22 @@ const SPECIFIC_FIELD_LABELS = {
   requestedExamPanel: "Exames complementares solicitados",
 };
 
+const PERSISTENT_SPECIFIC_KEYS = {
+  pequeno: new Set([
+    "allergyHistory",
+    "chronicDiseases",
+    "contactWithAnimals",
+    "reproductiveStatusSmall",
+  ]),
+  grande: new Set([
+    "farmName",
+    "productionSystem",
+    "animalFunction",
+    "propertyAndManagement",
+    "contactAnimals",
+  ]),
+};
+
 const FieldModeConsultation = ({
   patient,
   onSave,
@@ -64,7 +80,7 @@ const FieldModeConsultation = ({
   onSwitchToManual,
   onContinueToManual,
 }) => {
-  const [weight, setWeight] = useState("");
+  const [weight, setWeight] = useState(patient?.weight || "");
   const [temperature, setTemperature] = useState("");
   const [heartRate, setHeartRate] = useState("");
   const [respiratoryRate, setRespiratoryRate] = useState("");
@@ -82,7 +98,9 @@ const FieldModeConsultation = ({
   const [parsedData, setParsedData] = useState(null);
   const [structuredDraft, setStructuredDraft] = useState(null);
   const [parsedConfidence, setParsedConfidence] = useState(null);
+  const [parsedConfidenceComposite, setParsedConfidenceComposite] = useState(null);
   const [roleReliability, setRoleReliability] = useState(null);
+  const [ruleAlerts, setRuleAlerts] = useState([]);
   const [saving, setSaving] = useState(false);
   const [audioProfile, setAudioProfile] = useState("normal");
   const [currentSpeaker, setCurrentSpeaker] = useState("Auto");
@@ -171,6 +189,11 @@ const FieldModeConsultation = ({
   useEffect(() => {
     segmentsRef.current = segments;
   }, [segments]);
+
+  useEffect(() => {
+    const fallbackWeight = patient?.weight == null ? "" : String(patient.weight);
+    setWeight((current) => (String(current || "").trim() ? current : fallbackWeight));
+  }, [patient?.id, patient?.weight]);
 
   const formatElapsed = (seconds) => {
     const total = Math.max(0, Number(seconds) || 0);
@@ -657,6 +680,104 @@ const FieldModeConsultation = ({
     };
   };
 
+  const extractSpecificFieldsFallback = (sourceText = "", porte = "pequeno", parsed = {}) => {
+    const cleaned = String(sourceText || "")
+      .replace(/\[[0-9:]+\]/g, " ")
+      .replace(/\b(Tutor|Medico)\s*:\s*/gi, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+    if (!cleaned) return {};
+
+    const norm = normalizeText(cleaned);
+    const sentences = cleaned
+      .split(/[.!?;]+/g)
+      .map((item) => item.trim())
+      .filter(Boolean);
+    const pick = (regex) => {
+      const match = cleaned.match(regex);
+      return match?.[1] ? String(match[1]).trim() : "";
+    };
+    const pickSentence = (tokens = []) => {
+      const normTokens = tokens.map((token) => normalizeText(token));
+      for (const sentence of sentences) {
+        const sentenceNorm = normalizeText(sentence);
+        if (normTokens.some((token) => token && sentenceNorm.includes(token))) {
+          return sentence;
+        }
+      }
+      return "";
+    };
+    const limit = (value, size = 180) => String(value || "").replace(/\s+/g, " ").trim().slice(0, size);
+
+    if (porte === "grande") {
+      const out = {};
+      out.farmName =
+        pick(/\b((?:Haras|Fazenda|Sitio|Sítio)\s+[^,.;]+)/i) ||
+        "";
+      out.animalId =
+        pick(/\b(?:animal|paciente|nome)\s*[:-]?\s*([A-Za-zÀ-ÿ][\wÀ-ÿ-]{1,40})/i) ||
+        patient?.name ||
+        "";
+
+      if (/\bprova|laco|la[cç]o|esporte\b/i.test(norm)) out.animalFunction = "Esporte";
+      else if (/\bleite|lacta[cç][aã]o\b/i.test(norm)) out.animalFunction = "Leite";
+      else if (/\bcorte|engorda\b/i.test(norm)) out.animalFunction = "Corte";
+
+      out.herdVaccination = pickSentence(["vacina", "raiva", "tetano", "gripe", "encefalo"]);
+      out.herdDeworming = pickSentence(["vermifug", "ivermect"]);
+      out.waterIntake = pickSentence(["ingestao de agua", "consumo de agua", "agua diminu", "água diminu"]);
+      out.hoofStatus = pickSentence(["casco", "locomoc", "claudic", "flanco", "arranho", "arranh"]);
+      out.rumenMotility = pickSentence(["motilidade", "ruminal", "hipomotilidade", "sons diminu"]);
+      out.fecesAndUrine = pickSentence(["fezes", "urina"]);
+      out.historicalDiseases = pickSentence(["historico do lote", "aie", "mormo", "sem ocorrencia", "sem ocorrência"]);
+      out.physicalExamDetailed = limit(
+        String(parsed?.physicalExam || "").trim() || pickSentence(["mucosa", "tpc", "febre", "frequencia cardiaca", "fc"]),
+      );
+      out.requestedExamPanel = pickSentence(["hemograma", "bioquim", "aie", "mormo", "coleta", "exame"]);
+      out.previousTreatmentHistory = limit(
+        [
+          String(parsed?.treatment || "").trim(),
+          String(parsed?.medications || "").trim(),
+        ]
+          .filter(Boolean)
+          .join(". "),
+      );
+      out.animalIdentificationDetails = limit(
+        [
+          patient?.name ? `Nome: ${patient.name}` : "",
+          patient?.subcategory || patient?.species || "",
+          patient?.breed || "",
+        ]
+          .filter(Boolean)
+          .join(", "),
+      );
+
+      return Object.entries(out).reduce((acc, [key, value]) => {
+        const cleanedValue = limit(value);
+        if (cleanedValue) acc[key] = cleanedValue;
+        return acc;
+      }, {});
+    }
+
+    const smallOut = {
+      vaccinationProtocol: pickSentence(["v8", "v10", "antirrab", "raiva", "vacina"]),
+      dewormingStatus: pickSentence(["vermifug", "ivermect"]),
+      ectoparasiteControl: pickSentence(["pulga", "carrapato", "ectoparasita", "pipeta"]),
+      diet: pickSentence(["racao", "ração", "dieta", "petisco"]),
+      waterIntakeSmall: pickSentence(["ingestao de agua", "consumo de agua", "agua"]),
+      behavior: pickSentence(["apatia", "pregui", "comportamento", "letarg"]),
+      allergyHistory: pickSentence(["alerg", "prurido", "coceira"]),
+    };
+    if (/\batrasad/i.test(norm)) smallOut.vaccinationStatus = "Atrasada";
+    else if (/\bem dia\b/i.test(norm)) smallOut.vaccinationStatus = "Em dia";
+
+    return Object.entries(smallOut).reduce((acc, [key, value]) => {
+      const cleanedValue = limit(value);
+      if (cleanedValue) acc[key] = cleanedValue;
+      return acc;
+    }, {});
+  };
+
   const confidenceLabel = (score) => {
     if (score >= 0.75) return "alta";
     if (score >= 0.5) return "media";
@@ -790,6 +911,8 @@ const FieldModeConsultation = ({
 
     setAnalyzing(true);
     setParsedConfidence(null);
+    setParsedConfidenceComposite(null);
+    setRuleAlerts([]);
     setRoleReliability(null);
     try {
       const formData = new FormData();
@@ -808,6 +931,8 @@ const FieldModeConsultation = ({
 
       const result = response.data || {};
       setRoleReliability(result?.context?.roleReliability || null);
+      setParsedConfidenceComposite(result?.parsedConfidenceComposite || null);
+      setRuleAlerts(result?.pipeline?.semanticRules?.alerts || []);
       if (Array.isArray(result.segments) && result.segments.length > 0) {
         setSegments(result.segments);
       }
@@ -835,6 +960,8 @@ const FieldModeConsultation = ({
             mode: "nova",
             patientId: patient?.id || null,
             text: chatInput,
+            transcript: fallbackTranscript,
+            segments: fallbackSegments,
             messages: [{ role: "user", content: chatInput }],
             recordProfile: {
               porte: requestedPorte,
@@ -896,6 +1023,8 @@ const FieldModeConsultation = ({
       setStructuredDraft(null);
       setParsedData(parsed);
       setParsedConfidence(buildLocalConfidence(parsed, candidateSegments));
+      setParsedConfidenceComposite(null);
+      setRuleAlerts([]);
       setRoleReliability({ reliable: false, score: 0.3, reason: "fallback_local" });
       setAnalysisSource("local");
     } finally {
@@ -930,6 +1059,8 @@ const FieldModeConsultation = ({
     setParsedData(null);
     setStructuredDraft(null);
     setParsedConfidence(null);
+    setParsedConfidenceComposite(null);
+    setRuleAlerts([]);
     setRoleReliability(null);
     setManualPorteOverride(null);
     setPorteDetectionState({ porte: "pequeno", confident: false, reason: "indefinido" });
@@ -995,6 +1126,8 @@ const FieldModeConsultation = ({
       setParsedData(null);
       setStructuredDraft(null);
       setParsedConfidence(null);
+      setParsedConfidenceComposite(null);
+      setRuleAlerts([]);
       setRoleReliability(null);
       setManualPorteOverride(null);
       setPorteDetectionState({ porte: "pequeno", confident: false, reason: "indefinido" });
@@ -1092,6 +1225,8 @@ const FieldModeConsultation = ({
     setParsedData(null);
     setStructuredDraft(null);
     setParsedConfidence(null);
+    setParsedConfidenceComposite(null);
+    setRuleAlerts([]);
     setRoleReliability(null);
     setManualPorteOverride(null);
     setPorteDetectionState({ porte: "pequeno", confident: false, reason: "indefinido" });
@@ -1154,10 +1289,33 @@ const FieldModeConsultation = ({
     const parsed = parsedData || parseTranscriptLocal(transcriptRef.current || "", segments) || {};
     const draft = structuredDraft && typeof structuredDraft === "object" ? structuredDraft : {};
     const timestampedTranscript = buildTimestampedTranscript();
-    const specificFields =
+    const enforcedPorte = manualPorteOverride || porteDetectionState.porte || draft.porte || "pequeno";
+    const porte = String(enforcedPorte || "").toLowerCase() === "grande" ? "grande" : "pequeno";
+    const transcriptForSpecific = [
+      timestampedTranscript,
+      transcriptRef.current || "",
+      String(parsed?.chiefComplaint || ""),
+      String(parsed?.anamnesis || ""),
+      String(parsed?.physicalExam || ""),
+      String(parsed?.diagnosis || ""),
+      String(parsed?.treatment || ""),
+      String(parsed?.medications || ""),
+    ]
+      .filter(Boolean)
+      .join("\n");
+    const fallbackSpecific = extractSpecificFieldsFallback(transcriptForSpecific, porte, parsed);
+    const aiSpecific =
       draft.specificFields && typeof draft.specificFields === "object"
         ? draft.specificFields
         : {};
+    const specificFields = {
+      ...fallbackSpecific,
+      ...Object.entries(aiSpecific).reduce((acc, [key, value]) => {
+        const text = String(value || "").trim();
+        if (text) acc[key] = text;
+        return acc;
+      }, {}),
+    };
     const filledSpecificItems = Object.entries(specificFields)
       .map(([key, value]) => ({
         key,
@@ -1165,8 +1323,6 @@ const FieldModeConsultation = ({
         value: String(value || "").trim(),
       }))
       .filter((item) => item.value);
-    const enforcedPorte = manualPorteOverride || porteDetectionState.porte || draft.porte || "pequeno";
-    const porte = String(enforcedPorte || "").toLowerCase() === "grande" ? "grande" : "pequeno";
 
     const chiefComplaint = String(draft.chiefComplaint || parsed.chiefComplaint || "").trim();
     const anamnesis = String(draft.anamnesis || parsed.anamnesis || "").trim();
@@ -1177,6 +1333,19 @@ const FieldModeConsultation = ({
     const medications = String(draft.medications || parsed.medications || "").trim();
     const examDetails = String(draft.examDetails || "").trim();
     const returnRecommendation = String(draft.returnRecommendation || "").trim();
+    const persistentFields = filledSpecificItems.reduce((acc, item) => {
+      const text = String(item.value || "").trim();
+      if (!text) return acc;
+      const normalized = normalizeText(text);
+      if (normalized === "nao informado" || normalized === "não informado") return acc;
+      const allowedByPorte =
+        porte === "grande"
+          ? PERSISTENT_SPECIFIC_KEYS.grande
+          : PERSISTENT_SPECIFIC_KEYS.pequeno;
+      if (!allowedByPorte.has(item.key)) return acc;
+      acc[item.key] = text;
+      return acc;
+    }, {});
 
     const hasMeaningfulData = [
       chiefComplaint,
@@ -1207,6 +1376,12 @@ const FieldModeConsultation = ({
         medications,
         examDetails,
         returnRecommendation,
+        persistentProfileUpdate: Object.keys(persistentFields).length
+          ? {
+              porte,
+              fields: persistentFields,
+            }
+          : null,
         fromFieldMode: true,
         porte,
         specificFields: filledSpecificItems.reduce((acc, item) => {
@@ -1645,7 +1820,7 @@ const FieldModeConsultation = ({
               ["treatment", "Conduta", parsedData.treatment],
               ["medications", "Medicacao", parsedData.medications],
             ].map(([key, label, value]) => {
-              const conf = parsedConfidence?.[key];
+              const conf = parsedConfidenceComposite?.[key] || parsedConfidence?.[key];
               const pct = Math.round((conf?.score || 0) * 100);
               return (
                 <div key={key} className="space-y-1">
@@ -1671,6 +1846,16 @@ const FieldModeConsultation = ({
                 </div>
               );
             })}
+            {ruleAlerts.length > 0 && (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 p-2 space-y-1">
+                <p className="text-[11px] font-semibold text-amber-900">Alertas clinicos detectados</p>
+                {ruleAlerts.slice(0, 4).map((alert, index) => (
+                  <p key={`${alert?.id || "alert"}-${index}`} className="text-[11px] text-amber-900">
+                    {(alert?.severity || "media").toUpperCase()}: {alert?.message || "-"}
+                  </p>
+                ))}
+              </div>
+            )}
             {structuredDraft && (
               <div className="rounded-lg border border-emerald-200 bg-white p-2 space-y-1">
                 <p className="text-[11px] font-semibold text-emerald-900">
@@ -1748,7 +1933,7 @@ const FieldModeConsultation = ({
               type="button"
               onClick={() => handleSave(false)}
               disabled={saving || analyzing}
-              className="min-h-[44px] rounded-xl bg-emerald-600 px-3 py-2 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-70 inline-flex items-center justify-center gap-2"
+              className="btn btn-success btn-md btn-block"
             >
               {saving && <LoadingDot />}
               {saving ? "Salvando..." : "Salvar"}
@@ -1757,7 +1942,7 @@ const FieldModeConsultation = ({
               type="button"
               onClick={() => setShowMobileMoreActions((prev) => !prev)}
               disabled={saving || analyzing}
-              className="min-h-[44px] rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm font-bold text-gray-700"
+              className="btn btn-neutral btn-md btn-block"
             >
               {showMobileMoreActions ? "Fechar" : "Mais"}
             </button>
@@ -1768,7 +1953,7 @@ const FieldModeConsultation = ({
                 type="button"
                 onClick={() => handleSave(true)}
                 disabled={saving || analyzing}
-                className="min-h-[42px] rounded-xl bg-indigo-600 px-3 py-2 text-sm font-bold text-white hover:bg-indigo-700 disabled:opacity-70 inline-flex items-center justify-center gap-2"
+                className="btn btn-primary btn-sm btn-block"
               >
                 {saving && <LoadingDot />}
                 {saving ? "Processando..." : "Salvar + Receita"}
@@ -1776,7 +1961,7 @@ const FieldModeConsultation = ({
               <button
                 type="button"
                 onClick={goToManualEditor}
-                className="min-h-[42px] rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm font-bold text-gray-700"
+                className="btn btn-neutral btn-sm btn-block"
               >
                 Consulta manual
               </button>
@@ -1787,6 +1972,8 @@ const FieldModeConsultation = ({
                   setParsedData(null);
                   setStructuredDraft(null);
                   setParsedConfidence(null);
+                  setParsedConfidenceComposite(null);
+                  setRuleAlerts([]);
                   setRoleReliability(null);
                   setManualPorteOverride(null);
                   setPorteDetectionState({ porte: "pequeno", confident: false, reason: "indefinido" });
@@ -1796,7 +1983,7 @@ const FieldModeConsultation = ({
                   setUploadedAudioName("");
                   setShowMobileMoreActions(false);
                 }}
-                className="min-h-[42px] rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm font-bold text-gray-700"
+                className="btn btn-neutral btn-sm btn-block"
               >
                 Limpar capturas
               </button>
@@ -1809,7 +1996,7 @@ const FieldModeConsultation = ({
             type="button"
             onClick={() => handleSave(false)}
             disabled={saving || analyzing}
-            className="min-h-[46px] rounded-xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-70 inline-flex items-center justify-center gap-2"
+            className="btn btn-success btn-lg btn-block"
           >
             {saving && <LoadingDot />}
             {saving ? "Salvando..." : "Salvar Campo"}
@@ -1818,7 +2005,7 @@ const FieldModeConsultation = ({
             type="button"
             onClick={() => handleSave(true)}
             disabled={saving || analyzing}
-            className="min-h-[46px] rounded-xl bg-indigo-600 px-4 py-3 text-sm font-bold text-white hover:bg-indigo-700 disabled:opacity-70 inline-flex items-center justify-center gap-2"
+            className="btn btn-primary btn-lg btn-block"
           >
             {saving && <LoadingDot />}
             {saving ? "Processando..." : "Salvar + Receita"}
@@ -1826,7 +2013,7 @@ const FieldModeConsultation = ({
           <button
             type="button"
             onClick={goToManualEditor}
-            className="min-h-[46px] rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm font-bold text-gray-700"
+            className="btn btn-neutral btn-lg btn-block"
           >
             Consulta manual
           </button>
@@ -1837,6 +2024,8 @@ const FieldModeConsultation = ({
               setParsedData(null);
               setStructuredDraft(null);
               setParsedConfidence(null);
+              setParsedConfidenceComposite(null);
+              setRuleAlerts([]);
               setRoleReliability(null);
               setManualPorteOverride(null);
               setPorteDetectionState({ porte: "pequeno", confident: false, reason: "indefinido" });
@@ -1845,7 +2034,7 @@ const FieldModeConsultation = ({
               recordedAudioBlobRef.current = null;
               setUploadedAudioName("");
             }}
-            className="min-h-[46px] rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm font-bold text-gray-700"
+            className="btn btn-neutral btn-lg btn-block"
           >
             Limpar capturas
           </button>
@@ -1863,14 +2052,14 @@ const FieldModeConsultation = ({
               <button
                 type="button"
                 onClick={() => choosePorteManually("pequeno")}
-                className="min-h-[42px] rounded-xl border border-blue-300 bg-blue-50 px-3 py-2 text-sm font-bold text-blue-800"
+                className="btn btn-info-soft btn-sm btn-block"
               >
                 Pequeno porte
               </button>
               <button
                 type="button"
                 onClick={() => choosePorteManually("grande")}
-                className="min-h-[42px] rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-sm font-bold text-amber-800"
+                className="btn btn-warn-soft btn-sm btn-block"
               >
                 Grande porte
               </button>
@@ -1878,7 +2067,7 @@ const FieldModeConsultation = ({
             <button
               type="button"
               onClick={() => setShowPorteChoiceModal(false)}
-              className="mt-2 w-full min-h-[40px] rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-700"
+              className="btn btn-neutral btn-sm btn-block mt-2"
             >
               Fechar
             </button>

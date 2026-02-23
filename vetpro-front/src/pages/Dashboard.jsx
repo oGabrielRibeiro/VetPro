@@ -39,7 +39,7 @@ const Dashboard = ({
       <div className="grid grid-cols-1 gap-3 sm:gap-4 mb-4 sm:mb-6">
         <button
           onClick={() => onAddPatient?.()}
-          className="w-full min-h-[52px] bg-gradient-to-r from-emerald-500 to-cyan-600 text-white font-bold py-3 sm:py-4 px-4 sm:px-6 rounded-xl shadow-md hover:shadow-lg transition-all text-sm sm:text-base"
+          className="btn btn-success btn-lg btn-block !min-h-[52px] text-sm sm:text-base"
         >
           <div className="flex items-center justify-center space-x-2">
             <AppIcon name="plus" />
@@ -49,7 +49,7 @@ const Dashboard = ({
 
         <button
           onClick={() => onNewConsultation?.()}
-          className="w-full min-h-[52px] bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-bold py-3 sm:py-4 px-4 sm:px-6 rounded-xl shadow-md hover:shadow-lg transition-all text-sm sm:text-base"
+          className="btn btn-primary btn-lg btn-block !min-h-[52px] text-sm sm:text-base"
         >
           <div className="flex items-center justify-center space-x-2">
             <AppIcon name="consultations" />
@@ -96,7 +96,7 @@ const Dashboard = ({
             >
               <div className="flex items-start space-x-2 sm:space-x-3">
                 <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center">
-                  <SpeciesIcon species={patient.species} subcategory={patient.subcategory} className="h-6 w-6" />
+                  <SpeciesIcon species={patient.species} subcategory={patient.subcategory} breed={patient.breed} className="h-6 w-6" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <h3 className="font-bold text-sm sm:text-base text-gray-800 truncate">{patient.name}</h3>
@@ -144,7 +144,7 @@ const Dashboard = ({
                     <div className="mb-2 sm:mb-0">
                       <div className="flex items-center space-x-2 sm:space-x-3">
                         <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center">
-                          <SpeciesIcon species={patient.species} subcategory={patient.subcategory} className="h-4 w-4" />
+                          <SpeciesIcon species={patient.species} subcategory={patient.subcategory} breed={patient.breed} className="h-4 w-4" />
                         </div>
                         <div>
                           <h3 className="font-bold text-sm sm:text-base text-gray-800">{patient.name}</h3>
@@ -173,13 +173,13 @@ const Dashboard = ({
       <div className="mt-6 sm:hidden grid grid-cols-2 gap-2">
         <button
           onClick={() => onOpenPatients?.()}
-          className="min-h-[46px] rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-700 text-sm font-semibold"
+          className="btn btn-info-soft btn-lg btn-block"
         >
           Pacientes
         </button>
         <button
           onClick={() => onOpenAppointments?.() || onViewAppointments?.()}
-          className="min-h-[46px] rounded-xl border border-blue-200 bg-blue-50 text-blue-700 text-sm font-semibold"
+          className="btn btn-primary btn-lg btn-block"
         >
           Agenda
         </button>

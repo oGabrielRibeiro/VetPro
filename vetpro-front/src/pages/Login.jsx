@@ -10,6 +10,7 @@ const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [formError, setFormError] = useState("");
+  const [loginLogoError, setLoginLogoError] = useState(false);
 
   const submitLabel = useMemo(() => {
     if (authLoading) return "Processando...";
@@ -67,8 +68,19 @@ const Login = () => {
       <div className="w-full max-w-md bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100">
         <div className="bg-gradient-to-r from-emerald-600 to-cyan-700 p-6 text-center">
           <div className="flex items-center justify-center space-x-3 mb-2">
-            <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-white/20 text-white">
-              <AppIcon name="patients" />
+            <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-white/20 overflow-hidden">
+              {!loginLogoError ? (
+                <img
+                  src="/logo192.png"
+                  alt="Logo VetPro"
+                  className="h-8 w-8 object-contain"
+                  onError={() => setLoginLogoError(true)}
+                />
+              ) : (
+                <span className="text-white">
+                  <AppIcon name="patients" />
+                </span>
+              )}
             </span>
             <h1 className="text-2xl font-bold text-white">VetPro</h1>
           </div>

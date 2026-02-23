@@ -99,6 +99,29 @@ function drawKeyValue(doc, label, value) {
     .text(safe(value));
 }
 
+function resolveClinicalParameters(consultation = {}) {
+  const patient = consultation?.patient || {};
+  const previous = consultation?.previousConsultation || {};
+  const latest = consultation?.latestVitals || {};
+
+  const pick = (...values) => {
+    for (const value of values) {
+      if (value == null) continue;
+      const text = String(value).trim();
+      if (!text) continue;
+      return value;
+    }
+    return null;
+  };
+
+  return {
+    weight: pick(consultation.weight, previous.weight, latest.weight, patient.weight),
+    temperature: pick(consultation.temperature, previous.temperature, latest.temperature),
+    heartRate: pick(consultation.heartRate, previous.heartRate, latest.heartRate),
+    respiratoryRate: pick(consultation.respiratoryRate, previous.respiratoryRate, latest.respiratoryRate)
+  };
+}
+
 function parsePorteDataFromNotes(notes = "") {
   const text = String(notes || "");
   const start = text.indexOf(PORTE_NOTES_MARK_START);
@@ -403,10 +426,11 @@ function generateConsultationPDF(consultation, res) {
   drawKeyValue(doc, "Telefone", patient.ownerPhone);
 
   drawSectionTitle(doc, "Parametros clinicos", accent);
-  drawKeyValue(doc, "Peso (kg)", consultation.weight);
-  drawKeyValue(doc, "Temperatura", consultation.temperature);
-  drawKeyValue(doc, "FC", consultation.heartRate);
-  drawKeyValue(doc, "FR", consultation.respiratoryRate);
+  const clinicalParams = resolveClinicalParameters(consultation);
+  drawKeyValue(doc, "Peso (kg)", clinicalParams.weight);
+  drawKeyValue(doc, "Temperatura", clinicalParams.temperature);
+  drawKeyValue(doc, "FC", clinicalParams.heartRate);
+  drawKeyValue(doc, "FR", clinicalParams.respiratoryRate);
 
   if (consultation.consultationType === "retorno" && consultation.previousConsultation) {
     const prev = consultation.previousConsultation;

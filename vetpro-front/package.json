@@ -10,6 +10,9 @@
     "pet-care"
   ],
   "author": "VetPro Team",
+  "engines": {
+    "node": ">=20 <21"
+  },
   "dependencies": {
     "axios": "^1.13.5",
     "date-fns": "^2.30.0",
@@ -26,9 +29,10 @@
     "tailwindcss": "^3.4.1"
   },
   "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
+    "check-node": "node scripts/check-node-version.js",
+    "start": "npm run check-node && react-scripts start",
+    "build": "npm run check-node && react-scripts build",
+    "test": "npm run check-node && react-scripts test",
     "eject": "react-scripts eject"
   },
   "eslintConfig": {

@@ -63,6 +63,7 @@ function buildInitialForm(profile = {}) {
 
 const Profile = ({ profile, onSave, onCancel, onDeleteAccount }) => {
   const [form, setForm] = useState(buildInitialForm(profile));
+  const [clinicLogoFileName, setClinicLogoFileName] = useState("");
   const [formError, setFormError] = useState("");
   const [deleteError, setDeleteError] = useState("");
   const [deleteLoading, setDeleteLoading] = useState(false);
@@ -70,6 +71,7 @@ const Profile = ({ profile, onSave, onCancel, onDeleteAccount }) => {
 
   useEffect(() => {
     setForm(buildInitialForm(profile));
+    setClinicLogoFileName("");
   }, [profile]);
 
   const initials = useMemo(() => {
@@ -109,6 +111,7 @@ const Profile = ({ profile, onSave, onCancel, onDeleteAccount }) => {
   const handleClinicLogoChange = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    setClinicLogoFileName(file.name);
     const reader = new FileReader();
     reader.onloadend = () => {
       setForm((prev) => ({
@@ -390,8 +393,18 @@ const Profile = ({ profile, onSave, onCancel, onDeleteAccount }) => {
                       type="file"
                       accept="image/*"
                       onChange={handleClinicLogoChange}
-                      className="text-xs text-gray-500 file:mr-2 file:py-1 file:px-2 file:rounded-full file:border-0 file:text-xs file:font-medium file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100"
+                      className="hidden"
+                      id="clinic-logo-upload"
                     />
+                    <label
+                      htmlFor="clinic-logo-upload"
+                      className="cursor-pointer inline-block rounded-lg bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700 hover:bg-emerald-100 transition-colors"
+                    >
+                      Selecionar logo
+                    </label>
+                    <p className="mt-1 text-[11px] text-gray-500">
+                      {clinicLogoFileName || (form.clinicLogoPreview ? "Logo carregada" : "Nenhum arquivo selecionado")}
+                    </p>
                   </div>
                 </div>
               </div>

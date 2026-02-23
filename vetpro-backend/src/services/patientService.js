@@ -80,6 +80,11 @@ function normalizePatientInput(data = {}) {
   const riskValue = parseNumber(data.anestheticRiskScore);
   const birthDate = parseDate(data.birthDate);
 
+  const persistentProfile =
+    data.persistentProfile && typeof data.persistentProfile === "object"
+      ? data.persistentProfile
+      : null;
+
   return {
     name: (data.name || "").trim(),
     specie: (data.specie || data.species || "").trim(),
@@ -105,7 +110,8 @@ function normalizePatientInput(data = {}) {
     responsibleVet: data.responsibleVet ? data.responsibleVet.trim() : null,
     originClinic: data.originClinic ? data.originClinic.trim() : null,
     anestheticRiskScore:
-      Number.isFinite(riskValue) ? Math.max(0, Math.min(5, Math.trunc(riskValue))) : null
+      Number.isFinite(riskValue) ? Math.max(0, Math.min(5, Math.trunc(riskValue))) : null,
+    persistentProfile
   };
 }
 

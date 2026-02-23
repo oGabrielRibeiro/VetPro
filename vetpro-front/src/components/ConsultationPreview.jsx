@@ -480,7 +480,7 @@ const ConsultationPreview = ({
               setCompareMode(!compareMode);
               setSelectedCompareFiles([]);
             }}
-            className="w-full sm:w-auto text-sm bg-indigo-600 text-white px-3 py-2 rounded-lg hover:bg-indigo-700"
+            className="btn btn-primary btn-md btn-block sm:w-auto"
           >
             {compareMode ? "Cancelar Comparação" : "Comparar Lado a Lado"}
           </button>
@@ -519,7 +519,7 @@ const ConsultationPreview = ({
             <button
               onClick={handleUploadFile}
               disabled={!selectedFile || uploading}
-              className="w-full sm:w-auto bg-emerald-600 text-white px-4 py-3 sm:py-2 rounded-lg text-sm font-medium hover:bg-emerald-700 disabled:opacity-50 inline-flex items-center justify-center gap-2"
+              className="btn btn-success btn-md btn-block sm:w-auto"
             >
               {uploading && <LoadingDot />}
               {uploading ? "Enviando..." : "Enviar"}
@@ -619,13 +619,13 @@ const ConsultationPreview = ({
           <div className="mx-auto max-w-4xl grid grid-cols-2 gap-2 sm:flex sm:justify-end sm:space-x-3 sm:gap-0">
           <button
             onClick={() => onClose?.()}
-            className="w-full sm:w-auto px-4 sm:px-6 py-3 sm:py-2 bg-gray-200 text-gray-800 font-semibold rounded-lg hover:bg-gray-300 transition-colors"
+            className="btn btn-neutral btn-md btn-block sm:w-auto"
           >
             Fechar
           </button>
           <button
             onClick={handleDownloadConsultationPDF}
-            className="w-full sm:w-auto px-4 sm:px-6 py-3 sm:py-2 bg-emerald-600 text-white font-semibold rounded-lg hover:bg-emerald-700 transition-colors inline-flex items-center justify-center"
+            className="btn btn-success btn-md btn-block sm:w-auto"
           >
             <span className="mr-2">
               <AppIcon name="print" className="h-4 w-4" />

@@ -2,7 +2,61 @@ const fs = require("fs");
 const path = require("path");
 
 const HEURISTIC_MEMORY_PATH = path.join(__dirname, "..", "ai", "heuristicMemory.json");
+const DEBUG_DIR_PATH = path.join(__dirname, "..", "ai", "debug");
 const MAX_MEMORY_ITEMS = 300;
+const CLINICAL_CATEGORIES = [
+  "queixa",
+  "sintoma",
+  "exame",
+  "historico",
+  "comportamento",
+  "diagnostico",
+  "conduta",
+  "irrelevante"
+];
+const MEDICATION_TOKENS = [
+  "dipirona",
+  "flunixin",
+  "meloxicam",
+  "amoxic",
+  "antibiot",
+  "anti-inflam",
+  "iv",
+  "im",
+  "vo",
+  "mg",
+  "ml",
+  "ringer",
+  "soro",
+  "fluidoterapia"
+];
+const VET_ONTOLOGY = [
+  {
+    concept: "dor abdominal",
+    canonical: "Dor abdominal com desconforto",
+    aliases: ["rolar", "inquieto", "bate pata", "deita e levanta", "flanco", "colica", "cólica"]
+  },
+  {
+    concept: "apetite diminuido",
+    canonical: "Apetite diminuido",
+    aliases: ["nao come", "não come", "come pouco", "sem apetite", "anorexia", "recusou alimento"]
+  },
+  {
+    concept: "sinal febril",
+    canonical: "Febre",
+    aliases: ["febre", "temperatura alta", "hipertermia", "39.", "40."]
+  },
+  {
+    concept: "desidratacao",
+    canonical: "Possivel desidratacao",
+    aliases: ["urina concentrada", "pouca agua", "ingestao de agua diminuida", "fezes ressecadas"]
+  },
+  {
+    concept: "alteracao mucosa",
+    canonical: "Mucosas alteradas",
+    aliases: ["mucosa palida", "mucosa pálida", "icterica", "ictérica"]
+  }
+];
 
 function normalizeText(value = "") {
   return String(value)
@@ -59,6 +113,266 @@ function splitIntoSentences(text = "") {
     .split(/[\n.!?;]+/g)
     .map((item) => item.replace(/\s+/g, " ").trim())
     .filter(Boolean);
+}
+
+function splitSentencesWithMetadata(text = "", meta = {}) {
+  const raw = String(text || "").replace(/\r/g, " ");
+  const pieces = raw
+    .split(/[\n.!?;]+/g)
+    .map((item) => item.replace(/\s+/g, " ").trim())
+    .filter(Boolean);
+  return pieces.map((sentence, index) => ({
+    sentence,
+    index,
+    ...meta
+  }));
+}
+
+function detectSentenceCategory(sentence = "") {
+  const normalized = normalizeText(sentence);
+  if (!normalized) return { category: "irrelevante", confidence: 0 };
+
+  const categoryTokens = {
+    queixa: [
+      "nao ta bem", "não tá bem", "queixa", "motivo", "veio porque", "principal",
+      "hoje", "ontem", "desde"
+    ],
+    sintoma: [
+      "dor", "febre", "vomit", "diarre", "apat", "prostr", "sem apetite", "nao come",
+      "não come", "manco", "claudic", "coce", "prurido", "ingestao de agua", "agua diminu"
+    ],
+    exame: [
+      "exame", "fc", "fr", "tpc", "mucosa", "ausculta", "palpac", "temperatura", "39.",
+      "icter", "palida", "pálida", "rumen", "linfonodo"
+    ],
+    historico: [
+      "historico", "histórico", "vacina", "vermif", "ja teve", "participou", "lote",
+      "mormo", "aie", "tratamento anterior", "ha ", "há ", "meses", "dias"
+    ],
+    comportamento: [
+      "comportamento", "inquieto", "agitado", "deitou", "rolou", "preguicoso", "preguiçoso",
+      "mudou", "diferente", "sedentario", "ativo"
+    ],
+    diagnostico: [
+      "suspeita", "diagnost", "pode ser", "provavel", "provável", "diferencial", "hipotese", "hipótese"
+    ],
+    conduta: [
+      "conduta", "tratamento", "prescrev", "solicitei", "pedi", "coleta", "coletar", "reavaliar",
+      "retorno", "internar", "hidrata", "medicar", "sonda"
+    ]
+  };
+
+  const scored = CLINICAL_CATEGORIES.map((category) => {
+    if (category === "irrelevante") return { category, score: 0 };
+    const matches = (categoryTokens[category] || []).reduce(
+      (sum, token) => (normalized.includes(token) ? sum + 1 : sum),
+      0
+    );
+    return { category, score: matches };
+  });
+
+  const best = scored.sort((a, b) => b.score - a.score)[0];
+  if (!best || best.score <= 0) return { category: "irrelevante", confidence: 0.2 };
+
+  const confidence = Math.min(0.95, Number((0.35 + best.score * 0.15).toFixed(2)));
+  return { category: best.category, confidence };
+}
+
+function normalizeClinicalConcepts(sentence = "") {
+  const normalized = normalizeText(sentence);
+  const concepts = [];
+  for (const entry of VET_ONTOLOGY) {
+    if (entry.aliases.some((alias) => normalized.includes(normalizeText(alias)))) {
+      concepts.push(entry.canonical);
+    }
+  }
+  return concepts;
+}
+
+function isMedicationSentence(sentence = "") {
+  const normalized = normalizeText(sentence);
+  return MEDICATION_TOKENS.some((token) => normalized.includes(token));
+}
+
+function createExtractionState() {
+  return {
+    queixa: [],
+    sintoma: [],
+    exame: [],
+    historico: [],
+    comportamento: [],
+    diagnostico: [],
+    conduta: [],
+    medicacao: [],
+    conceitos: []
+  };
+}
+
+function pushUnique(bucket = [], text = "") {
+  const value = String(text || "").trim();
+  if (!value) return;
+  const key = normalizeText(value);
+  const exists = bucket.some((item) => normalizeText(item) === key);
+  if (!exists) bucket.push(value);
+}
+
+function applySentenceToState(state, classifiedSentence) {
+  const next = state || createExtractionState();
+  const sentence = String(classifiedSentence?.text || "").trim();
+  if (!sentence) return next;
+
+  const category = classifiedSentence?.category || "irrelevante";
+  const concepts = Array.isArray(classifiedSentence?.concepts) ? classifiedSentence.concepts : [];
+
+  if (category !== "irrelevante" && Object.prototype.hasOwnProperty.call(next, category)) {
+    pushUnique(next[category], sentence);
+  }
+  if (isMedicationSentence(sentence)) {
+    pushUnique(next.medicacao, sentence);
+  }
+  concepts.forEach((concept) => pushUnique(next.conceitos, concept));
+
+  return next;
+}
+
+function classifyAndExtractIncremental(segments = [], transcript = "") {
+  const safeSegments = Array.isArray(segments) ? segments : [];
+  const sourceSentences = safeSegments.length
+    ? safeSegments.flatMap((segment) =>
+        splitSentencesWithMetadata(segment?.text || "", {
+          stamp: segment?.stamp || "00:00",
+          speaker: segment?.speaker || "Tutor"
+        })
+      )
+    : splitSentencesWithMetadata(transcript, { stamp: "00:00", speaker: "Tutor" });
+
+  const state = createExtractionState();
+  const classified = sourceSentences.map((item, idx) => {
+    const text = String(item?.sentence || "").trim();
+    const categoryResult = detectSentenceCategory(text);
+    const concepts = normalizeClinicalConcepts(text);
+    const row = {
+      id: idx + 1,
+      stamp: item?.stamp || "00:00",
+      speaker: item?.speaker || "Tutor",
+      text,
+      category: categoryResult.category,
+      confidence: categoryResult.confidence,
+      concepts
+    };
+    applySentenceToState(state, row);
+    return row;
+  });
+
+  return { classified, state };
+}
+
+function clampValue(value, min, max) {
+  return Math.max(min, Math.min(max, value));
+}
+
+function evaluateClinicalRules(transcript = "", extractionState = {}) {
+  const normalized = normalizeText(transcript);
+  const alerts = [];
+
+  const hasShockPattern =
+    (/tpc\s*([3-9]|[1-9]\d)/.test(normalized) || normalized.includes("tpc 3")) &&
+    (normalized.includes("palida") || normalized.includes("pálida") || normalized.includes("icter"));
+  if (hasShockPattern) {
+    alerts.push({
+      id: "choque_circulatorio",
+      severity: "alta",
+      message: "Padrao compativel com hipoperfusao/choque circulatorio; reavaliar urgencia imediatamente."
+    });
+  }
+
+  const hasColicPattern =
+    (normalized.includes("rolar") || normalized.includes("flanco") || normalized.includes("dor abdominal")) &&
+    (normalized.includes("colica") || normalized.includes("hipomotilidade") || normalized.includes("inquiet"));
+  if (hasColicPattern) {
+    alerts.push({
+      id: "suspeita_colica",
+      severity: "alta",
+      message: "Sinais sugerem colica; considerar monitorizacao continua e analgesia protocolada."
+    });
+  }
+
+  const hasDehydrationPattern =
+    (normalized.includes("agua diminu") || normalized.includes("nao bebe") || normalized.includes("não bebe")) &&
+    (normalized.includes("urina concentrada") || normalized.includes("fezes ressec"));
+  if (hasDehydrationPattern) {
+    alerts.push({
+      id: "desidratacao",
+      severity: "media",
+      message: "Sinais de desidratacao; considerar fluidoterapia e monitorar perfusao."
+    });
+  }
+
+  const evidenceCount =
+    (extractionState?.sintoma?.length || 0) +
+    (extractionState?.exame?.length || 0) +
+    (extractionState?.diagnostico?.length || 0) +
+    (extractionState?.conduta?.length || 0);
+  const coherence = clampValue((alerts.length * 0.2 + evidenceCount * 0.05), 0, 1);
+
+  return {
+    alerts,
+    coherenceScore: Number(coherence.toFixed(2))
+  };
+}
+
+function buildParsedFromExtractionState(state = {}, fallbackText = "", roleData = {}) {
+  const tutorContent = String(roleData?.tutorContent || "").trim();
+  const medicoContent = String(roleData?.medicoContent || "").trim();
+  const fullContent = String(roleData?.fullContent || fallbackText || "").trim();
+
+  const chiefComplaintDraft = dedupeAndJoin([...(state.queixa || []), ...(state.sintoma || [])]).slice(0, 260);
+  const anamnesisDraft = dedupeAndJoin([
+    ...(state.historico || []),
+    ...(state.comportamento || []),
+    ...(state.sintoma || [])
+  ]);
+  const physicalExamDraft = dedupeAndJoin(state.exame || []);
+  const diagnosisDraft = dedupeAndJoin(state.diagnostico || []);
+  const treatmentDraft = dedupeAndJoin(state.conduta || []);
+  const medicationDraft = dedupeAndJoin(state.medicacao || []);
+
+  const fallbackClassified = classifySentencesHeuristic(fullContent);
+
+  return {
+    chiefComplaint:
+      extractByKeywords(tutorContent || fullContent, ["queixa", "motivo da consulta", "motivo"]) ||
+      chiefComplaintDraft ||
+      dedupeAndJoin(fallbackClassified.complaint).slice(0, 260) ||
+      (tutorContent || fullContent).slice(0, 220),
+    anamnesis:
+      extractByKeywords(tutorContent || fullContent, ["anamnese", "historico", "histórico", "evolucao", "evolução"]) ||
+      anamnesisDraft ||
+      dedupeAndJoin(fallbackClassified.anamnesis),
+    physicalExam:
+      extractByKeywords(medicoContent || fullContent, ["exame fisico", "exame físico"]) ||
+      physicalExamDraft ||
+      dedupeAndJoin(fallbackClassified.physicalExam),
+    diagnosis:
+      extractByKeywords(medicoContent || fullContent, ["diagnostico", "diagnóstico", "suspeita"]) ||
+      diagnosisDraft ||
+      dedupeAndJoin(fallbackClassified.diagnosis),
+    treatment:
+      extractByKeywords(medicoContent || fullContent, ["tratamento", "conduta"]) ||
+      treatmentDraft ||
+      dedupeAndJoin(fallbackClassified.treatment),
+    medications:
+      extractByKeywords(medicoContent || fullContent, [
+        "medicacao",
+        "medicação",
+        "prescricao",
+        "prescrição",
+        "prescrever",
+        "receita"
+      ]) ||
+      medicationDraft ||
+      dedupeAndJoin(fallbackClassified.medications)
+  };
 }
 
 function dedupeAndJoin(values = []) {
@@ -471,44 +785,23 @@ function parseClinicalFieldsFromSegments(segments = [], transcript = "") {
 
   const tutorOrFull = shouldUseFullAsPrimary ? fullContent : (tutorContent || fullContent);
   const medicoOrFull = shouldUseFullAsPrimary ? fullContent : (medicoContent || fullContent);
-  const classified = classifySentencesHeuristic(fullContent);
+  const { classified: classifiedSentences, state: extractionState } = classifyAndExtractIncremental(
+    safeSegments,
+    fullContent
+  );
 
-  const chiefComplaintFallback = dedupeAndJoin(classified.complaint).slice(0, 260);
-  const anamnesisFallback = dedupeAndJoin(classified.anamnesis);
-  const physicalExamFallback = dedupeAndJoin(classified.physicalExam);
-  const diagnosisFallback = dedupeAndJoin(classified.diagnosis);
-  const treatmentFallback = dedupeAndJoin(classified.treatment);
-  const medicationFallback = dedupeAndJoin(classified.medications);
-
-  const parsedRaw = {
-      chiefComplaint:
-      extractByKeywords(tutorOrFull, ["queixa", "motivo da consulta", "motivo"]) ||
-      chiefComplaintFallback ||
-      tutorOrFull.slice(0, 220),
-      anamnesis:
-        extractByKeywords(tutorOrFull, ["anamnese", "historico", "evolucao"]) ||
-        anamnesisFallback,
-      physicalExam:
-        extractByKeywords(medicoOrFull, ["exame fisico", "exame físico"]) ||
-        physicalExamFallback,
-      diagnosis:
-        extractByKeywords(medicoOrFull, ["diagnostico", "diagnóstico", "suspeita"]) ||
-        diagnosisFallback,
-      treatment:
-        extractByKeywords(medicoOrFull, ["tratamento", "conduta"]) ||
-        treatmentFallback,
-      medications:
-        extractByKeywords(medicoOrFull, [
-        "medicacao",
-        "medicação",
-        "prescricao",
-        "prescrição",
-        "prescrever",
-        "receita"
-      ]) || medicationFallback
-    };
+  const parsedRaw = buildParsedFromExtractionState(
+    extractionState,
+    fullContent,
+    {
+      tutorContent: tutorOrFull,
+      medicoContent: medicoOrFull,
+      fullContent
+    }
+  );
 
   const parsed = applyMemoryToParsed(parsedRaw, fullContent);
+  const semanticRules = evaluateClinicalRules(fullContent, extractionState);
 
   return {
     parsed,
@@ -517,6 +810,11 @@ function parseClinicalFieldsFromSegments(segments = [], transcript = "") {
       medicoContent,
       fullContent,
       roleReliability
+    },
+    pipeline: {
+      classifiedSentences,
+      extractionState,
+      semanticRules
     }
   };
 }
@@ -734,6 +1032,96 @@ async function diarizeWithDeepgram(audioBuffer, mimeType = "audio/webm") {
   };
 }
 
+function computeCompositeFieldConfidence({
+  rawScore = 0,
+  sentenceCoverage = 0,
+  clinicalCoherence = 0,
+  evidenceCount = 0
+}) {
+  const modelScore = clampValue(Number(rawScore) || 0, 0, 1);
+  const coverage = clampValue(Number(sentenceCoverage) || 0, 0, 1);
+  const coherence = clampValue(Number(clinicalCoherence) || 0, 0, 1);
+  const evidence = clampValue((Number(evidenceCount) || 0) / 4, 0, 1);
+
+  const score = Number((
+    modelScore * 0.45 +
+    coverage * 0.2 +
+    coherence * 0.2 +
+    evidence * 0.15
+  ).toFixed(2));
+
+  return {
+    score,
+    label: confidenceLabel(score),
+    factors: {
+      model: modelScore,
+      coverage,
+      coherence,
+      evidence
+    }
+  };
+}
+
+function buildCompositeConfidence(parsedConfidence = {}, pipeline = {}) {
+  const state = pipeline?.extractionState || {};
+  const coherence = pipeline?.semanticRules?.coherenceScore || 0;
+
+  const map = {
+    chiefComplaint: { source: ["queixa", "sintoma"] },
+    anamnesis: { source: ["historico", "comportamento", "sintoma"] },
+    physicalExam: { source: ["exame"] },
+    diagnosis: { source: ["diagnostico"] },
+    treatment: { source: ["conduta"] },
+    medications: { source: ["medicacao", "conduta"] }
+  };
+
+  const result = {};
+  Object.keys(map).forEach((field) => {
+    const raw = parsedConfidence?.[field]?.score || 0;
+    const sources = map[field].source || [];
+    const evidenceCount = sources.reduce((sum, bucket) => sum + (state?.[bucket]?.length || 0), 0);
+    const coverage = sources.length
+      ? sources.reduce((sum, bucket) => sum + Math.min(1, (state?.[bucket]?.length || 0) / 2), 0) / sources.length
+      : 0;
+    result[field] = computeCompositeFieldConfidence({
+      rawScore: raw,
+      sentenceCoverage: coverage,
+      clinicalCoherence: coherence,
+      evidenceCount
+    });
+  });
+
+  return result;
+}
+
+function shouldWriteDebugArtifacts() {
+  const forced = String(process.env.FIELD_ASSIST_DEBUG || "").trim().toLowerCase();
+  if (forced === "0" || forced === "false" || forced === "off") return false;
+  if (forced === "1" || forced === "true" || forced === "on") return true;
+  return process.env.NODE_ENV !== "production";
+}
+
+function writeDebugArtifacts(payload = {}) {
+  if (!shouldWriteDebugArtifacts()) return;
+  try {
+    fs.mkdirSync(DEBUG_DIR_PATH, { recursive: true });
+    const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+    const files = [
+      { suffix: "transcricao", data: payload.transcript || "" },
+      { suffix: "frases_classificadas", data: payload.classifiedSentences || [] },
+      { suffix: "extracao_por_frase", data: payload.extractionState || {} },
+      { suffix: "resultado_final", data: payload.finalResult || {} }
+    ];
+
+    for (const file of files) {
+      const fullPath = path.join(DEBUG_DIR_PATH, `${stamp}-${file.suffix}.json`);
+      fs.writeFileSync(fullPath, JSON.stringify(file.data, null, 2), "utf8");
+    }
+  } catch (error) {
+    console.error("Falha ao gravar logs de debug do modo campo:", error.message);
+  }
+}
+
 async function transcribeWithOpenAI(audioBuffer, mimeType = "audio/webm", filename = "field-audio.webm") {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
@@ -833,19 +1221,41 @@ async function analyzeFieldConversation({ audioBuffer, mimeType, filename, segme
       : buildHeuristicTurnsFromTranscript(finalTranscript);
 
   const provider = diarizationResult?.provider || "heuristic";
-  const { parsed, context } = parseClinicalFieldsFromSegments(
+  const { parsed, context, pipeline } = parseClinicalFieldsFromSegments(
     normalizedSegments,
     finalTranscript
   );
   const parsedConfidence = buildParsedConfidence(parsed, context, provider);
+  const parsedConfidenceComposite = buildCompositeConfidence(parsedConfidence, pipeline);
 
-  return {
+  const result = {
     provider,
     transcript: finalTranscript,
     segments: normalizedSegments,
+    context,
     parsed,
-    parsedConfidence
+    parsedConfidence,
+    parsedConfidenceComposite,
+    pipeline: {
+      classifiedSentences: pipeline?.classifiedSentences || [],
+      semanticRules: pipeline?.semanticRules || { alerts: [], coherenceScore: 0 },
+      extractionState: pipeline?.extractionState || {}
+    }
   };
+
+  writeDebugArtifacts({
+    transcript: finalTranscript,
+    classifiedSentences: result.pipeline.classifiedSentences,
+    extractionState: result.pipeline.extractionState,
+    finalResult: {
+      parsed: result.parsed,
+      parsedConfidence: result.parsedConfidence,
+      parsedConfidenceComposite: result.parsedConfidenceComposite,
+      semanticRules: result.pipeline.semanticRules
+    }
+  });
+
+  return result;
 }
 
 module.exports = {
