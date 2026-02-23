@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import AppIcon from "../components/AppIcon";
 import SpeciesIcon from "../components/SpeciesIcon";
 
@@ -16,21 +16,40 @@ const Dashboard = ({
   const totalPatients = patients.length;
   const totalConsultations = consultations.length;
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  const today = useMemo(() => {
+    const date = new Date();
+    date.setHours(0, 0, 0, 0);
+    return date;
+  }, []);
 
-  const todayAppointments = appointments.filter((apt) => {
-    const aptDate = new Date(apt.date);
-    aptDate.setHours(0, 0, 0, 0);
-    return aptDate.getTime() === today.getTime();
-  }).length;
+  const todayAppointmentList = useMemo(
+    () =>
+      appointments.filter((apt) => {
+        const aptDate = new Date(apt.date);
+        aptDate.setHours(0, 0, 0, 0);
+        return aptDate.getTime() === today.getTime();
+      }),
+    [appointments, today],
+  );
 
-  const returnConsultations = consultations.filter((c) => c.template === "return").length;
-  const returnRate = totalConsultations > 0 ? Math.round((returnConsultations / totalConsultations) * 100) : 0;
+  const todayAppointments = todayAppointmentList.length;
 
-  const recentPatients = [...patients]
-    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-    .slice(0, 5);
+  const returnRate = useMemo(() => {
+    const returnConsultations = consultations.filter(
+      (consultation) => consultation.template === "return",
+    ).length;
+    return totalConsultations > 0
+      ? Math.round((returnConsultations / totalConsultations) * 100)
+      : 0;
+  }, [consultations, totalConsultations]);
+
+  const recentPatients = useMemo(
+    () =>
+      [...patients]
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+        .slice(0, 5),
+    [patients],
+  );
 
   return (
     <div className="max-w-7xl mx-auto">
@@ -125,18 +144,8 @@ const Dashboard = ({
           </button>
         </div>
         <div className="space-y-3">
-          {appointments.filter((apt) => {
-            const aptDate = new Date(apt.date);
-            aptDate.setHours(0, 0, 0, 0);
-            return aptDate.getTime() === today.getTime();
-          }).length > 0 ? (
-            appointments
-              .filter((apt) => {
-                const aptDate = new Date(apt.date);
-                aptDate.setHours(0, 0, 0, 0);
-                return aptDate.getTime() === today.getTime();
-              })
-              .map((appointment) => {
+          {todayAppointmentList.length > 0 ? (
+            todayAppointmentList.map((appointment) => {
                 const patient = patients.find((p) => p.id === appointment.patientId);
                 if (!patient) return null;
                 return (

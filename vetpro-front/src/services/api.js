@@ -39,6 +39,10 @@ export function buildApiUrl(path, query = {}) {
 
 const api = axios.create({
   baseURL: resolveApiBaseUrl(),
+  timeout: 15000,
+  headers: {
+    "Content-Type": "application/json",
+  },
 });
 
 api.interceptors.request.use((config) => {

@@ -1,17 +1,7 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, lazy, Suspense } from "react";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import Login from "./pages/Login";
-import Dashboard from "./pages/Dashboard";
-import Patients from "./pages/Patients";
-import Consultations from "./pages/Consultations";
-import Appointments from "./pages/Appointments";
-import Reports from "./pages/Reports";
-import Profile from "./pages/Profile";
 import Sidebar from "./components/Sidebar";
-import QuickConsultation from "./components/QuickConsultation";
-import FieldModeConsultation from "./components/FieldModeConsultation";
-import ReturnConsultation from "./components/ReturnConsultation";
-import ConsultationPreview from "./components/ConsultationPreview";
 import FeedbackBanner from "./components/FeedbackBanner";
 import AppIcon from "./components/AppIcon";
 import SpeciesIcon from "./components/SpeciesIcon";
@@ -20,6 +10,30 @@ import { addToQueue } from "./services/offlineQueue";
 import { getQueue, clearQueue } from "./services/offlineQueue";
 import { toUserFriendlyError } from "./utils/errorMessages";
 import { sanitizeConsultationNotesForDisplay } from "./utils/consultationNotes";
+
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Patients = lazy(() => import("./pages/Patients"));
+const Consultations = lazy(() => import("./pages/Consultations"));
+const Appointments = lazy(() => import("./pages/Appointments"));
+const Reports = lazy(() => import("./pages/Reports"));
+const Profile = lazy(() => import("./pages/Profile"));
+const QuickConsultation = lazy(() => import("./components/QuickConsultation"));
+const FieldModeConsultation = lazy(() =>
+  import("./components/FieldModeConsultation"),
+);
+const ReturnConsultation = lazy(() => import("./components/ReturnConsultation"));
+const ConsultationPreview = lazy(() =>
+  import("./components/ConsultationPreview"),
+);
+
+const MOBILE_NAV_ITEMS = [
+  { id: "dashboard", icon: "dashboard", label: "Inicio" },
+  { id: "patients", icon: "patients", label: "Pacientes" },
+  { id: "appointments", icon: "appointments", label: "Agenda" },
+  { id: "consultations", icon: "consultations", label: "Pront." },
+  { id: "profile", icon: "profile", label: "Perfil" },
+  { id: "logout", icon: "logout", label: "Sair" },
+];
 
 // Componente principal com roteamento baseado em estado
 const MainApp = () => {
@@ -50,15 +64,6 @@ const MainApp = () => {
 
   const [currentConsultation, setCurrentConsultation] = useState(null);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
-  const mobileNavItems = [
-    { id: "dashboard", icon: "dashboard", label: "Inicio" },
-    { id: "patients", icon: "patients", label: "Pacientes" },
-    { id: "appointments", icon: "appointments", label: "Agenda" },
-    { id: "consultations", icon: "consultations", label: "Pront." },
-    { id: "profile", icon: "profile", label: "Perfil" },
-    { id: "logout", icon: "logout", label: "Sair" },
-  ];
-
   // Estados para relatorios
   const [dateRange, setDateRange] = useState({
     startDate: new Date(new Date().setMonth(new Date().getMonth() - 5))
@@ -68,6 +73,11 @@ const MainApp = () => {
   });
 
   const { isAuthenticated } = useAuth();
+  const lazyFallback = (
+    <div className="min-h-[220px] flex items-center justify-center">
+      <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-emerald-600"></div>
+    </div>
+  );
 
   const handleToggleFieldMode = () => {
     setFieldMode((prev) => {
@@ -1806,7 +1816,7 @@ const MainApp = () => {
             onClose={() => setActionFeedback(null)}
           />
         )}
-        {renderCurrentView()}
+        <Suspense fallback={lazyFallback}>{renderCurrentView()}</Suspense>
       </div>
 
       {showPatientPicker && (
@@ -1855,7 +1865,7 @@ const MainApp = () => {
       {isMobile && (
         <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-gray-200 bg-white/95 pb-[max(0.4rem,env(safe-area-inset-bottom))] backdrop-blur">
           <div className="grid grid-cols-6">
-            {mobileNavItems.map((item) => (
+            {MOBILE_NAV_ITEMS.map((item) => (
               <button
                 key={item.id}
                 onClick={() => {
