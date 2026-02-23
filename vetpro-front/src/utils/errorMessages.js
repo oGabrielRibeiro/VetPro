@@ -55,10 +55,7 @@ export function toUserFriendlyError(error, fallback = "Nao foi possivel concluir
     "";
 
   if (!error?.response) {
-    if (normalizeMessage(apiMessage).includes("network")) {
-      return "Sem conexao com o servidor. Verifique sua internet e tente novamente.";
-    }
-    return mapByPhrase(apiMessage, "Nao foi possivel conectar ao servidor. Tente novamente.");
+    return "Sem conexao com o servidor. Verifique sua internet e tente novamente.";
   }
 
   if (status === 401) {

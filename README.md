@@ -20,6 +20,8 @@ Ou use o script:
 - Backend: `http://localhost:5000`
 
 **Rodar em outras maquinas**
-- No `.env`, ajuste `REACT_APP_API_BASE_URL` para o IP/hostname da maquina que hospeda o backend.
+- Por padrao, o frontend detecta automaticamente o host atual e usa `:5000/api`.
+- Se precisar fixar manualmente, no `.env` ajuste `REACT_APP_API_BASE_URL` para o IP/hostname da maquina que hospeda o backend.
   Exemplo: `http://192.168.0.10:5000/api`
 - Garanta que as portas `3000` e `5000` estejam liberadas no firewall da maquina host.
+- Sempre que alterar `REACT_APP_API_BASE_URL`, recrie o frontend com `docker compose up --build -d`.

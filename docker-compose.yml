@@ -39,7 +39,7 @@ services:
     build:
       context: ./vetpro-front
       args:
-        REACT_APP_API_BASE_URL: ${REACT_APP_API_BASE_URL:-http://localhost:5000/api}
+        REACT_APP_API_BASE_URL: ${REACT_APP_API_BASE_URL:-}
     restart: always
     ports:
       - "${FRONTEND_PORT:-3000}:80"

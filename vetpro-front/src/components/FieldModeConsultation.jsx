@@ -8,6 +8,10 @@ import {
   PORTE_NOTES_MARK_END,
   PORTE_NOTES_MARK_START,
 } from "../utils/consultationNotes";
+import {
+  CONSULTATION_TYPE_OPTIONS,
+  resolveConsultationContext,
+} from "../utils/consultationContext";
 
 const SPECIFIC_FIELD_LABELS = {
   vaccinationStatus: "Vacinacao",
@@ -75,15 +79,21 @@ const PERSISTENT_SPECIFIC_KEYS = {
 
 const FieldModeConsultation = ({
   patient,
+  initialData = null,
   onSave,
   onBack,
   onSwitchToManual,
   onContinueToManual,
 }) => {
-  const [weight, setWeight] = useState(patient?.weight || "");
+  const [weight, setWeight] = useState(
+    initialData?.weight ?? patient?.weight ?? "",
+  );
   const [temperature, setTemperature] = useState("");
   const [heartRate, setHeartRate] = useState("");
   const [respiratoryRate, setRespiratoryRate] = useState("");
+  const [consultationType, setConsultationType] = useState(
+    initialData?.consultationType || "nova",
+  );
 
   const [isRecording, setIsRecording] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
@@ -107,7 +117,6 @@ const FieldModeConsultation = ({
   const [analysisSource, setAnalysisSource] = useState("local");
   const [analyzing, setAnalyzing] = useState(false);
   const [feedback, setFeedback] = useState(null);
-  const [showMobileMoreActions, setShowMobileMoreActions] = useState(false);
   const [showPorteChoiceModal, setShowPorteChoiceModal] = useState(false);
   const [manualPorteOverride, setManualPorteOverride] = useState(null);
   const [porteDetectionState, setPorteDetectionState] = useState({
@@ -136,8 +145,31 @@ const FieldModeConsultation = ({
     [],
   );
 
+  const isTypeLockedByContext = initialData?.consultationType === "retorno";
+  const consultationContext = useMemo(
+    () => resolveConsultationContext(consultationType),
+    [consultationType],
+  );
+  const consultationTypeLabel = consultationContext.label;
+
   const showFeedback = (type, message) => {
     setFeedback({ type, message });
+  };
+
+  const clearCapturedData = () => {
+    setSegments([]);
+    setParsedData(null);
+    setStructuredDraft(null);
+    setParsedConfidence(null);
+    setParsedConfidenceComposite(null);
+    setRuleAlerts([]);
+    setRoleReliability(null);
+    setManualPorteOverride(null);
+    setPorteDetectionState({ porte: "pequeno", confident: false, reason: "indefinido" });
+    setShowPorteChoiceModal(false);
+    transcriptRef.current = "";
+    recordedAudioBlobRef.current = null;
+    setUploadedAudioName("");
   };
 
   const buildChatInputFromSegments = (currentSegments, fallbackTranscript) => {
@@ -194,6 +226,16 @@ const FieldModeConsultation = ({
     const fallbackWeight = patient?.weight == null ? "" : String(patient.weight);
     setWeight((current) => (String(current || "").trim() ? current : fallbackWeight));
   }, [patient?.id, patient?.weight]);
+
+  useEffect(() => {
+    if (!initialData) return;
+    if (initialData.consultationType) {
+      setConsultationType(initialData.consultationType);
+    }
+    if (initialData.weight !== undefined && initialData.weight !== null) {
+      setWeight(String(initialData.weight));
+    }
+  }, [initialData]);
 
   const formatElapsed = (seconds) => {
     const total = Math.max(0, Number(seconds) || 0);
@@ -1054,7 +1096,6 @@ const FieldModeConsultation = ({
     setIsRecording(false);
     setIsPaused(false);
     setShowPausedActions(false);
-    setShowMobileMoreActions(false);
     setSegments([]);
     setParsedData(null);
     setStructuredDraft(null);
@@ -1122,7 +1163,6 @@ const FieldModeConsultation = ({
       setSegments([]);
       setLiveInterim("");
       setShowPausedActions(false);
-      setShowMobileMoreActions(false);
       setParsedData(null);
       setStructuredDraft(null);
       setParsedConfidence(null);
@@ -1362,7 +1402,10 @@ const FieldModeConsultation = ({
       porte,
       payload: {
         patientId: patient.id,
-        consultationType: "nova",
+        consultationType,
+        ...(initialData?.previousConsultationId
+          ? { previousConsultationId: initialData.previousConsultationId }
+          : {}),
         weight,
         temperature,
         heartRate,
@@ -1389,6 +1432,7 @@ const FieldModeConsultation = ({
           return acc;
         }, {}),
         aiChatText: [
+          `Contexto: ${consultationTypeLabel}`,
           chiefComplaint ? `Queixa: ${chiefComplaint}` : "",
           anamnesis ? `Anamnese: ${anamnesis}` : "",
           physicalExam ? `Exame fisico: ${physicalExam}` : "",
@@ -1464,7 +1508,7 @@ const FieldModeConsultation = ({
       procedures: manualPayload.procedures || "Nao realizado",
       medications: manualPayload.medications || "Nao prescrita",
       notes: [
-        "Registro gerado em Modo Campo.",
+        `Registro gerado em Modo Campo (${consultationTypeLabel}).`,
         `Origem da analise: ${analysisSource}.`,
         manualPayload.examDetails ? `Detalhes do exame: ${manualPayload.examDetails}` : "",
         specificSummary,
@@ -1493,7 +1537,6 @@ const FieldModeConsultation = ({
 
     try {
       setSaving(true);
-      setShowMobileMoreActions(false);
       const saved = await onSave(payload);
       const savedId = saved?.id || saved?.data?.id || saved?.data?.data?.id;
 
@@ -1582,6 +1625,9 @@ const FieldModeConsultation = ({
             <p className="text-sm text-gray-700 mt-1">
               Paciente: <strong>{patient.name}</strong> · Tutor: {patient.ownerName}
             </p>
+            <p className="text-xs text-cyan-800 mt-1 font-semibold">
+              Contexto ativo: {consultationTypeLabel}
+            </p>
           </div>
           <span
             className={`px-3 py-1 rounded-full text-[11px] font-semibold ${
@@ -1604,6 +1650,29 @@ const FieldModeConsultation = ({
       />
 
       <div className="rounded-2xl border border-gray-200 bg-white p-4 sm:p-6 space-y-4">
+        <div>
+          <label className="mb-1 block text-xs font-semibold text-gray-600 uppercase tracking-wide">
+            Tipo de consulta
+          </label>
+          <select
+            value={consultationType}
+            onChange={(event) => setConsultationType(event.target.value)}
+            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm"
+            disabled={isTypeLockedByContext}
+          >
+            {CONSULTATION_TYPE_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+          {isTypeLockedByContext && (
+            <p className="mt-1 text-[11px] text-amber-700">
+              Contexto de retorno fixado pela consulta anterior selecionada.
+            </p>
+          )}
+        </div>
+
         <div className="flex items-center justify-between">
           <p className="text-sm font-semibold text-gray-700">Captura de conversa</p>
           <p className="text-sm font-bold text-cyan-700">{formatElapsed(elapsedSeconds)}</p>
@@ -1927,71 +1996,7 @@ const FieldModeConsultation = ({
       </div>
 
       <FloatingFormActions maxWidthClass="max-w-3xl">
-        <div className="sm:hidden space-y-2">
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={() => handleSave(false)}
-              disabled={saving || analyzing}
-              className="btn btn-success btn-md btn-block"
-            >
-              {saving && <LoadingDot />}
-              {saving ? "Salvando..." : "Salvar"}
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowMobileMoreActions((prev) => !prev)}
-              disabled={saving || analyzing}
-              className="btn btn-neutral btn-md btn-block"
-            >
-              {showMobileMoreActions ? "Fechar" : "Mais"}
-            </button>
-          </div>
-          {showMobileMoreActions && (
-            <div className="grid grid-cols-1 gap-2 rounded-xl border border-gray-200 bg-gray-50 p-2">
-              <button
-                type="button"
-                onClick={() => handleSave(true)}
-                disabled={saving || analyzing}
-                className="btn btn-primary btn-sm btn-block"
-              >
-                {saving && <LoadingDot />}
-                {saving ? "Processando..." : "Salvar + Receita"}
-              </button>
-              <button
-                type="button"
-                onClick={goToManualEditor}
-                className="btn btn-neutral btn-sm btn-block"
-              >
-                Consulta manual
-              </button>
-              <button
-                type="button"
-                onClick={async () => {
-                  setSegments([]);
-                  setParsedData(null);
-                  setStructuredDraft(null);
-                  setParsedConfidence(null);
-                  setParsedConfidenceComposite(null);
-                  setRuleAlerts([]);
-                  setRoleReliability(null);
-                  setManualPorteOverride(null);
-                  setPorteDetectionState({ porte: "pequeno", confident: false, reason: "indefinido" });
-                  setShowPorteChoiceModal(false);
-                  transcriptRef.current = "";
-                  recordedAudioBlobRef.current = null;
-                  setUploadedAudioName("");
-                  setShowMobileMoreActions(false);
-                }}
-                className="btn btn-neutral btn-sm btn-block"
-              >
-                Limpar capturas
-              </button>
-            </div>
-          )}
-        </div>
-
-        <div className="hidden sm:grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
           <button
             type="button"
             onClick={() => handleSave(false)}
@@ -2019,21 +2024,7 @@ const FieldModeConsultation = ({
           </button>
           <button
             type="button"
-            onClick={async () => {
-              setSegments([]);
-              setParsedData(null);
-              setStructuredDraft(null);
-              setParsedConfidence(null);
-              setParsedConfidenceComposite(null);
-              setRuleAlerts([]);
-              setRoleReliability(null);
-              setManualPorteOverride(null);
-              setPorteDetectionState({ porte: "pequeno", confident: false, reason: "indefinido" });
-              setShowPorteChoiceModal(false);
-              transcriptRef.current = "";
-              recordedAudioBlobRef.current = null;
-              setUploadedAudioName("");
-            }}
+            onClick={clearCapturedData}
             className="btn btn-neutral btn-lg btn-block"
           >
             Limpar capturas

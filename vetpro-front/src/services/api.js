@@ -1,10 +1,40 @@
 import axios from "axios";
 import { toUserFriendlyError } from "../utils/errorMessages";
 
+function isLoopbackHost(hostname = "") {
+  const host = String(hostname || "").toLowerCase();
+  return host === "localhost" || host === "127.0.0.1" || host === "::1";
+}
+
+function normalizeEnvBaseUrl(envBase) {
+  const raw = String(envBase || "").trim();
+  if (!raw) return "";
+  if (typeof window === "undefined") return raw;
+
+  try {
+    const parsed = new URL(raw, window.location.origin);
+    const clientHost = window.location.hostname || "localhost";
+
+    // Se o build veio com localhost, em dispositivo remoto trocamos para o host atual.
+    if (isLoopbackHost(parsed.hostname) && !isLoopbackHost(clientHost)) {
+      parsed.hostname = clientHost;
+      if (!parsed.port) parsed.port = "5000";
+    }
+
+    if (!parsed.pathname || parsed.pathname === "/") {
+      parsed.pathname = "/api";
+    }
+
+    return parsed.toString().replace(/\/$/, "");
+  } catch {
+    return raw;
+  }
+}
+
 function resolveApiBaseUrl() {
   const envBase = process.env.REACT_APP_API_BASE_URL;
   if (envBase && String(envBase).trim()) {
-    return String(envBase).trim();
+    return normalizeEnvBaseUrl(envBase);
   }
 
   if (typeof window !== "undefined") {

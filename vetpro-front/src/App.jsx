@@ -10,6 +10,10 @@ import { addToQueue } from "./services/offlineQueue";
 import { getQueue, clearQueue } from "./services/offlineQueue";
 import { toUserFriendlyError } from "./utils/errorMessages";
 import { sanitizeConsultationNotesForDisplay } from "./utils/consultationNotes";
+import {
+  buildReturnConsultationInitialData,
+  resolveConsultationContext,
+} from "./utils/consultationContext";
 
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Patients = lazy(() => import("./pages/Patients"));
@@ -21,7 +25,6 @@ const QuickConsultation = lazy(() => import("./components/QuickConsultation"));
 const FieldModeConsultation = lazy(() =>
   import("./components/FieldModeConsultation"),
 );
-const ReturnConsultation = lazy(() => import("./components/ReturnConsultation"));
 const ConsultationPreview = lazy(() =>
   import("./components/ConsultationPreview"),
 );
@@ -568,7 +571,7 @@ const MainApp = () => {
 
     setCurrentConsultationPatient(patient);
     setReturnSourceConsultation(consultation);
-    setCurrentView("new-consultation-return");
+    setCurrentView(fieldMode ? "new-consultation-field" : "new-consultation-quick");
   };
 
   const handleGeneratePrescription = (consultation) => {
@@ -599,7 +602,6 @@ const MainApp = () => {
         "patient-consultations",
         "new-consultation-quick",
         "new-consultation-field",
-        "new-consultation-return",
         "consultation-preview",
       ].includes(currentView);
     }
@@ -706,21 +708,32 @@ const MainApp = () => {
       case "new-consultation-quick": {
         const quickInitialData = fieldModeDraftInitialData
           ? fieldModeDraftInitialData
-          : returnSourceConsultation
-            ? {
-                consultationType: "retorno",
-                previousConsultationId: returnSourceConsultation.id,
-                weight: returnSourceConsultation.weight,
-                chiefComplaint: "",
-                diagnosis: returnSourceConsultation.diagnosis || "",
-                treatment: returnSourceConsultation.treatment || "",
-              }
-            : null;
+          : buildReturnConsultationInitialData(returnSourceConsultation);
+
+        if (fieldMode && !fieldModeDraftInitialData) {
+          return (
+            <FieldModeConsultation
+              patient={currentConsultationPatient}
+              initialData={quickInitialData}
+              onSave={handleAddConsultation}
+              onSwitchToManual={() => setCurrentView("new-consultation-quick")}
+              onContinueToManual={(draftInitialData) => {
+                setFieldModeDraftInitialData(draftInitialData || null);
+                setCurrentView("new-consultation-quick");
+              }}
+              onBack={() => {
+                setFieldModeDraftInitialData(null);
+                setReturnSourceConsultation(null);
+                setCurrentView("patient-consultations");
+              }}
+            />
+          );
+        }
+
         return (
           <QuickConsultation
             patient={currentConsultationPatient}
             onSave={handleAddConsultation}
-            fieldMode={fieldMode}
             initialData={quickInitialData}
             onBack={() => {
               setFieldModeDraftInitialData(null);
@@ -730,10 +743,14 @@ const MainApp = () => {
           />
         );
       }
-      case "new-consultation-field":
+      case "new-consultation-field": {
+        const fieldInitialData =
+          buildReturnConsultationInitialData(returnSourceConsultation) ||
+          fieldModeDraftInitialData;
         return (
           <FieldModeConsultation
             patient={currentConsultationPatient}
+            initialData={fieldInitialData}
             onSave={handleAddConsultation}
             onSwitchToManual={() => setCurrentView("new-consultation-quick")}
             onContinueToManual={(draftInitialData) => {
@@ -747,6 +764,7 @@ const MainApp = () => {
             }}
           />
         );
+      }
       case "consultation-preview":
         if (!currentConsultation) return null;
 
@@ -1266,20 +1284,6 @@ const MainApp = () => {
           />
         );
 
-      case "new-consultation-return":
-        return (
-          <ReturnConsultation
-            patient={currentConsultationPatient}
-            previousConsultation={returnSourceConsultation}
-            onSave={handleAddConsultation}
-            fieldMode={fieldMode}
-            onBack={() => {
-              setReturnSourceConsultation(null);
-              setCurrentView("patient-consultations");
-            }}
-          />
-        );
-
       case "new-appointment":
         return (
           <div className="max-w-2xl mx-auto">
@@ -1565,11 +1569,9 @@ const MainApp = () => {
                           </h2>
                           <p className="text-xs text-gray-600 mt-0.5">
                             No {consultation.numeroProntuario} -{" "}
-                            {consultation.consultationType === "nova"
-                              ? "Consulta Geral"
-                              : consultation.consultationType === "retorno"
-                                ? "Retorno"
-                                : "Outro"}
+                            {resolveConsultationContext(
+                              consultation.consultationType,
+                            ).label}
                           </p>
                         </div>
                         <div className="mt-2 sm:mt-0 flex flex-wrap gap-2">

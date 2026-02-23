@@ -10,6 +10,11 @@ import {
   PORTE_NOTES_MARK_START,
   sanitizeConsultationNotesForDisplay,
 } from "../utils/consultationNotes";
+import {
+  CONSULTATION_TYPE_OPTIONS,
+  isReturnConsultationType,
+  resolveConsultationContext,
+} from "../utils/consultationContext";
 
 const SMALL_ANIMAL_FIELDS = [
   { key: "vaccinationStatus", label: "Vacinacao" },
@@ -221,7 +226,6 @@ const QuickConsultation = ({
   onSave,
   onBack,
   initialData = null,
-  fieldMode = false,
 }) => {
   const [weight, setWeight] = useState(initialData?.weight || patient?.weight || "");
   const [temperature, setTemperature] = useState("");
@@ -254,7 +258,6 @@ const QuickConsultation = ({
   const [showMobileMoreActions, setShowMobileMoreActions] = useState(false);
 
   const [conversationTranscript, setConversationTranscript] = useState("");
-  const [isConversationRecording, setIsConversationRecording] = useState(false);
   const [conversationRecognition, setConversationRecognition] = useState(null);
   const [transcriptSegments, setTranscriptSegments] = useState([]);
   const [conversationStartedAt, setConversationStartedAt] = useState(null);
@@ -277,11 +280,12 @@ const QuickConsultation = ({
   const liveInterimRef = useRef("");
   const conversationRecognitionRef = useRef(null);
 
-  const supportsSpeech = useMemo(
-    () =>
-      typeof window !== "undefined" &&
-      ("SpeechRecognition" in window || "webkitSpeechRecognition" in window),
-    [],
+  const consultationContext = useMemo(
+    () => resolveConsultationContext(consultationType),
+    [consultationType],
+  );
+  const isReturnTypeLockedByContext = isReturnConsultationType(
+    initialData?.consultationType,
   );
 
   const draftKey = useMemo(() => {
@@ -372,33 +376,6 @@ const QuickConsultation = ({
       .normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "")
       .toLowerCase();
-
-  const formatElapsed = (seconds) => {
-    const total = Math.max(0, Number(seconds) || 0);
-    const mins = String(Math.floor(total / 60)).padStart(2, "0");
-    const secs = String(total % 60).padStart(2, "0");
-    return `${mins}:${secs}`;
-  };
-
-  const appendTranscriptChunk = (chunk, elapsedSeconds = null) => {
-    const nextChunk = (chunk || "").trim();
-    if (!nextChunk) return;
-    const stamp = formatElapsed(elapsedSeconds);
-    setConversationTranscript((prev) => {
-      const merged = `${prev}${prev ? " " : ""}${nextChunk}`.trim();
-      transcriptRef.current = merged;
-      return merged;
-    });
-    setTranscriptSegments((prev) => [...prev, { stamp, text: nextChunk }]);
-  };
-
-  const flushLiveInterimToTranscript = (elapsedSeconds = null) => {
-    const interim = liveInterimRef.current.trim();
-    if (!interim) return;
-    appendTranscriptChunk(interim, elapsedSeconds);
-    liveInterimRef.current = "";
-    setLiveInterimText("");
-  };
 
   const buildTimestampedTranscript = () => {
     if (!transcriptSegments.length) return "";
@@ -920,7 +897,6 @@ const QuickConsultation = ({
     liveInterimRef.current = "";
     transcriptRef.current = "";
     keepConversationRecordingRef.current = false;
-    setIsConversationRecording(false);
     conversationRecognitionRef.current?.stop?.();
     setConversationRecognition(null);
 
@@ -1067,196 +1043,6 @@ const QuickConsultation = ({
     showTranscriptExpanded,
     selectedPorte,
   ]);
-
-  const toggleConversationRecording = () => {
-    if (!supportsSpeech) {
-      showFeedback(
-        "error",
-        "Reconhecimento de voz nao dispona­vel neste navegador. Use Chrome atualizado ou preencha manualmente.",
-      );
-      return;
-    }
-
-    if (isConversationRecording && conversationRecognition) {
-      keepConversationRecordingRef.current = false;
-      const elapsedSeconds = Math.floor(
-        (Date.now() - (conversationStartedAt || Date.now())) / 1000,
-      );
-      flushLiveInterimToTranscript(elapsedSeconds);
-      conversationRecognition.stop();
-      setIsConversationRecording(false);
-      return;
-    }
-
-    const SpeechRecognition =
-      window.SpeechRecognition || window.webkitSpeechRecognition;
-    const recognition = new SpeechRecognition();
-    recognition.lang = "pt-BR";
-    recognition.continuous = true;
-    recognition.interimResults = true;
-
-    keepConversationRecordingRef.current = true;
-    const recordingStartAt = conversationStartedAt || Date.now();
-    if (!conversationStartedAt) {
-      setConversationStartedAt(recordingStartAt);
-    }
-    recognition.onstart = () => setIsConversationRecording(true);
-    recognition.onend = () => {
-      if (keepConversationRecordingRef.current) {
-        try {
-          recognition.start();
-          return;
-        } catch {
-          // no-op
-        }
-      }
-      setIsConversationRecording(false);
-      setLiveInterimText("");
-      liveInterimRef.current = "";
-    };
-    recognition.onerror = () => {
-      if (!keepConversationRecordingRef.current) {
-        setIsConversationRecording(false);
-      }
-    };
-    recognition.onresult = (event) => {
-      for (let i = event.resultIndex; i < event.results.length; i += 1) {
-        const result = event.results[i];
-        if (!result) continue;
-        const phrase = (result[0]?.transcript || "").trim();
-        if (!phrase) continue;
-        const elapsedSeconds = Math.floor((Date.now() - recordingStartAt) / 1000);
-        if (result.isFinal) {
-          appendTranscriptChunk(phrase, elapsedSeconds);
-          liveInterimRef.current = "";
-          setLiveInterimText("");
-        } else {
-          liveInterimRef.current = phrase;
-          setLiveInterimText(phrase);
-        }
-      }
-    };
-
-    setConversationRecognition(recognition);
-    recognition.start();
-  };
-
-  const clearTranscript = () => {
-    setConversationTranscript("");
-    setTranscriptSegments([]);
-    setConversationStartedAt(null);
-    setParsedTranscriptPreview(null);
-    setLiveInterimText("");
-    setShowTranscriptExpanded(false);
-    liveInterimRef.current = "";
-    transcriptRef.current = "";
-    setAiMessages([]);
-    setAiConfidenceByField({});
-    setAiMissingFields({ core: [], specific: [] });
-  };
-
-  const parseTranscriptToSectionsLocal = (text) => {
-    const content = (text || "").trim();
-    if (!content) return null;
-    const dialogue = splitDialogueByRoleLocal(content);
-    const tutorContext = dialogue.tutorText || content;
-    const vetContext = dialogue.vetText || content;
-    const complaintFallback = extractClinicalComplaintSentence(tutorContext || content);
-
-    return {
-      chiefComplaint:
-        extractByKeywords(tutorContext, ["queixa", "motivo da consulta", "motivo"]) ||
-        complaintFallback ||
-        content.slice(0, 220),
-      anamnesis: extractByKeywords(tutorContext, ["anamnese", "historico"]),
-      physicalExam: extractByKeywords(vetContext, ["exame fisico"]),
-      diagnosis: extractByKeywords(vetContext, ["diagnostico", "suspeita"]),
-      treatment: extractByKeywords(vetContext, ["tratamento", "conduta"]),
-      medication: extractByKeywords(vetContext, [
-        "medicacao",
-        "prescricao",
-        "prescrever",
-        "receita",
-      ]),
-    };
-  };
-
-  const analyzeTranscript = async () => {
-    const text = transcriptRef.current.trim() || conversationTranscript.trim();
-    if (!text) {
-      showFeedback(
-        "error",
-        "Nenhuma transcricao encontrada. Grave ou digite um texto primeiro.",
-      );
-      return null;
-    }
-
-    let parsed = null;
-    try {
-      const response = await api.post("/consultations/heuristic-parse", {
-        transcript: text,
-        segments: transcriptSegments
-      });
-      const serverParsed = response?.data?.parsed || {};
-      parsed = {
-        chiefComplaint: String(serverParsed.chiefComplaint || "").trim(),
-        anamnesis: String(serverParsed.anamnesis || "").trim(),
-        physicalExam: String(serverParsed.physicalExam || "").trim(),
-        diagnosis: String(serverParsed.diagnosis || "").trim(),
-        treatment: String(serverParsed.treatment || "").trim(),
-        medication: String(serverParsed.medications || "").trim(),
-      };
-    } catch {
-      parsed = parseTranscriptToSectionsLocal(text);
-    }
-
-    setParsedTranscriptPreview(parsed);
-    return parsed;
-  };
-
-  const applyTranscriptToRecord = async () => {
-    const text = transcriptRef.current.trim() || conversationTranscript.trim();
-    if (!text) {
-      showFeedback(
-        "error",
-        "Nenhuma transcricao encontrada. Grave ou digite um texto primeiro.",
-      );
-      return;
-    }
-
-    const parsed = parsedTranscriptPreview || (await analyzeTranscript());
-    if (!parsed) return;
-
-    if (!chiefComplaint) setChiefComplaint(parsed.chiefComplaint);
-    if (!anamnesis && parsed.anamnesis) setAnamnesis(parsed.anamnesis);
-    if (!physicalExam && parsed.physicalExam) setPhysicalExam(parsed.physicalExam);
-    if (!diagnosis && parsed.diagnosis) setDiagnosis(parsed.diagnosis);
-    if (!treatment && parsed.treatment) setTreatment(parsed.treatment);
-    const transcriptVitals = extractVitalSignsFromText(text);
-    if (!weight && transcriptVitals.weight) setWeight(transcriptVitals.weight);
-    if (!temperature && transcriptVitals.temperature) setTemperature(transcriptVitals.temperature);
-    if (!heartRate && transcriptVitals.heartRate) setHeartRate(transcriptVitals.heartRate);
-    if (!respiratoryRate && transcriptVitals.respiratoryRate) setRespiratoryRate(transcriptVitals.respiratoryRate);
-
-    if (parsed.medication) {
-      setMedicationPrescribed("sim");
-      if (!medicationDetails) setMedicationDetails(parsed.medication);
-    }
-
-    const transcriptWithTime = buildTimestampedTranscript();
-    setNotes((prev) =>
-      [
-        prev,
-        transcriptWithTime
-          ? `Transcricao com minutagem:\n${transcriptWithTime}`
-          : `Transcricao da conversa:\n${text}`,
-      ]
-        .filter(Boolean)
-        .join("\n\n"),
-    );
-
-    showFeedback("success", "Transcricao aplicada aos campos do prontuario.");
-  };
 
   const applyAiDraft = (draft, overwrite = false, sourceText = "") => {
     if (!draft || typeof draft !== "object") return;
@@ -1414,7 +1200,7 @@ const QuickConsultation = ({
       setAiMissingFields({ core: [], specific: [] });
       const response = await api.post("/consultations/chat-assist", {
         patientId: patient?.id || null,
-        mode: initialData?.consultationType === "retorno" ? "retorno" : "nova",
+        mode: isReturnConsultationType(consultationType) ? "retorno" : "nova",
         text,
         recordProfile: {
           porte: requestedPorte,
@@ -1555,7 +1341,7 @@ const QuickConsultation = ({
       setAiRefining(true);
       const response = await api.post("/consultations/refine-field", {
         patientId: patient?.id || null,
-        mode: initialData?.consultationType === "retorno" ? "retorno" : "nova",
+        mode: isReturnConsultationType(consultationType) ? "retorno" : "nova",
         field: aiRefineField,
         text: currentValue
       });
@@ -2335,6 +2121,9 @@ const QuickConsultation = ({
         <p className="text-sm text-gray-700 mt-1">
           Paciente: <strong>{patient.name}</strong> - Tutor: {patient.ownerName}
         </p>
+        <p className="text-xs text-emerald-800 mt-1 font-semibold">
+          Contexto ativo: {consultationContext.label}
+        </p>
         <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-2">
           <label className="text-xs font-semibold text-gray-700 flex flex-col">
             Tipo de consulta
@@ -2342,12 +2131,21 @@ const QuickConsultation = ({
               value={consultationType}
               onChange={(e) => setConsultationType(e.target.value)}
               className="mt-1 rounded-lg border border-emerald-200 bg-white px-3 py-2 text-sm"
-              disabled={initialData?.consultationType === "retorno"}
+              disabled={isReturnTypeLockedByContext}
             >
-              <option value="nova">Consulta geral</option>
-              <option value="vacinacao">Vacinação</option>
-              <option value="anestesia">Anestesia</option>
-              <option value="retorno" disabled>Retorno (use criar retorno)</option>
+              {CONSULTATION_TYPE_OPTIONS.map((option) => (
+                <option
+                  key={option.value}
+                  value={option.value}
+                  disabled={
+                    option.value === "retorno" && !isReturnTypeLockedByContext
+                  }
+                >
+                  {option.value === "retorno" && !isReturnTypeLockedByContext
+                    ? `${option.label} (use criar retorno)`
+                    : option.label}
+                </option>
+              ))}
             </select>
           </label>
         </div>
@@ -2392,8 +2190,7 @@ const QuickConsultation = ({
         onClose={() => setFeedback(null)}
       />
 
-      {!fieldMode && (
-        <div id="assistant-section" className="rounded-xl border border-violet-200 bg-violet-50 p-4 space-y-3">
+      <div id="assistant-section" className="rounded-xl border border-violet-200 bg-violet-50 p-4 space-y-3">
           <h2 className="text-sm font-bold text-violet-900">Assistente IA por chat</h2>
           <p className="text-xs text-violet-800">
             Descreva em linguagem livre o caso e a IA monta um rascunho estruturado.
@@ -2514,127 +2311,6 @@ const QuickConsultation = ({
             </div>
           )}
         </div>
-      )}
-
-      {fieldMode && (
-        <div id="assistant-section" className="rounded-xl border border-amber-200 bg-amber-50 p-4 space-y-3">
-          <h2 className="text-sm font-bold text-amber-900">
-            Modo Campo: Assistente de conversa
-          </h2>
-          <p className="text-xs text-amber-800">
-            Capture a conversa tutor/medico e aplique preenchimento assistido.
-          </p>
-          <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
-            <button
-              type="button"
-              onClick={toggleConversationRecording}
-              className={`min-h-[44px] rounded-lg px-3 text-sm font-bold text-white ${
-                isConversationRecording ? "bg-red-600" : "bg-indigo-600"
-              }`}
-            >
-              {isConversationRecording
-                ? "Parar gravacao"
-                : "Iniciar transcricao"}
-            </button>
-            <button
-              type="button"
-              onClick={analyzeTranscript}
-              className="min-h-[44px] rounded-lg border border-cyan-300 bg-white px-3 text-sm font-bold text-cyan-700"
-            >
-              Analisar conversa
-            </button>
-            <button
-              type="button"
-              onClick={applyTranscriptToRecord}
-              className="min-h-[44px] rounded-lg border border-indigo-300 bg-white px-3 text-sm font-bold text-indigo-700"
-            >
-              Aplicar no prontuario
-            </button>
-            <button
-              type="button"
-              onClick={clearTranscript}
-              className="min-h-[44px] rounded-lg border border-amber-300 bg-white px-3 text-sm font-bold text-amber-800"
-            >
-              Limpar transcricao
-            </button>
-          </div>
-          <textarea
-            value={conversationTranscript}
-            onChange={(e) => {
-              setConversationTranscript(e.target.value);
-              transcriptRef.current = e.target.value;
-            }}
-            rows={2}
-            placeholder="Transcricao em tempo real da conversa..."
-            className="w-full rounded-lg border border-amber-300 px-3 py-3 text-sm"
-          />
-          <div className="rounded-lg border border-amber-200 bg-white/80 px-3 py-2 space-y-2">
-            <div className="flex items-center justify-between">
-              <p className="text-[11px] font-semibold text-amber-700">
-                Captura em tempo real
-              </p>
-              <button
-                type="button"
-                onClick={() => setShowTranscriptExpanded((prev) => !prev)}
-                className="text-[11px] font-semibold text-amber-800 underline"
-              >
-                {showTranscriptExpanded ? "Recolher transcricao" : "Expandir transcricao"}
-              </button>
-            </div>
-
-            <div className="flex gap-2 overflow-x-auto pb-1">
-              {transcriptSegments.slice(-8).map((item, index, arr) => (
-                <div
-                  key={`${item.stamp}-${index}`}
-                  className="min-w-[160px] max-w-[220px] shrink-0 rounded-md border border-amber-100 bg-amber-50 px-2 py-1 transition-opacity duration-300"
-                  style={{ opacity: (index + 1) / arr.length }}
-                >
-                  <p className="text-[10px] font-bold text-amber-700">[{item.stamp}]</p>
-                  <p className="text-[11px] text-gray-700 line-clamp-2">{item.text}</p>
-                </div>
-              ))}
-              {liveInterimText && (
-                <div className="min-w-[160px] max-w-[220px] shrink-0 rounded-md border border-amber-200 bg-white px-2 py-1 animate-pulse">
-                  <p className="text-[10px] font-bold text-amber-700">Agora</p>
-                  <p className="text-[11px] text-amber-700 italic line-clamp-2">
-                    {liveInterimText}
-                  </p>
-                </div>
-              )}
-              {!transcriptSegments.length && !liveInterimText && (
-                <p className="text-[11px] text-gray-400">Aguardando fala...</p>
-              )}
-            </div>
-
-            {showTranscriptExpanded && (
-              <div className="max-h-44 overflow-y-auto rounded-md border border-amber-100 bg-white px-2 py-2 space-y-1">
-                {transcriptSegments.map((item, index) => (
-                  <p key={`${item.stamp}-${index}`} className="text-[11px] text-gray-700">
-                    <strong>[{item.stamp}]</strong> {item.text}
-                  </p>
-                ))}
-                {liveInterimText && (
-                  <p className="text-[11px] text-amber-700 italic">{liveInterimText}</p>
-                )}
-              </div>
-            )}
-          </div>
-          <p className="text-xs text-amber-800">
-            Rascunho automatico ativo neste aparelho para evitar perda de dados.
-          </p>
-          {parsedTranscriptPreview && (
-            <div className="rounded-lg border border-cyan-200 bg-cyan-50 p-3 text-xs text-cyan-900 space-y-1">
-              <p className="font-bold">Sugestao de preenchimento (revisar antes de aplicar)</p>
-              <p><strong>Queixa:</strong> {parsedTranscriptPreview.chiefComplaint || "-"}</p>
-              <p><strong>Anamnese:</strong> {parsedTranscriptPreview.anamnesis || "-"}</p>
-              <p><strong>Exame fisico:</strong> {parsedTranscriptPreview.physicalExam || "-"}</p>
-              <p><strong>Diagnostico:</strong> {parsedTranscriptPreview.diagnosis || "-"}</p>
-              <p><strong>Conduta:</strong> {parsedTranscriptPreview.treatment || "-"}</p>
-              <p><strong>Medicacao:</strong> {parsedTranscriptPreview.medication || "-"}</p>
-            </div>
-          )}
-        </div>
-      )}
 
       <div id="porte-section" className="rounded-xl border border-gray-200 bg-white p-4 sm:p-6 space-y-4">
         <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
