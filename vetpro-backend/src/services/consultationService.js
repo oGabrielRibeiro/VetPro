@@ -1,6 +1,9 @@
-const prisma = require("../lib/prisma");
+const prisma = require('../lib/prisma');
 
-function buildPatientSyncDataFromConsultation(normalizedData = {}, currentPatient = null) {
+function buildPatientSyncDataFromConsultation(
+  normalizedData = {},
+  currentPatient = null,
+) {
   const nextWeight = Number(normalizedData?.weight);
   const currentWeight = Number(currentPatient?.weight);
 
@@ -8,7 +11,8 @@ function buildPatientSyncDataFromConsultation(normalizedData = {}, currentPatien
     Number.isFinite(nextWeight) &&
     nextWeight > 0 &&
     nextWeight < 2000 &&
-    (!Number.isFinite(currentWeight) || Math.abs(currentWeight - nextWeight) >= 0.01);
+    (!Number.isFinite(currentWeight) ||
+      Math.abs(currentWeight - nextWeight) >= 0.01);
 
   if (!canSyncWeight) {
     return {};
@@ -17,46 +21,49 @@ function buildPatientSyncDataFromConsultation(normalizedData = {}, currentPatien
   return { weight: nextWeight };
 }
 
-function normalizeText(value = "") {
-  return String(value || "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
+function normalizeText(value = '') {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
     .trim();
 }
 
-function isMeaningfulProfileValue(value = "") {
+function isMeaningfulProfileValue(value = '') {
   const normalized = normalizeText(value);
   if (!normalized) return false;
-  if (normalized === "nao informado" || normalized === "não informado") return false;
+  if (normalized === 'nao informado' || normalized === 'não informado')
+    return false;
   return true;
 }
 
 const PERSISTENT_SPECIFIC_KEYS = {
   pequeno: new Set([
-    "allergyHistory",
-    "chronicDiseases",
-    "contactWithAnimals",
-    "reproductiveStatusSmall"
+    'allergyHistory',
+    'chronicDiseases',
+    'contactWithAnimals',
+    'reproductiveStatusSmall',
   ]),
   grande: new Set([
-    "farmName",
-    "productionSystem",
-    "animalFunction",
-    "propertyAndManagement",
-    "contactAnimals"
-  ])
+    'farmName',
+    'productionSystem',
+    'animalFunction',
+    'propertyAndManagement',
+    'contactAnimals',
+  ]),
 };
 
 function sanitizePersistentProfileUpdate(raw = {}) {
-  if (!raw || typeof raw !== "object") return null;
-  const porte = String(raw?.porte || "").toLowerCase() === "grande" ? "grande" : "pequeno";
-  const fields = raw?.fields && typeof raw.fields === "object" ? raw.fields : {};
+  if (!raw || typeof raw !== 'object') return null;
+  const porte =
+    String(raw?.porte || '').toLowerCase() === 'grande' ? 'grande' : 'pequeno';
+  const fields =
+    raw?.fields && typeof raw.fields === 'object' ? raw.fields : {};
   const allowedKeys = PERSISTENT_SPECIFIC_KEYS[porte] || new Set();
 
   const cleanedFields = Object.entries(fields).reduce((acc, [key, value]) => {
-    if (!allowedKeys.has(String(key || ""))) return acc;
-    const text = String(value || "").trim();
+    if (!allowedKeys.has(String(key || ''))) return acc;
+    const text = String(value || '').trim();
     if (!isMeaningfulProfileValue(text)) return acc;
     acc[key] = text;
     return acc;
@@ -68,16 +75,15 @@ function sanitizePersistentProfileUpdate(raw = {}) {
 
 function mergePatientPersistentProfile(currentProfile, nextUpdate) {
   const base =
-    currentProfile && typeof currentProfile === "object"
-      ? currentProfile
-      : {};
+    currentProfile && typeof currentProfile === 'object' ? currentProfile : {};
   const sanitized = sanitizePersistentProfileUpdate(nextUpdate);
   if (!sanitized) return null;
 
-  const porte = sanitized.porte;
-  const previousPorte = base?.[porte]?.fields && typeof base[porte].fields === "object"
-    ? base[porte].fields
-    : {};
+  const { porte } = sanitized;
+  const previousPorte =
+    base?.[porte]?.fields && typeof base[porte].fields === 'object'
+      ? base[porte].fields
+      : {};
 
   return {
     ...base,
@@ -85,15 +91,17 @@ function mergePatientPersistentProfile(currentProfile, nextUpdate) {
     [porte]: {
       fields: {
         ...previousPorte,
-        ...sanitized.fields
-      }
-    }
+        ...sanitized.fields,
+      },
+    },
   };
 }
 
 function normalizeConsultationData(data = {}) {
   const normalized = {
-    consultationType: data.consultationType || (data.template === "return" ? "retorno" : "nova"),
+    consultationType:
+      data.consultationType ||
+      (data.template === 'return' ? 'retorno' : 'nova'),
     chiefComplaint: data.chiefComplaint || null,
     anamnesis: data.anamnesis || null,
     physicalExam: data.physicalExam || data.clinicalAssessment || null,
@@ -104,23 +112,38 @@ function normalizeConsultationData(data = {}) {
     notes: data.notes || data.observations || null,
     returnRecommendation: data.returnRecommendation || null,
     veterinarianName: data.veterinarianName || null,
-    veterinarianCrmv: data.veterinarianCrmv || data.veterinarianCRMV || null
+    veterinarianCrmv: data.veterinarianCrmv || data.veterinarianCRMV || null,
   };
 
-  const weight = data.weight == null || data.weight === "" ? null : Number(data.weight);
-  const temperature = data.temperature == null || data.temperature === "" ? null : Number(data.temperature);
-  const heartRate = data.heartRate == null || data.heartRate === "" ? null : Number(data.heartRate);
-  const respiratoryRate = data.respiratoryRate == null || data.respiratoryRate === "" ? null : Number(data.respiratoryRate);
+  const weight =
+    data.weight == null || data.weight === '' ? null : Number(data.weight);
+  const temperature =
+    data.temperature == null || data.temperature === ''
+      ? null
+      : Number(data.temperature);
+  const heartRate =
+    data.heartRate == null || data.heartRate === ''
+      ? null
+      : Number(data.heartRate);
+  const respiratoryRate =
+    data.respiratoryRate == null || data.respiratoryRate === ''
+      ? null
+      : Number(data.respiratoryRate);
 
   normalized.weight = Number.isFinite(weight) ? weight : null;
   normalized.temperature = Number.isFinite(temperature) ? temperature : null;
-  normalized.heartRate = Number.isFinite(heartRate) ? Math.trunc(heartRate) : null;
-  normalized.respiratoryRate = Number.isFinite(respiratoryRate) ? Math.trunc(respiratoryRate) : null;
+  normalized.heartRate = Number.isFinite(heartRate)
+    ? Math.trunc(heartRate)
+    : null;
+  normalized.respiratoryRate = Number.isFinite(respiratoryRate)
+    ? Math.trunc(respiratoryRate)
+    : null;
 
-  if (typeof data.vaccinationUpToDate === "boolean") {
+  if (typeof data.vaccinationUpToDate === 'boolean') {
     normalized.vaccinationUpToDate = data.vaccinationUpToDate;
-  } else if (typeof data.vaccinationStatus === "string") {
-    normalized.vaccinationUpToDate = data.vaccinationStatus.toLowerCase() === "em dia";
+  } else if (typeof data.vaccinationStatus === 'string') {
+    normalized.vaccinationUpToDate =
+      data.vaccinationStatus.toLowerCase() === 'em dia';
   }
 
   if (data.previousConsultationId) {
@@ -136,25 +159,25 @@ async function createConsultation({
   data,
   recipeNumber,
   recipeYear,
-  clinicId
+  clinicId,
 }) {
   return await prisma.$transaction(async (tx) => {
     const patient = await tx.patient.findFirst({
       where: {
         id: patientId,
         userId,
-        clinicId
-      }
+        clinicId,
+      },
     });
 
     if (!patient) {
-      throw new Error("Paciente nao encontrado");
+      throw new Error('Paciente nao encontrado');
     }
 
     const last = await tx.consultation.findFirst({
       where: { userId },
-      orderBy: { numeroProntuario: "desc" },
-      select: { numeroProntuario: true }
+      orderBy: { numeroProntuario: 'desc' },
+      select: { numeroProntuario: true },
     });
 
     const nextNumber = last ? last.numeroProntuario + 1 : 1;
@@ -165,12 +188,12 @@ async function createConsultation({
       const previous = await tx.consultation.findFirst({
         where: {
           id: normalizedData.previousConsultationId,
-          userId
-        }
+          userId,
+        },
       });
 
       if (!previous) {
-        throw new Error("Consulta anterior nao encontrada");
+        throw new Error('Consulta anterior nao encontrada');
       }
 
       copiedData = {
@@ -182,7 +205,7 @@ async function createConsultation({
         weight: previous.weight,
         temperature: previous.temperature,
         heartRate: previous.heartRate,
-        respiratoryRate: previous.respiratoryRate
+        respiratoryRate: previous.respiratoryRate,
       };
     }
 
@@ -195,25 +218,30 @@ async function createConsultation({
         recipeNumber,
         recipeYear,
         ...copiedData,
-        ...normalizedData
-      }
+        ...normalizedData,
+      },
     });
 
-    const patientSyncData = buildPatientSyncDataFromConsultation(normalizedData, patient);
+    const patientSyncData = buildPatientSyncDataFromConsultation(
+      normalizedData,
+      patient,
+    );
     const nextPersistentProfile = mergePatientPersistentProfile(
       patient?.persistentProfile,
-      data?.persistentProfileUpdate
+      data?.persistentProfileUpdate,
     );
     if (nextPersistentProfile) {
       patientSyncData.persistentProfile = nextPersistentProfile;
-      patientSyncData.porte = String(data?.persistentProfileUpdate?.porte || "").toLowerCase() === "grande"
-        ? "grande"
-        : "pequeno";
+      patientSyncData.porte =
+        String(data?.persistentProfileUpdate?.porte || '').toLowerCase() ===
+        'grande'
+          ? 'grande'
+          : 'pequeno';
     }
     if (Object.keys(patientSyncData).length) {
       await tx.patient.update({
         where: { id: patient.id },
-        data: patientSyncData
+        data: patientSyncData,
       });
     }
 
@@ -225,7 +253,7 @@ async function getConsultations(userId) {
   return await prisma.consultation.findMany({
     where: { userId },
     include: { patient: true },
-    orderBy: { createdAt: "desc" }
+    orderBy: { createdAt: 'desc' },
   });
 }
 
@@ -233,9 +261,9 @@ async function getConsultationsByPatient(userId, patientId) {
   return await prisma.consultation.findMany({
     where: {
       userId,
-      patientId
+      patientId,
     },
-    orderBy: { createdAt: "desc" }
+    orderBy: { createdAt: 'desc' },
   });
 }
 
@@ -243,7 +271,7 @@ async function getConsultationById(userId, consultationId) {
   const consultation = await prisma.consultation.findFirst({
     where: {
       id: consultationId,
-      userId
+      userId,
     },
     include: {
       patient: true,
@@ -268,16 +296,16 @@ async function getConsultationById(userId, consultationId) {
             select: {
               id: true,
               numeroProntuario: true,
-              createdAt: true
-            }
-          }
-        }
-      }
-    }
+              createdAt: true,
+            },
+          },
+        },
+      },
+    },
   });
 
   if (!consultation) {
-    throw new Error("Consulta nao encontrada");
+    throw new Error('Consulta nao encontrada');
   }
 
   const hasMissingVitals =
@@ -299,23 +327,23 @@ async function getConsultationById(userId, consultationId) {
         { weight: { not: null } },
         { temperature: { not: null } },
         { heartRate: { not: null } },
-        { respiratoryRate: { not: null } }
-      ]
+        { respiratoryRate: { not: null } },
+      ],
     },
-    orderBy: { createdAt: "desc" },
+    orderBy: { createdAt: 'desc' },
     select: {
       id: true,
       createdAt: true,
       weight: true,
       temperature: true,
       heartRate: true,
-      respiratoryRate: true
-    }
+      respiratoryRate: true,
+    },
   });
 
   return {
     ...consultation,
-    latestVitals
+    latestVitals,
   };
 }
 
@@ -324,18 +352,18 @@ async function createReturnFromConsultation(userId, clinicId, consultationId) {
     const original = await tx.consultation.findFirst({
       where: {
         id: consultationId,
-        userId
-      }
+        userId,
+      },
     });
 
     if (!original) {
-      throw new Error("Consulta original nao encontrada");
+      throw new Error('Consulta original nao encontrada');
     }
 
     const last = await tx.consultation.findFirst({
       where: { userId },
-      orderBy: { numeroProntuario: "desc" },
-      select: { numeroProntuario: true }
+      orderBy: { numeroProntuario: 'desc' },
+      select: { numeroProntuario: true },
     });
     const nextNumber = last ? last.numeroProntuario + 1 : 1;
 
@@ -343,11 +371,13 @@ async function createReturnFromConsultation(userId, clinicId, consultationId) {
     const lastRecipe = await tx.consultation.findFirst({
       where: {
         clinicId,
-        recipeYear: currentYear
+        recipeYear: currentYear,
       },
-      orderBy: { recipeNumber: "desc" }
+      orderBy: { recipeNumber: 'desc' },
     });
-    const nextRecipeNumber = lastRecipe ? (lastRecipe.recipeNumber || 0) + 1 : 1;
+    const nextRecipeNumber = lastRecipe
+      ? (lastRecipe.recipeNumber || 0) + 1
+      : 1;
 
     return await tx.consultation.create({
       data: {
@@ -355,7 +385,7 @@ async function createReturnFromConsultation(userId, clinicId, consultationId) {
         userId,
         clinicId,
         patientId: original.patientId,
-        consultationType: "retorno",
+        consultationType: 'retorno',
         previousConsultationId: original.id,
         recipeNumber: nextRecipeNumber,
         recipeYear: currentYear,
@@ -367,8 +397,8 @@ async function createReturnFromConsultation(userId, clinicId, consultationId) {
         treatment: original.treatment,
         medications: original.medications,
         notes: original.notes,
-        returnRecommendation: original.returnRecommendation
-      }
+        returnRecommendation: original.returnRecommendation,
+      },
     });
   });
 }
@@ -378,5 +408,5 @@ module.exports = {
   getConsultations,
   getConsultationsByPatient,
   getConsultationById,
-  createReturnFromConsultation
+  createReturnFromConsultation,
 };

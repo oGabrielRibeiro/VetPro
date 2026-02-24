@@ -1,7 +1,7 @@
-const { z } = require("zod");
+const { z } = require('zod');
 
-const NOT_INFORMED = "Não informado";
-const CLINICAL_SCHEMA_VERSION = "1.1.0";
+const NOT_INFORMED = 'Não informado';
+const CLINICAL_SCHEMA_VERSION = '1.1.0';
 
 /**
  * @typedef {Object} ClinicalStructuredRecordDTO
@@ -28,53 +28,76 @@ const CLINICAL_SCHEMA_VERSION = "1.1.0";
 
 const safeString = z
   .preprocess((value) => {
-    if (value == null) return "";
+    if (value == null) return '';
     return String(value).trim();
   }, z.string())
-  .transform((value) => (value ? value : NOT_INFORMED))
+  .transform((value) => value || NOT_INFORMED)
   .catch(NOT_INFORMED);
 
 const safeStringArray = z
   .preprocess((value) => {
     if (!Array.isArray(value)) return [];
     return value
-      .map((item) => String(item == null ? "" : item).trim())
+      .map((item) => String(item == null ? '' : item).trim())
       .filter(Boolean);
   }, z.array(z.string()))
   .catch([]);
 
 const gravidadeSchema = z
-  .preprocess((value) => String(value == null ? "" : value).trim().toLowerCase(), z.string())
+  .preprocess(
+    (value) =>
+      String(value == null ? '' : value)
+        .trim()
+        .toLowerCase(),
+    z.string(),
+  )
   .transform((value) => {
-    if (["leve", "moderado", "grave"].includes(value)) return value;
+    if (['leve', 'moderado', 'grave'].includes(value)) return value;
     return NOT_INFORMED;
   })
   .catch(NOT_INFORMED);
 
 const prioridadeTriagemSchema = z
-  .preprocess((value) => String(value == null ? "" : value).trim().toLowerCase(), z.string())
+  .preprocess(
+    (value) =>
+      String(value == null ? '' : value)
+        .trim()
+        .toLowerCase(),
+    z.string(),
+  )
   .transform((value) => {
-    if (["baixa", "media", "alta", "imediata"].includes(value)) return value;
+    if (['baixa', 'media', 'alta', 'imediata'].includes(value)) return value;
     return NOT_INFORMED;
   })
   .catch(NOT_INFORMED);
 
 const riscoSchema = z
-  .preprocess((value) => String(value == null ? "" : value).trim().toLowerCase(), z.string())
+  .preprocess(
+    (value) =>
+      String(value == null ? '' : value)
+        .trim()
+        .toLowerCase(),
+    z.string(),
+  )
   .transform((value) => {
-    if (["baixo", "moderado", "alto"].includes(value)) return value;
+    if (['baixo', 'moderado', 'alto'].includes(value)) return value;
     return NOT_INFORMED;
   })
   .catch(NOT_INFORMED);
 
 const percentualSchema = z
-  .preprocess((value) => {
-    const text = String(value == null ? "" : value).trim().replace("%", "");
-    if (!text) return NOT_INFORMED;
-    const num = Number(text.replace(",", "."));
-    if (!Number.isFinite(num)) return NOT_INFORMED;
-    return Math.max(0, Math.min(100, Number(num.toFixed(2))));
-  }, z.union([z.number(), z.string()]))
+  .preprocess(
+    (value) => {
+      const text = String(value == null ? '' : value)
+        .trim()
+        .replace('%', '');
+      if (!text) return NOT_INFORMED;
+      const num = Number(text.replace(',', '.'));
+      if (!Number.isFinite(num)) return NOT_INFORMED;
+      return Math.max(0, Math.min(100, Number(num.toFixed(2))));
+    },
+    z.union([z.number(), z.string()]),
+  )
   .catch(NOT_INFORMED);
 
 const clinicalStructuredSchema = z

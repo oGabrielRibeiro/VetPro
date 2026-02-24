@@ -1,18 +1,14 @@
-const prisma = require("../lib/prisma");
+const prisma = require('../lib/prisma');
 
 async function getDashboardData(userId) {
   const now = new Date();
 
-  const startOfMonth = new Date(
-    now.getFullYear(),
-    now.getMonth(),
-    1
-  );
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
   const startOfToday = new Date(
     now.getFullYear(),
     now.getMonth(),
-    now.getDate()
+    now.getDate(),
   );
 
   const [
@@ -82,8 +78,18 @@ async function getMonthlyConsultations(userId, yearParam) {
   });
 
   const months = [
-    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
   ];
 
   return months.map((month, index) => ({

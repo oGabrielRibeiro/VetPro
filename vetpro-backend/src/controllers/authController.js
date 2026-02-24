@@ -1,13 +1,13 @@
-const bcrypt = require("bcrypt");
-const fs = require("fs");
-const path = require("path");
-const jwt = require("jsonwebtoken");
-const prisma = require("../lib/prisma");
+const bcrypt = require('bcrypt');
+const fs = require('fs');
+const path = require('path');
+const jwt = require('jsonwebtoken');
+const prisma = require('../lib/prisma');
 
-const JWT_SECRET = process.env.JWT_SECRET;
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "7d";
+const { JWT_SECRET } = process.env;
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
 
-function isValidEmail(email = "") {
+function isValidEmail(email = '') {
   return /^\S+@\S+\.\S+$/.test(String(email).trim());
 }
 
@@ -16,20 +16,20 @@ function signToken(user) {
     {
       userId: user.id,
       clinicId: user.clinicId,
-      email: user.email
+      email: user.email,
     },
     JWT_SECRET,
-    { expiresIn: JWT_EXPIRES_IN }
+    { expiresIn: JWT_EXPIRES_IN },
   );
 }
 
 function serializeUser(user) {
   const publicBase = process.env.PUBLIC_URL
-    ? String(process.env.PUBLIC_URL).replace(/\/$/, "")
+    ? String(process.env.PUBLIC_URL).replace(/\/$/, '')
     : null;
   const normalizeLogo = (logo) => {
     if (!logo) return null;
-    if (logo.startsWith("http://") || logo.startsWith("https://")) return logo;
+    if (logo.startsWith('http://') || logo.startsWith('https://')) return logo;
     if (publicBase) return `${publicBase}${logo}`;
     return logo;
   };
@@ -47,56 +47,66 @@ function serializeUser(user) {
     clinicName: user.clinic?.name || null,
     clinic: user.clinic
       ? {
-        id: user.clinic.id,
-        name: user.clinic.name,
-        address: user.clinic.address,
-        cnpj: user.clinic.cnpj,
-        phone: user.clinic.phone,
-        email: user.clinic.email,
-        logoUrl: normalizeLogo(user.clinic.logoUrl || null)
-      }
-      : null
+          id: user.clinic.id,
+          name: user.clinic.name,
+          address: user.clinic.address,
+          cnpj: user.clinic.cnpj,
+          phone: user.clinic.phone,
+          email: user.clinic.email,
+          logoUrl: normalizeLogo(user.clinic.logoUrl || null),
+        }
+      : null,
   };
 }
 
 async function register(req, res) {
   try {
-    const name = String(req.body?.name || "").trim();
-    const email = String(req.body?.email || "").trim().toLowerCase();
-    const password = String(req.body?.password || "");
-    const clinicName = String(req.body?.clinicName || "").trim();
+    const name = String(req.body?.name || '').trim();
+    const email = String(req.body?.email || '')
+      .trim()
+      .toLowerCase();
+    const password = String(req.body?.password || '');
+    const clinicName = String(req.body?.clinicName || '').trim();
 
     if (!name || !email || !password) {
-      return res.status(400).json({ error: "Preencha nome, e-mail e senha para continuar." });
+      return res
+        .status(400)
+        .json({ error: 'Preencha nome, e-mail e senha para continuar.' });
     }
 
     if (name.length < 2) {
-      return res.status(400).json({ error: "Nome deve ter ao menos 2 caracteres" });
+      return res
+        .status(400)
+        .json({ error: 'Nome deve ter ao menos 2 caracteres' });
     }
 
     if (!isValidEmail(email)) {
-      return res.status(400).json({ error: "Informe um e-mail valido." });
+      return res.status(400).json({ error: 'Informe um e-mail valido.' });
     }
 
     if (password.length < 6) {
-      return res.status(400).json({ error: "A senha deve ter no minimo 6 caracteres." });
+      return res
+        .status(400)
+        .json({ error: 'A senha deve ter no minimo 6 caracteres.' });
     }
 
     if (!JWT_SECRET) {
-      return res.status(500).json({ error: "Erro de configuracao do servidor. Tente novamente mais tarde." });
+      return res.status(500).json({
+        error: 'Erro de configuracao do servidor. Tente novamente mais tarde.',
+      });
     }
 
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) {
-      return res.status(409).json({ error: "Este e-mail ja esta cadastrado." });
+      return res.status(409).json({ error: 'Este e-mail ja esta cadastrado.' });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const clinic = await prisma.clinic.create({
       data: {
-        name: clinicName || `Clinica de ${name}`
-      }
+        name: clinicName || `Clinica de ${name}`,
+      },
     });
 
     const user = await prisma.user.create({
@@ -104,71 +114,81 @@ async function register(req, res) {
         name,
         email,
         password: hashedPassword,
-        clinicId: clinic.id
+        clinicId: clinic.id,
       },
-      include: { clinic: true }
+      include: { clinic: true },
     });
 
     const token = signToken(user);
 
     return res.status(201).json({
-      message: "Cadastro realizado com sucesso.",
+      message: 'Cadastro realizado com sucesso.',
       token,
       data: {
         user: serializeUser(user),
-        token
-      }
+        token,
+      },
     });
   } catch (err) {
-    console.error("register error:", err);
-    return res.status(500).json({ error: "Nao foi possivel concluir o cadastro. Tente novamente." });
+    console.error('register error:', err);
+    return res.status(500).json({
+      error: 'Nao foi possivel concluir o cadastro. Tente novamente.',
+    });
   }
 }
 
 async function login(req, res) {
   try {
-    const email = String(req.body?.email || "").trim().toLowerCase();
-    const password = String(req.body?.password || "");
+    const email = String(req.body?.email || '')
+      .trim()
+      .toLowerCase();
+    const password = String(req.body?.password || '');
 
     if (!email || !password) {
-      return res.status(400).json({ error: "Informe e-mail e senha para continuar." });
+      return res
+        .status(400)
+        .json({ error: 'Informe e-mail e senha para continuar.' });
     }
 
     if (!isValidEmail(email)) {
-      return res.status(400).json({ error: "Informe um e-mail valido." });
+      return res.status(400).json({ error: 'Informe um e-mail valido.' });
     }
 
     if (!JWT_SECRET) {
-      return res.status(500).json({ error: "Erro de configuracao do servidor. Tente novamente mais tarde." });
+      return res.status(500).json({
+        error: 'Erro de configuracao do servidor. Tente novamente mais tarde.',
+      });
     }
 
     const user = await prisma.user.findUnique({
       where: { email },
-      include: { clinic: true }
+      include: { clinic: true },
     });
 
     if (!user) {
-      return res.status(401).json({ error: "E-mail ou senha incorretos." });
+      return res.status(401).json({ error: 'E-mail ou senha incorretos.' });
     }
 
     const matched = await bcrypt.compare(password, user.password);
     if (!matched) {
-      return res.status(401).json({ error: "E-mail ou senha incorretos." });
+      return res.status(401).json({ error: 'E-mail ou senha incorretos.' });
     }
 
     const token = signToken(user);
 
     return res.json({
-      message: "Login realizado com sucesso.",
+      message: 'Login realizado com sucesso.',
       token,
       data: {
         user: serializeUser(user),
-        token
-      }
+        token,
+      },
     });
   } catch (err) {
-    console.error("login error:", err);
-    return res.status(500).json({ error: "Nao foi possivel concluir o login. Tente novamente." });
+    console.error('login error:', err);
+    return res
+      .status(500)
+      .json({ error: 'Nao foi possivel concluir o login. Tente novamente.' });
   }
 }
 
@@ -176,17 +196,19 @@ async function me(req, res) {
   try {
     const user = await prisma.user.findUnique({
       where: { id: req.user.id },
-      include: { clinic: true }
+      include: { clinic: true },
     });
 
     if (!user) {
-      return res.status(404).json({ error: "Usuario nao encontrado." });
+      return res.status(404).json({ error: 'Usuario nao encontrado.' });
     }
 
     return res.json(serializeUser(user));
   } catch (err) {
-    console.error("me error:", err);
-    return res.status(500).json({ error: "Nao foi possivel carregar sua sessao." });
+    console.error('me error:', err);
+    return res
+      .status(500)
+      .json({ error: 'Nao foi possivel carregar sua sessao.' });
   }
 }
 
@@ -211,7 +233,7 @@ async function updateProfile(req, res) {
     if (!name || !email) {
       return res
         .status(400)
-        .json({ error: "Preencha nome e e-mail para salvar o perfil." });
+        .json({ error: 'Preencha nome e e-mail para salvar o perfil.' });
     }
 
     const user = await prisma.user.update({
@@ -224,7 +246,7 @@ async function updateProfile(req, res) {
         profilePhoto: profilePhoto || null,
         signature: signature || null,
         crmv: crmvNumber
-          ? `${crmvState || ""}${crmvState ? "-" : ""}${crmvNumber}`
+          ? `${crmvState || ''}${crmvState ? '-' : ''}${crmvNumber}`
           : undefined,
       },
       include: { clinic: true },
@@ -242,12 +264,15 @@ async function updateProfile(req, res) {
     });
 
     const absoluteLogo =
-      clinic.logoUrl && !clinic.logoUrl.startsWith("http")
-        ? `${req.protocol}://${req.get("host")}${clinic.logoUrl}`
+      clinic.logoUrl && !clinic.logoUrl.startsWith('http')
+        ? `${req.protocol}://${req.get('host')}${clinic.logoUrl}`
         : clinic.logoUrl || null;
 
     return res.json({
-      ...serializeUser({ ...user, clinic: { ...clinic, logoUrl: absoluteLogo } }),
+      ...serializeUser({
+        ...user,
+        clinic: { ...clinic, logoUrl: absoluteLogo },
+      }),
       crmvState: crmvState || null,
       crmvNumber: crmvNumber || null,
       clinic: {
@@ -265,16 +290,16 @@ async function updateProfile(req, res) {
       phone: phone || user.phone || null,
     });
   } catch (err) {
-    console.error("updateProfile error:", err);
+    console.error('updateProfile error:', err);
     return res
       .status(500)
-      .json({ error: "Nao foi possivel salvar o perfil. Tente novamente." });
+      .json({ error: 'Nao foi possivel salvar o perfil. Tente novamente.' });
   }
 }
 
 function resolveLocalPath(filePath) {
   if (!filePath) return null;
-  const cleaned = String(filePath).replace(/^\/+/, "");
+  const cleaned = String(filePath).replace(/^\/+/, '');
   return path.resolve(process.cwd(), cleaned);
 }
 
@@ -282,7 +307,7 @@ async function deleteAccount(req, res) {
   try {
     const userId = req.user?.id;
     if (!userId) {
-      return res.status(401).json({ error: "Sessao invalida." });
+      return res.status(401).json({ error: 'Sessao invalida.' });
     }
 
     const user = await prisma.user.findUnique({
@@ -291,7 +316,7 @@ async function deleteAccount(req, res) {
     });
 
     if (!user) {
-      return res.status(404).json({ error: "Usuario nao encontrado." });
+      return res.status(404).json({ error: 'Usuario nao encontrado.' });
     }
 
     const consultationFiles = await prisma.consultationFile.findMany({
@@ -301,7 +326,7 @@ async function deleteAccount(req, res) {
 
     const clinicLogoPath = user.clinic?.logoUrl || null;
 
-    const clinicId = user.clinicId;
+    const { clinicId } = user;
     let shouldDeleteClinic = false;
 
     await prisma.$transaction(async (tx) => {
@@ -332,7 +357,11 @@ async function deleteAccount(req, res) {
           fs.unlinkSync(resolved);
         }
       } catch (err) {
-        console.warn("Falha ao remover arquivo:", resolved, err?.message || err);
+        console.warn(
+          'Falha ao remover arquivo:',
+          resolved,
+          err?.message || err,
+        );
       }
     }
 
@@ -343,16 +372,16 @@ async function deleteAccount(req, res) {
           fs.unlinkSync(resolvedLogo);
         }
       } catch (err) {
-        console.warn("Falha ao remover logo da clinica:", err?.message || err);
+        console.warn('Falha ao remover logo da clinica:', err?.message || err);
       }
     }
 
-    return res.json({ message: "Conta excluida com sucesso." });
+    return res.json({ message: 'Conta excluida com sucesso.' });
   } catch (err) {
-    console.error("deleteAccount error:", err);
+    console.error('deleteAccount error:', err);
     return res
       .status(500)
-      .json({ error: "Nao foi possivel excluir sua conta. Tente novamente." });
+      .json({ error: 'Nao foi possivel excluir sua conta. Tente novamente.' });
   }
 }
 

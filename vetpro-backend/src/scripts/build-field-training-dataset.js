@@ -1,25 +1,28 @@
-const fs = require("fs");
-const path = require("path");
+const fs = require('fs');
+const path = require('path');
 
-const ROOT_AI_DIR = path.join(__dirname, "..", "ai");
+const ROOT_AI_DIR = path.join(__dirname, '..', 'ai');
 const SOURCE_FILES = [
   {
-    name: "recordChatMobileExamples",
-    file: path.join(ROOT_AI_DIR, "recordChatMobileExamples.json"),
-    sourceType: "mobile",
+    name: 'recordChatMobileExamples',
+    file: path.join(ROOT_AI_DIR, 'recordChatMobileExamples.json'),
+    sourceType: 'mobile',
   },
   {
-    name: "recordChatExamples",
-    file: path.join(ROOT_AI_DIR, "recordChatExamples.json"),
-    sourceType: "general",
+    name: 'recordChatExamples',
+    file: path.join(ROOT_AI_DIR, 'recordChatExamples.json'),
+    sourceType: 'general',
   },
 ];
-const DIALOGUE_SEEDS_FILE = path.join(ROOT_AI_DIR, "fieldModeDialogueSeeds.jsonl");
-const OUTPUT_FILE = path.join(ROOT_AI_DIR, "fieldModeTrainingDataset.json");
+const DIALOGUE_SEEDS_FILE = path.join(
+  ROOT_AI_DIR,
+  'fieldModeDialogueSeeds.jsonl',
+);
+const OUTPUT_FILE = path.join(ROOT_AI_DIR, 'fieldModeTrainingDataset.json');
 
 function safeReadJson(filePath) {
   try {
-    const raw = fs.readFileSync(filePath, "utf8");
+    const raw = fs.readFileSync(filePath, 'utf8');
     return JSON.parse(raw);
   } catch (error) {
     console.error(`Falha ao ler ${filePath}:`, error.message);
@@ -30,7 +33,7 @@ function safeReadJson(filePath) {
 function safeReadJsonl(filePath) {
   if (!fs.existsSync(filePath)) return [];
   try {
-    const raw = fs.readFileSync(filePath, "utf8");
+    const raw = fs.readFileSync(filePath, 'utf8');
     return raw
       .split(/\r?\n/g)
       .map((line) => line.trim())
@@ -49,18 +52,31 @@ function safeReadJsonl(filePath) {
   }
 }
 
-function normalizeWhitespace(text = "") {
-  return String(text || "").replace(/\s+/g, " ").trim();
+function normalizeWhitespace(text = '') {
+  return String(text || '')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
-function splitBySpeakerHints(input = "") {
-  const text = String(input || "").replace(/\r/g, "").trim();
+function splitBySpeakerHints(input = '') {
+  const text = String(input || '')
+    .replace(/\r/g, '')
+    .trim();
   if (!text) return [];
 
   const marked = text
-    .replace(/\b(Tutor(?: por voz)?|Responsavel|Proprietario)\s*:\s*/gi, "\nTutor: ")
-    .replace(/\b(Vet(?:erinario)?|Medico(?: veterinario)?)\s*:\s*/gi, "\nMedico: ")
-    .replace(/\b(No exame fisico|Exame fisico|Diagnostico|Conduta|Medicacao|Retorno)\s*:\s*/gi, "\nMedico: $1: ");
+    .replace(
+      /\b(Tutor(?: por voz)?|Responsavel|Proprietario)\s*:\s*/gi,
+      '\nTutor: ',
+    )
+    .replace(
+      /\b(Vet(?:erinario)?|Medico(?: veterinario)?)\s*:\s*/gi,
+      '\nMedico: ',
+    )
+    .replace(
+      /\b(No exame fisico|Exame fisico|Diagnostico|Conduta|Medicacao|Retorno)\s*:\s*/gi,
+      '\nMedico: $1: ',
+    );
 
   const lines = marked
     .split(/\n+/g)
@@ -68,22 +84,22 @@ function splitBySpeakerHints(input = "") {
     .filter(Boolean);
 
   const segments = [];
-  let currentSpeaker = "Tutor";
+  let currentSpeaker = 'Tutor';
   let seconds = 0;
 
   for (const line of lines) {
     const normalized = line.toLowerCase();
     if (/^tutor:/.test(normalized)) {
-      currentSpeaker = "Tutor";
+      currentSpeaker = 'Tutor';
     } else if (/^medico:/.test(normalized)) {
-      currentSpeaker = "Medico";
+      currentSpeaker = 'Medico';
     }
 
-    const content = line.replace(/^(tutor|medico)\s*:\s*/i, "").trim();
+    const content = line.replace(/^(tutor|medico)\s*:\s*/i, '').trim();
     if (!content) continue;
 
-    const stampMinutes = String(Math.floor(seconds / 60)).padStart(2, "0");
-    const stampSeconds = String(seconds % 60).padStart(2, "0");
+    const stampMinutes = String(Math.floor(seconds / 60)).padStart(2, '0');
+    const stampSeconds = String(seconds % 60).padStart(2, '0');
 
     segments.push({
       stamp: `${stampMinutes}:${stampSeconds}`,
@@ -91,47 +107,62 @@ function splitBySpeakerHints(input = "") {
       text: content,
     });
 
-    seconds += Math.max(3, Math.min(12, Math.ceil(content.split(/\s+/g).length / 2)));
+    seconds += Math.max(
+      3,
+      Math.min(12, Math.ceil(content.split(/\s+/g).length / 2)),
+    );
   }
 
   return segments;
 }
 
 function sanitizeOutput(output = {}) {
-  const safe = output && typeof output === "object" ? output : {};
+  const safe = output && typeof output === 'object' ? output : {};
   const specificFields =
-    safe.specificFields && typeof safe.specificFields === "object"
+    safe.specificFields && typeof safe.specificFields === 'object'
       ? safe.specificFields
       : {};
 
   return {
-    chiefComplaint: normalizeWhitespace(safe.chiefComplaint || ""),
-    anamnesis: normalizeWhitespace(safe.anamnesis || ""),
-    physicalExam: normalizeWhitespace(safe.physicalExam || ""),
-    diagnosis: normalizeWhitespace(safe.diagnosis || ""),
-    treatment: normalizeWhitespace(safe.treatment || ""),
-    procedures: normalizeWhitespace(safe.procedures || ""),
-    medications: normalizeWhitespace(safe.medications || ""),
-    examDetails: normalizeWhitespace(safe.examDetails || ""),
-    notes: normalizeWhitespace(safe.notes || ""),
-    returnRecommendation: normalizeWhitespace(safe.returnRecommendation || ""),
-    porte: String(safe.porte || "").toLowerCase() === "grande" ? "grande" : "pequeno",
+    chiefComplaint: normalizeWhitespace(safe.chiefComplaint || ''),
+    anamnesis: normalizeWhitespace(safe.anamnesis || ''),
+    physicalExam: normalizeWhitespace(safe.physicalExam || ''),
+    diagnosis: normalizeWhitespace(safe.diagnosis || ''),
+    treatment: normalizeWhitespace(safe.treatment || ''),
+    procedures: normalizeWhitespace(safe.procedures || ''),
+    medications: normalizeWhitespace(safe.medications || ''),
+    examDetails: normalizeWhitespace(safe.examDetails || ''),
+    notes: normalizeWhitespace(safe.notes || ''),
+    returnRecommendation: normalizeWhitespace(safe.returnRecommendation || ''),
+    porte:
+      String(safe.porte || '').toLowerCase() === 'grande'
+        ? 'grande'
+        : 'pequeno',
     specificFields,
   };
 }
 
 function buildSample(example, sourceInfo) {
-  const input = String(example?.input || "").trim();
+  const input = String(example?.input || '').trim();
   const output = sanitizeOutput(example?.output || {});
-  const mode = String(example?.mode || "").toLowerCase() === "retorno" ? "retorno" : "nova";
-  const porte = String(example?.porte || output.porte || "").toLowerCase() === "grande" ? "grande" : "pequeno";
+  const mode =
+    String(example?.mode || '').toLowerCase() === 'retorno'
+      ? 'retorno'
+      : 'nova';
+  const porte =
+    String(example?.porte || output.porte || '').toLowerCase() === 'grande'
+      ? 'grande'
+      : 'pequeno';
   const segments = splitBySpeakerHints(input);
   const transcript = normalizeWhitespace(
-    segments.length ? segments.map((segment) => segment.text).join(" ") : input,
+    segments.length ? segments.map((segment) => segment.text).join(' ') : input,
   );
 
   return {
-    id: String(example?.id || `${sourceInfo.name}_${Math.random().toString(36).slice(2, 9)}`),
+    id: String(
+      example?.id ||
+        `${sourceInfo.name}_${Math.random().toString(36).slice(2, 9)}`,
+    ),
     source: sourceInfo.name,
     sourceType: sourceInfo.sourceType,
     mode,
@@ -140,8 +171,8 @@ function buildSample(example, sourceInfo) {
     segments,
     target: output,
     metadata: {
-      hasSpecificFields: Object.values(output.specificFields || {}).some((value) =>
-        String(value || "").trim(),
+      hasSpecificFields: Object.values(output.specificFields || {}).some(
+        (value) => String(value || '').trim(),
       ),
       textLength: transcript.length,
     },
@@ -149,17 +180,21 @@ function buildSample(example, sourceInfo) {
 }
 
 function buildSeedSample(seed) {
-  const scenario = String(seed?.cenario || "cenario_campo").trim();
-  const id = String(seed?.id || "").trim() || Math.random().toString(36).slice(2, 9);
+  const scenario = String(seed?.cenario || 'cenario_campo').trim();
+  const id =
+    String(seed?.id || '').trim() || Math.random().toString(36).slice(2, 9);
   const turns = Array.isArray(seed?.dialogo) ? seed.dialogo : [];
   const segments = turns
     .map((turn, index) => {
-      const speakerRaw = String(turn?.speaker || "").toLowerCase();
-      const speaker = speakerRaw.startsWith("vet") ? "Medico" : "Tutor";
-      const text = normalizeWhitespace(turn?.text || "");
+      const speakerRaw = String(turn?.speaker || '').toLowerCase();
+      const speaker = speakerRaw.startsWith('vet') ? 'Medico' : 'Tutor';
+      const text = normalizeWhitespace(turn?.text || '');
       if (!text) return null;
-      const stampMinutes = String(Math.floor((index * 6) / 60)).padStart(2, "0");
-      const stampSeconds = String((index * 6) % 60).padStart(2, "0");
+      const stampMinutes = String(Math.floor((index * 6) / 60)).padStart(
+        2,
+        '0',
+      );
+      const stampSeconds = String((index * 6) % 60).padStart(2, '0');
       return {
         stamp: `${stampMinutes}:${stampSeconds}`,
         speaker,
@@ -168,30 +203,33 @@ function buildSeedSample(seed) {
     })
     .filter(Boolean);
 
-  const transcript = normalizeWhitespace(segments.map((segment) => segment.text).join(" "));
-  const isLargeHint =
-    /cavalo|equino|pasto|haras|colica|claudic/i.test(`${scenario} ${transcript}`);
-  const porte = isLargeHint ? "grande" : "pequeno";
+  const transcript = normalizeWhitespace(
+    segments.map((segment) => segment.text).join(' '),
+  );
+  const isLargeHint = /cavalo|equino|pasto|haras|colica|claudic/i.test(
+    `${scenario} ${transcript}`,
+  );
+  const porte = isLargeHint ? 'grande' : 'pequeno';
 
   return {
     id: `seed_${id}_${scenario}`,
-    source: "fieldModeDialogueSeeds",
-    sourceType: "dialogue-seed",
-    mode: "nova",
+    source: 'fieldModeDialogueSeeds',
+    sourceType: 'dialogue-seed',
+    mode: 'nova',
     porte,
     transcript,
     segments,
     target: {
-      chiefComplaint: "",
-      anamnesis: "",
-      physicalExam: "",
-      diagnosis: "",
-      treatment: "",
-      procedures: "",
-      medications: "",
-      examDetails: "",
-      notes: "",
-      returnRecommendation: "",
+      chiefComplaint: '',
+      anamnesis: '',
+      physicalExam: '',
+      diagnosis: '',
+      treatment: '',
+      procedures: '',
+      medications: '',
+      examDetails: '',
+      notes: '',
+      returnRecommendation: '',
       porte,
       specificFields: {},
     },
@@ -246,29 +284,29 @@ function main() {
     version: 1,
     generatedAt: new Date().toISOString(),
     description:
-      "Dataset estruturado para treino e avaliacao do Modo Campo (transcricao, diarizacao e preenchimento de prontuario).",
+      'Dataset estruturado para treino e avaliacao do Modo Campo (transcricao, diarizacao e preenchimento de prontuario).',
     schema: {
       sample: {
-        id: "string",
-        source: "recordChatMobileExamples|recordChatExamples",
-        sourceType: "mobile|general",
-        mode: "nova|retorno",
-        porte: "pequeno|grande",
-        transcript: "string",
-        segments: [{ stamp: "mm:ss", speaker: "Tutor|Medico", text: "string" }],
+        id: 'string',
+        source: 'recordChatMobileExamples|recordChatExamples',
+        sourceType: 'mobile|general',
+        mode: 'nova|retorno',
+        porte: 'pequeno|grande',
+        transcript: 'string',
+        segments: [{ stamp: 'mm:ss', speaker: 'Tutor|Medico', text: 'string' }],
         target: {
-          chiefComplaint: "string",
-          anamnesis: "string",
-          physicalExam: "string",
-          diagnosis: "string",
-          treatment: "string",
-          procedures: "string",
-          medications: "string",
-          examDetails: "string",
-          notes: "string",
-          returnRecommendation: "string",
-          porte: "pequeno|grande",
-          specificFields: "object",
+          chiefComplaint: 'string',
+          anamnesis: 'string',
+          physicalExam: 'string',
+          diagnosis: 'string',
+          treatment: 'string',
+          procedures: 'string',
+          medications: 'string',
+          examDetails: 'string',
+          notes: 'string',
+          returnRecommendation: 'string',
+          porte: 'pequeno|grande',
+          specificFields: 'object',
         },
       },
     },
@@ -276,11 +314,15 @@ function main() {
     samples,
   };
 
-  fs.writeFileSync(OUTPUT_FILE, JSON.stringify(dataset, null, 2), "utf8");
+  fs.writeFileSync(OUTPUT_FILE, JSON.stringify(dataset, null, 2), 'utf8');
   console.log(`Dataset salvo em: ${OUTPUT_FILE}`);
   console.log(`Total de amostras: ${stats.total}`);
-  console.log(`Porte pequeno/grande: ${stats.byPorte.pequeno}/${stats.byPorte.grande}`);
-  console.log(`Modo nova/retorno: ${stats.byMode.nova}/${stats.byMode.retorno}`);
+  console.log(
+    `Porte pequeno/grande: ${stats.byPorte.pequeno}/${stats.byPorte.grande}`,
+  );
+  console.log(
+    `Modo nova/retorno: ${stats.byMode.nova}/${stats.byMode.retorno}`,
+  );
 }
 
 main();

@@ -1,6 +1,6 @@
-const fileService = require("../services/consultationFileService");
-const path = require("path");
-const fs = require("fs");
+const path = require('path');
+const fs = require('fs');
+const fileService = require('../services/consultationFileService');
 
 async function viewFile(req, res) {
   try {
@@ -9,17 +9,16 @@ async function viewFile(req, res) {
     const file = await fileService.getFileById(req.user.id, fileId);
 
     if (!file) {
-      return res.status(404).json({ error: "Arquivo não encontrado" });
+      return res.status(404).json({ error: 'Arquivo não encontrado' });
     }
 
-    res.setHeader("Content-Type", file.mimeType);
+    res.setHeader('Content-Type', file.mimeType);
 
     const stream = fs.createReadStream(file.path);
     stream.pipe(res);
-
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "Erro ao visualizar arquivo" });
+    return res.status(500).json({ error: 'Erro ao visualizar arquivo' });
   }
 }
 
@@ -28,20 +27,17 @@ async function uploadFile(req, res) {
     const { id } = req.params;
 
     if (!req.file) {
-      return res.status(400).json({ error: "Nenhum arquivo enviado" });
+      return res.status(400).json({ error: 'Nenhum arquivo enviado' });
     }
 
-    const file = await fileService.attachFile(
-      req.user.id,
-      id,
-      req.file
-    );
+    const file = await fileService.attachFile(req.user.id, id, req.file);
 
-    res.status(201).json(file);
-
+    return res.status(201).json(file);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "Nao foi possivel anexar o arquivo. Tente novamente." });
+    return res
+      .status(500)
+      .json({ error: 'Nao foi possivel anexar o arquivo. Tente novamente.' });
   }
 }
 
@@ -49,23 +45,15 @@ async function listFiles(req, res) {
   try {
     const { id } = req.params;
 
-    const files = await fileService.listFilesGrouped(
-      req.user.id,
-      id
-    );
+    const files = await fileService.listFilesGrouped(req.user.id, id);
 
-    res.json(files);
-
+    return res.json(files);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "Nao foi possivel carregar os anexos desta consulta." });
+    return res
+      .status(500)
+      .json({ error: 'Nao foi possivel carregar os anexos desta consulta.' });
   }
-}
-
-
-async function downloadFile(req, res) {
-  const filePath = req.params.path;
-  res.download(path.resolve(filePath));
 }
 
 async function viewThumbnail(req, res) {
@@ -75,13 +63,12 @@ async function viewThumbnail(req, res) {
     const file = await fileService.getFileById(req.user.id, fileId);
 
     if (!file || !file.thumbnailPath) {
-      return res.status(404).json({ error: "Miniatura não encontrada" });
+      return res.status(404).json({ error: 'Miniatura não encontrada' });
     }
 
-    res.sendFile(require("path").resolve(file.thumbnailPath));
-
+    return res.sendFile(path.resolve(file.thumbnailPath));
   } catch (error) {
-    res.status(500).json({ error: "Erro ao carregar miniatura" });
+    return res.status(500).json({ error: 'Erro ao carregar miniatura' });
   }
 }
 
@@ -90,19 +77,19 @@ async function compareFiles(req, res) {
     const { fileA, fileB } = req.query;
 
     if (!fileA || !fileB) {
-      return res.status(400).json({ error: "Dois arquivos são necessários" });
+      return res.status(400).json({ error: 'Dois arquivos são necessários' });
     }
 
     const file1 = await fileService.getFileById(req.user.id, fileA);
     const file2 = await fileService.getFileById(req.user.id, fileB);
 
     if (!file1 || !file2) {
-      return res.status(404).json({ error: "Arquivo não encontrado" });
+      return res.status(404).json({ error: 'Arquivo não encontrado' });
     }
 
     if (file1.examType !== file2.examType) {
       return res.status(400).json({
-        error: "Arquivos precisam ser do mesmo tipo para comparação"
+        error: 'Arquivos precisam ser do mesmo tipo para comparação',
       });
     }
 
@@ -111,26 +98,24 @@ async function compareFiles(req, res) {
       fileA: {
         id: file1.id,
         originalName: file1.originalName,
-        viewUrl: `/api/consultations/files/${file1.id}/view`
+        viewUrl: `/api/consultations/files/${file1.id}/view`,
       },
       fileB: {
         id: file2.id,
         originalName: file2.originalName,
-        viewUrl: `/api/consultations/files/${file2.id}/view`
-      }
+        viewUrl: `/api/consultations/files/${file2.id}/view`,
+      },
     });
-
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "Erro ao comparar arquivos" });
+    return res.status(500).json({ error: 'Erro ao comparar arquivos' });
   }
 }
 
 module.exports = {
   uploadFile,
   listFiles,
-  downloadFile,
   compareFiles,
   viewFile,
-  viewThumbnail
+  viewThumbnail,
 };

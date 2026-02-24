@@ -1,4 +1,4 @@
-const dashboardService = require("../services/dashboardService");
+const dashboardService = require('../services/dashboardService');
 
 async function getDashboard(req, res) {
   try {
@@ -6,7 +6,7 @@ async function getDashboard(req, res) {
     res.json(data);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "Nao foi possivel carregar o dashboard." });
+    res.status(500).json({ error: 'Nao foi possivel carregar o dashboard.' });
   }
 }
 
@@ -16,16 +16,17 @@ async function getMonthlyData(req, res) {
 
     const data = await dashboardService.getMonthlyConsultations(
       req.user.id,
-      year
+      year,
     );
 
     res.json(data);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "Nao foi possivel carregar os dados mensais." });
+    res
+      .status(500)
+      .json({ error: 'Nao foi possivel carregar os dados mensais.' });
   }
 }
-
 
 module.exports = {
   getDashboard,

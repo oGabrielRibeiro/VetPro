@@ -1,19 +1,19 @@
-const prisma = require("../lib/prisma");
+const prisma = require('../lib/prisma');
 
 function buildUrl(req, relative) {
   if (!relative) return null;
-  if (relative.startsWith("http://") || relative.startsWith("https://")) {
+  if (relative.startsWith('http://') || relative.startsWith('https://')) {
     return relative;
   }
-  return `${req.protocol}://${req.get("host")}${relative}`;
+  return `${req.protocol}://${req.get('host')}${relative}`;
 }
 
 async function updateLogo(req, res) {
   try {
-    const clinicId = req.user.clinicId;
+    const { clinicId } = req.user;
 
     if (!req.file) {
-      return res.status(400).json({ error: "Arquivo não enviado" });
+      return res.status(400).json({ error: 'Arquivo não enviado' });
     }
 
     const clinic = await prisma.clinic.update({
@@ -23,13 +23,13 @@ async function updateLogo(req, res) {
       },
     });
 
-    res.json({
+    return res.json({
       ...clinic,
       logoUrl: buildUrl(req, clinic.logoUrl),
     });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "Erro ao atualizar logo" });
+    return res.status(500).json({ error: 'Erro ao atualizar logo' });
   }
 }
 

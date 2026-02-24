@@ -1,4 +1,4 @@
-const appointmentService = require("../services/appointmentService");
+const appointmentService = require('../services/appointmentService');
 
 function handleError(res, error, fallbackMessage) {
   console.error(error);
@@ -14,11 +14,11 @@ async function list(req, res) {
     const data = await appointmentService.listAppointments(
       req.user.id,
       req.user.clinicId,
-      req.query
+      req.query,
     );
     return res.json(data);
   } catch (error) {
-    return handleError(res, error, "Erro ao listar agendamentos.");
+    return handleError(res, error, 'Erro ao listar agendamentos.');
   }
 }
 
@@ -27,11 +27,11 @@ async function create(req, res) {
     const appointment = await appointmentService.createAppointment(
       req.user.id,
       req.user.clinicId,
-      req.body
+      req.body,
     );
     return res.status(201).json(appointment);
   } catch (error) {
-    return handleError(res, error, "Erro ao criar agendamento.");
+    return handleError(res, error, 'Erro ao criar agendamento.');
   }
 }
 
@@ -41,11 +41,11 @@ async function update(req, res) {
       req.user.id,
       req.user.clinicId,
       req.params.id,
-      req.body
+      req.body,
     );
     return res.json(appointment);
   } catch (error) {
-    return handleError(res, error, "Erro ao atualizar agendamento.");
+    return handleError(res, error, 'Erro ao atualizar agendamento.');
   }
 }
 
@@ -54,11 +54,11 @@ async function remove(req, res) {
     await appointmentService.deleteAppointment(
       req.user.id,
       req.user.clinicId,
-      req.params.id
+      req.params.id,
     );
-    return res.json({ message: "Agendamento removido." });
+    return res.json({ message: 'Agendamento removido.' });
   } catch (error) {
-    return handleError(res, error, "Erro ao remover agendamento.");
+    return handleError(res, error, 'Erro ao remover agendamento.');
   }
 }
 

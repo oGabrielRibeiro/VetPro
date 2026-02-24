@@ -1,13 +1,14 @@
-const fs = require("fs");
-const http = require("http");
-const https = require("https");
-const path = require("path");
-const app = require("./app");
-const prisma = require("./lib/prisma");
+const fs = require('fs');
+const http = require('http');
+const https = require('https');
+const path = require('path');
+const app = require('./app');
+const prisma = require('./lib/prisma');
 
 const PORT = Number(process.env.PORT || 5000);
-const HOST = process.env.HOST || "0.0.0.0";
-const HTTPS_ENABLED = String(process.env.HTTPS || "false").toLowerCase() === "true";
+const HOST = process.env.HOST || '0.0.0.0';
+const HTTPS_ENABLED =
+  String(process.env.HTTPS || 'false').toLowerCase() === 'true';
 
 function loadHttpsOptions() {
   const keyPath = process.env.HTTPS_KEY_PATH;
@@ -33,12 +34,6 @@ function loadHttpsOptions() {
 const httpsOptions = HTTPS_ENABLED ? loadHttpsOptions() : null;
 let server;
 
-function configureServerTimeouts(activeServer) {
-  // Balanceia throughput e proteção contra conexões ociosas.
-  activeServer.keepAliveTimeout = 65000;
-  activeServer.headersTimeout = 66000;
-}
-
 async function shutdown(signal) {
   console.log(`${signal} recebido. Encerrando servidor...`);
   if (server) {
@@ -50,34 +45,36 @@ async function shutdown(signal) {
 
 if (HTTPS_ENABLED && httpsOptions) {
   server = https.createServer(httpsOptions, app);
-  configureServerTimeouts(server);
+  server.keepAliveTimeout = 65000;
+  server.headersTimeout = 66000;
   server.listen(PORT, HOST, () => {
     console.log(`Servidor HTTPS rodando em https://${HOST}:${PORT}`);
   });
 } else {
   if (HTTPS_ENABLED && !httpsOptions) {
     console.warn(
-      "HTTPS ativado no .env, mas certificados nao encontrados. Subindo em HTTP.",
+      'HTTPS ativado no .env, mas certificados nao encontrados. Subindo em HTTP.',
     );
   }
 
   server = http.createServer(app);
-  configureServerTimeouts(server);
+  server.keepAliveTimeout = 65000;
+  server.headersTimeout = 66000;
   server.listen(PORT, HOST, () => {
     console.log(`Servidor HTTP rodando em http://${HOST}:${PORT}`);
   });
 }
 
-process.on("SIGINT", () => {
-  shutdown("SIGINT").catch((error) => {
-    console.error("Erro ao encerrar o servidor:", error);
+process.on('SIGINT', () => {
+  shutdown('SIGINT').catch((error) => {
+    console.error('Erro ao encerrar o servidor:', error);
     process.exit(1);
   });
 });
 
-process.on("SIGTERM", () => {
-  shutdown("SIGTERM").catch((error) => {
-    console.error("Erro ao encerrar o servidor:", error);
+process.on('SIGTERM', () => {
+  shutdown('SIGTERM').catch((error) => {
+    console.error('Erro ao encerrar o servidor:', error);
     process.exit(1);
   });
 });

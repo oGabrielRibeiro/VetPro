@@ -1,4 +1,4 @@
-const timelineService = require("../services/patientTimelineService");
+const timelineService = require('../services/patientTimelineService');
 
 async function getTimeline(req, res) {
   try {
@@ -6,17 +6,16 @@ async function getTimeline(req, res) {
 
     const timeline = await timelineService.getPatientTimeline(
       req.user.id,
-      patientId
+      patientId,
     );
 
     res.json(timeline);
-
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "Erro ao carregar timeline do paciente" });
+    res.status(500).json({ error: 'Erro ao carregar timeline do paciente' });
   }
 }
 
 module.exports = {
-  getTimeline
+  getTimeline,
 };

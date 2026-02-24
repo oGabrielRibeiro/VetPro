@@ -10,7 +10,10 @@
     "smoke:checklist": "node src/scripts/smoke-checklist.js",
     "ai:evaluate": "node src/scripts/evaluate-chat-assist.js",
     "ai:evaluate:mobile": "node src/scripts/evaluate-chat-assist-mobile.js",
-    "ai:dataset:field": "node src/scripts/build-field-training-dataset.js"
+    "ai:dataset:field": "node src/scripts/build-field-training-dataset.js",
+    "test": "jest",
+    "lint": "eslint .",
+    "format": "prettier --write ."
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
@@ -27,6 +30,14 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
-    "nodemon": "^3.0.3"
+    "eslint": "^8.57.1",
+    "eslint-config-airbnb-base": "^15.0.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-import": "^2.32.0",
+    "eslint-plugin-prettier": "^5.5.5",
+    "jest": "^30.2.0",
+    "nodemon": "^3.0.3",
+    "prettier": "^3.8.1",
+    "supertest": "^7.2.2"
   }
 }

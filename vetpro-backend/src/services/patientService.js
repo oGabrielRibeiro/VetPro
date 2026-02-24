@@ -1,9 +1,9 @@
-const prisma = require("../lib/prisma");
+const prisma = require('../lib/prisma');
 
 class ValidationError extends Error {
   constructor(message) {
     super(message);
-    this.name = "ValidationError";
+    this.name = 'ValidationError';
     this.statusCode = 400;
   }
 }
@@ -11,26 +11,28 @@ class ValidationError extends Error {
 function serializePatient(patient) {
   return {
     ...patient,
-    species: patient.specie
+    species: patient.specie,
   };
 }
 
 function normalizePhone(value) {
-  const raw = String(value || "").trim();
+  const raw = String(value || '').trim();
   return raw || null;
 }
 
 function normalizeCpf(value) {
-  const digits = String(value || "").replace(/\D+/g, "");
+  const digits = String(value || '').replace(/\D+/g, '');
   return digits || null;
 }
 
 function normalizeStatus(value) {
-  const normalized = String(value || "ativo").trim().toLowerCase();
-  if (["ativo", "obito", "transferido"].includes(normalized)) {
+  const normalized = String(value || 'ativo')
+    .trim()
+    .toLowerCase();
+  if (['ativo', 'obito', 'transferido'].includes(normalized)) {
     return normalized;
   }
-  return "ativo";
+  return 'ativo';
 }
 
 function parseDate(value) {
@@ -40,37 +42,42 @@ function parseDate(value) {
 }
 
 function parseNumber(value) {
-  if (value === "" || value == null) return null;
+  if (value === '' || value == null) return null;
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-function validatePatientInput(data = {}, mode = "create") {
-  const name = String(data.name || "").trim();
-  const species = String(data.specie || data.species || "").trim();
-  const ownerName = String(data.ownerName || "").trim();
+function validatePatientInput(data = {}, mode = 'create') {
+  const name = String(data.name || '').trim();
+  const species = String(data.specie || data.species || '').trim();
+  const ownerName = String(data.ownerName || '').trim();
 
-  if (!name) throw new ValidationError("Nome do paciente e obrigatorio.");
-  if (!species) throw new ValidationError("Especie e obrigatoria.");
-  if (!ownerName) throw new ValidationError("Tutor obrigatorio para criar paciente.");
+  if (!name) throw new ValidationError('Nome do paciente e obrigatorio.');
+  if (!species) throw new ValidationError('Especie e obrigatoria.');
+  if (!ownerName)
+    throw new ValidationError('Tutor obrigatorio para criar paciente.');
 
   const cpf = normalizeCpf(data.ownerCpf);
   if (cpf && !/^\d{11}$/.test(cpf)) {
-    throw new ValidationError("CPF do tutor invalido. Informe 11 digitos numericos.");
+    throw new ValidationError(
+      'CPF do tutor invalido. Informe 11 digitos numericos.',
+    );
   }
 
   const weight = parseNumber(data.weight);
   if (weight != null && weight <= 0) {
-    throw new ValidationError("Peso deve ser maior que zero.");
+    throw new ValidationError('Peso deve ser maior que zero.');
   }
 
   const status = normalizeStatus(data.status);
-  if (!["ativo", "obito", "transferido"].includes(status)) {
-    throw new ValidationError("Status invalido. Use ativo, obito ou transferido.");
+  if (!['ativo', 'obito', 'transferido'].includes(status)) {
+    throw new ValidationError(
+      'Status invalido. Use ativo, obito ou transferido.',
+    );
   }
 
-  if (mode === "create" && !ownerName) {
-    throw new ValidationError("Tutor obrigatorio para criar paciente.");
+  if (mode === 'create' && !ownerName) {
+    throw new ValidationError('Tutor obrigatorio para criar paciente.');
   }
 }
 
@@ -81,13 +88,13 @@ function normalizePatientInput(data = {}) {
   const birthDate = parseDate(data.birthDate);
 
   const persistentProfile =
-    data.persistentProfile && typeof data.persistentProfile === "object"
+    data.persistentProfile && typeof data.persistentProfile === 'object'
       ? data.persistentProfile
       : null;
 
   return {
-    name: (data.name || "").trim(),
-    specie: (data.specie || data.species || "").trim(),
+    name: (data.name || '').trim(),
+    specie: (data.specie || data.species || '').trim(),
     subcategory: data.subcategory ? data.subcategory.trim() : null,
     breed: data.breed ? data.breed.trim() : null,
     sex: data.sex ? data.sex.trim().toUpperCase() : null,
@@ -99,7 +106,7 @@ function normalizePatientInput(data = {}) {
     photoUrl: data.photoUrl ? data.photoUrl.trim() : null,
     status: normalizeStatus(data.status),
     porte: data.porte ? data.porte.trim().toLowerCase() : null,
-    ownerName: (data.ownerName || "").trim(),
+    ownerName: (data.ownerName || '').trim(),
     ownerPhone: normalizePhone(data.ownerPhone),
     ownerAltPhone: normalizePhone(data.ownerAltPhone),
     ownerEmail: data.ownerEmail ? data.ownerEmail.trim().toLowerCase() : null,
@@ -109,29 +116,30 @@ function normalizePatientInput(data = {}) {
     emergencyFlag: Boolean(data.emergencyFlag),
     responsibleVet: data.responsibleVet ? data.responsibleVet.trim() : null,
     originClinic: data.originClinic ? data.originClinic.trim() : null,
-    anestheticRiskScore:
-      Number.isFinite(riskValue) ? Math.max(0, Math.min(5, Math.trunc(riskValue))) : null,
-    persistentProfile
+    anestheticRiskScore: Number.isFinite(riskValue)
+      ? Math.max(0, Math.min(5, Math.trunc(riskValue)))
+      : null,
+    persistentProfile,
   };
 }
 
 async function createPatient(userId, clinicId, data) {
-  validatePatientInput(data, "create");
+  validatePatientInput(data, 'create');
   const normalized = normalizePatientInput(data);
 
   return await prisma.patient.create({
     data: {
       ...normalized,
       clinicId,
-      userId
-    }
+      userId,
+    },
   });
 }
 
 async function getPatients(userId, query = {}) {
   const page = parseInt(query.page) || 1;
   const limit = parseInt(query.limit) || 10;
-  const search = query.search || "";
+  const search = query.search || '';
 
   const skip = (page - 1) * limit;
 
@@ -139,7 +147,7 @@ async function getPatients(userId, query = {}) {
     userId,
     name: {
       contains: search,
-      mode: "insensitive",
+      mode: 'insensitive',
     },
   };
 
@@ -148,7 +156,7 @@ async function getPatients(userId, query = {}) {
       where,
       skip,
       take: limit,
-      orderBy: { createdAt: "desc" },
+      orderBy: { createdAt: 'desc' },
     }),
     prisma.patient.count({ where }),
   ]);
@@ -168,23 +176,23 @@ async function getPatientById(userId, patientId) {
   const patient = await prisma.patient.findFirst({
     where: {
       id: patientId,
-      userId
-    }
+      userId,
+    },
   });
 
   return patient ? serializePatient(patient) : null;
 }
 
 async function updatePatient(userId, patientId, data) {
-  validatePatientInput(data, "update");
+  validatePatientInput(data, 'update');
   const normalized = normalizePatientInput(data);
 
   return await prisma.patient.updateMany({
     where: {
       id: patientId,
-      userId
+      userId,
     },
-    data: normalized
+    data: normalized,
   });
 }
 
@@ -203,5 +211,5 @@ module.exports = {
   getPatientById,
   updatePatient,
   deletePatient,
-  ValidationError
+  ValidationError,
 };
