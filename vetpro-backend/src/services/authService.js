@@ -2,7 +2,8 @@ const jwt = require('jsonwebtoken');
 const prisma = require('../lib/prisma');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'vetpro-secret-key';
-const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'vetpro-refresh-secret-key';
+const JWT_REFRESH_SECRET =
+  process.env.JWT_REFRESH_SECRET || 'vetpro-refresh-secret-key';
 const ACCESS_TOKEN_EXPIRY = '15m'; // 15 minutos
 const REFRESH_TOKEN_EXPIRY = '7d'; // 7 dias
 
@@ -17,7 +18,7 @@ function generateAccessToken(user) {
       clinicId: user.clinicId,
     },
     JWT_SECRET,
-    { expiresIn: ACCESS_TOKEN_EXPIRY }
+    { expiresIn: ACCESS_TOKEN_EXPIRY },
   );
 }
 
@@ -31,7 +32,7 @@ function generateRefreshToken(user) {
       type: 'refresh',
     },
     JWT_REFRESH_SECRET,
-    { expiresIn: REFRESH_TOKEN_EXPIRY }
+    { expiresIn: REFRESH_TOKEN_EXPIRY },
   );
 }
 

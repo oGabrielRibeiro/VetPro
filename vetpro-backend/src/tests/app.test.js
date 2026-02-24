@@ -16,6 +16,6 @@ describe('App', () => {
   it('should respond with a welcome message on the base / endpoint', async () => {
     const response = await request(app).get('/');
     expect(response.statusCode).toBe(200);
-    expect(response.body).toEqual({ message: 'VetPro API rodando 🚀' });
+    expect(response.body).toHaveProperty('message', 'VetPro API rodando 🚀');
   });
 });

@@ -11,6 +11,11 @@ RUN npx prisma generate
 
 COPY . .
 
-EXPOSE 3001
+# Criar diretório de uploads se não existir
+RUN mkdir -p uploads
 
-CMD ["sh","-c","npx prisma migrate deploy && npm start"]
+# Expor porta correta
+EXPOSE 5000
+
+# Migrações + start
+CMD ["sh", "-c", "npx prisma migrate deploy && npm start"]

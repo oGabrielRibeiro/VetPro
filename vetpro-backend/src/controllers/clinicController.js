@@ -33,6 +33,26 @@ async function updateLogo(req, res) {
   }
 }
 
+async function getClinic(req, res) {
+  try {
+    const { clinicId } = req.user;
+
+    const clinic = await prisma.clinic.findUnique({
+      where: { id: clinicId },
+    });
+
+    if (!clinic) {
+      return res.status(404).json({ error: 'Clínica não encontrada' });
+    }
+
+    return res.json(clinic);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: 'Erro ao buscar clínica' });
+  }
+}
+
 module.exports = {
+  getClinic,
   updateLogo,
 };

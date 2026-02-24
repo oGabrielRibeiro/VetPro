@@ -20,8 +20,15 @@ const {
   buildFieldExtractionGuide,
   buildFieldRefinementPrompt,
   buildPortePromptRules,
-  selectFewShotExamples,
 } = require('./promptService');
+
+const {
+  buildFieldModeSystemPrompt,
+  selectOptimizedExamples,
+  buildEnhancedRefinementPrompt,
+  validateVitals,
+  fillFromHistory,
+} = require('./aiPromptService');
 
 const {
   CLINICAL_SCHEMA_VERSION,
@@ -72,73 +79,21 @@ async function generateWithOpenAI({
       ? Number(process.env.OPENAI_FEWSHOT_EXAMPLES)
       : 3,
   );
-  const fewShotExamples = selectFewShotExamples({
+  const fewShotExamples = selectOptimizedExamples({
     mode,
     porte,
     sourceText,
     maxExamples: maxFewShot,
   });
 
-  const systemPrompt = [
-    'Voce e um assistente especializado em preenchimento de prontuario veterinario.',
-    'OBJETIVO: extrair informacoes clinicas do dialogo e preencher corretamente os campos do prontuario.',
-    'REGRAS CRITICAS:',
-    '- Use apenas dados presentes na conversa. Nunca invente.',
-    '- Se nao houver evidencia para um dado no bloco estruturado, use "Não informado".',
-    '- Se inferir com alta confianca, marque com sufixo "(inferido)".',
-    '- Prioridade de conflitos: exame fisico > veterinario > tutor.',
-    '- Detecte sinais de urgencia e classifique gravidade quando possivel.',
-    '- Ignore saudacoes e conversa social sem valor clinico.',
-    '- Priorize sinais relatados pelo tutor para queixa/anamnese.',
-    '- Priorize condutas e observacoes tecnicas do veterinario para exame/diagnostico/tratamento.',
-    '- Nao invente informacoes ausentes no texto.',
-    '- Retorne SOMENTE JSON valido, sem markdown ou comentarios.',
-    detailLevel === 'max'
-      ? 'MODO DETALHADO: maximize completude com frases curtas e objetivas quando houver evidencia.'
-      : 'Mantenha objetividade e nao invente dados.',
-    `PORTE DO PACIENTE: ${porte}.`,
-    `GUIA DE EXTRAÇÃO PARA ESTE PORTE: ${extractionGuide}`,
-    `REGRAS ESPECIFICAS DE PORTE: ${porteRules}`,
-    'Campos obrigatorios no JSON:',
-    '{',
-    '  "chiefComplaint": "string",',
-    '  "anamnesis": "string",',
-    '  "physicalExam": "string",',
-    '  "diagnosis": "string",',
-    '  "treatment": "string",',
-    '  "procedures": "string",',
-    '  "medications": "string",',
-    '  "examDetails": "string",',
-    '  "notes": "string",',
-    '  "returnRecommendation": "string",',
-    `  "porte": "${porte}",`,
-    '  "specificFields": { ... },',
-    '  "structuredClinicalRecord": { ... }',
-    '}',
-    'No bloco structuredClinicalRecord, use este formato: propriedade, animal, neonato_info, queixa_principal, anamnese, tratamento_anterior, vacinacao, vermifugacao, sinais_clinicos, exame_fisico, achados, exames_solicitados, diagnostico_sugestivo, diagnosticos_diferenciais, tratamento, recomendacoes, urgencia, analise_avancada.',
-    `No objeto "specificFields", use APENAS estas chaves: ${specificKeysPrompt}.`,
-    'Para cada chave sem informacao no chat, retorne string vazia.',
-    'Se algum campo nao existir no chat, mantenha string vazia.',
-    `Tipo da consulta: ${mode === 'retorno' ? 'retorno' : 'nova'}.`,
-    patientContext,
-    `CONTEXTO TUTOR: ${tutorContext}`,
-    `CONTEXTO VETERINARIO: ${vetContext}`,
-    `PRE-PARSE UNIFICADO (mesmo cerebro campo/manual): ${JSON.stringify({
-      chiefComplaint: unified.parsed?.chiefComplaint || '',
-      anamnesis: unified.parsed?.anamnesis || '',
-      physicalExam: unified.parsed?.physicalExam || '',
-      diagnosis: unified.parsed?.diagnosis || '',
-      treatment: unified.parsed?.treatment || '',
-      medications: unified.parsed?.medications || '',
-      alerts: unified.pipeline?.semanticRules?.alerts || [],
-    })}`,
-    `CHAT ORIGINAL:\n${normalizedChat}`,
-    fewShotExamples.length
-      ? `EXEMPLOS GUIA DISPONIVEIS: ${fewShotExamples.length}. Siga o formato de saída dos exemplos.`
-      : '',
-  ]
-    .filter(Boolean)
-    .join(' ');
+  const systemPrompt =
+    buildFieldModeSystemPrompt({
+      porte,
+      mode,
+      patient,
+      previousConsultation: null,
+      recordProfile,
+    }) + `\nCONTEXTO: ${tutorContext} | ${vetContext}\nCHAT: ${normalizedChat}`;
 
   const completionMessages = [{ role: 'system', content: systemPrompt }];
 

@@ -65,7 +65,10 @@ router.post('/complete-register', async (req, res) => {
     const { token, clinicName, clinicCnpj, clinicAddress } = req.body;
 
     // Verifica token temporário
-    const decoded = require('jsonwebtoken').verify(token, process.env.JWT_SECRET);
+    const decoded = require('jsonwebtoken').verify(
+      token,
+      process.env.JWT_SECRET,
+    );
 
     if (!decoded.tempUser) {
       return res.status(400).json({ error: 'Token inválido' });

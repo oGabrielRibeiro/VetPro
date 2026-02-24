@@ -47,7 +47,6 @@ function fitTextToHeight(doc, text, options = {}) {
   return best || source.slice(0, 180).trim();
 }
 
-
 function renderPrescription(doc, data) {
   const accent = '#39bdb8';
   const accentDark = '#2ea39f';

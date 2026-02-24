@@ -27,5 +27,7 @@ module.exports = {
       'error',
       { devDependencies: ['**/*.test.js', '**/*.spec.js', '/jest.config.js'] },
     ],
+    // Allow require() for optional dependencies (OAuth, etc)
+    'import/no-unresolved': 'off',
   },
 };

@@ -16,23 +16,56 @@ services:
       timeout: 5s
       retries: 10
 
+  redis:
+    image: redis:7-alpine
+    restart: always
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
   backend:
     build: ./vetpro-backend
     restart: always
     ports:
       - "${BACKEND_PORT:-5000}:5000"
+    env_file:
+      - .env
     environment:
       PORT: 5000
       HOST: 0.0.0.0
       JWT_SECRET: ${JWT_SECRET:-vetpro-dev-secret}
-      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
-      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
-      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
-      OPENAI_FEWSHOT_EXAMPLES: ${OPENAI_FEWSHOT_EXAMPLES:-3}
-      DEEPGRAM_API_KEY: ${DEEPGRAM_API_KEY:-}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-15m}
+      JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN:-7d}
       DATABASE_URL: postgresql://${POSTGRES_USER:-vetpro}:${POSTGRES_PASSWORD:-vetpro123}@${POSTGRES_HOST:-postgres}:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-vetpro}
+      
+      # Redis (Cache)
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
+      
+      # AWS S3 (Cloud Storage)
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      AWS_REGION: ${AWS_REGION:-us-east-1}
+      CLOUD_BUCKET_NAME: ${CLOUD_BUCKET_NAME:-vetpro-uploads}
+      CLOUD_STORAGE_PROVIDER: ${CLOUD_STORAGE_PROVIDER:-local}
+      
+      # OAuth Google
+      OAUTH_ENABLED: ${OAUTH_ENABLED:-false}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      GOOGLE_CALLBACK_URL: ${GOOGLE_CALLBACK_URL:-http://localhost:5000/api/oauth/google/callback}
+      
+      # Frontend URL
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
     depends_on:
       postgres:
+        condition: service_healthy
+      redis:
         condition: service_healthy
 
   frontend:
@@ -48,3 +81,4 @@ services:
 
 volumes:
   pgdata:
+  redisdata:

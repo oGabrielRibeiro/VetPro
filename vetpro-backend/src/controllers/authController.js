@@ -394,9 +394,7 @@ async function refreshToken(req, res) {
     const refreshTokenValue = req.body?.refreshToken;
 
     if (!refreshTokenValue) {
-      return res
-        .status(400)
-        .json({ error: 'Refresh token e obrigatorio.' });
+      return res.status(400).json({ error: 'Refresh token e obrigatorio.' });
     }
 
     const result = await refreshAccessToken(refreshTokenValue);
@@ -413,9 +411,7 @@ async function refreshToken(req, res) {
         .status(401)
         .json({ error: 'Refresh token expirado. Faca login novamente.' });
     }
-    return res
-      .status(401)
-      .json({ error: 'Refresh token invalido.' });
+    return res.status(401).json({ error: 'Refresh token invalido.' });
   }
 }
 

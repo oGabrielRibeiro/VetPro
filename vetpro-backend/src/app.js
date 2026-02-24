@@ -2,7 +2,6 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
-const passport = require('passport');
 const patientRoutes = require('./routes/patientRoutes');
 const consultationRoutes = require('./routes/consultationRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
@@ -23,15 +22,20 @@ app.disable('x-powered-by');
 app.use(express.json({ limit: '20mb' }));
 app.use(express.urlencoded({ extended: true, limit: '20mb' }));
 
-// Passport para OAuth
-app.use(passport.initialize());
-
 // Rate limiting geral para todas as rotas API
 app.use('/api', generalLimiter);
 
 // Rotas de autenticação com limitador específico
 app.use('/api/auth', authLimiter, require('./routes/authRoutes'));
-app.use('/api/oauth', require('./routes/oauthRoutes'));
+
+// OAuth rotas - comentadas por padrão, ativar em .env
+// Para ativar OAuth: OAUTH_ENABLED=true
+if (process.env.OAUTH_ENABLED === 'true') {
+  const passport = require('passport');
+  app.use(passport.initialize());
+  app.use('/api/oauth', require('./routes/oauthRoutes'));
+}
+
 app.use('/api/reports', require('./routes/reportRoutes'));
 
 app.use('/api/patients', patientRoutes);
@@ -74,14 +78,17 @@ app.get('/api-docs', (req, res) => {
 });
 
 // Servir Swagger UI estático
-app.use('/api-docs', express.static(path.join(__dirname, '..', 'node_modules', 'swagger-ui-dist')));
+app.use(
+  '/api-docs',
+  express.static(path.join(__dirname, '..', 'node_modules', 'swagger-ui-dist')),
+);
 
 // Rota base
 app.get('/', (req, res) => {
   res.json({
     message: 'VetPro API rodando 🚀',
     docs: '/api-docs',
-    health: '/health'
+    health: '/health',
   });
 });
 

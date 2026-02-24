@@ -93,9 +93,7 @@ describe('API - Pacientes', () => {
 
   describe('GET /api/patients', () => {
     it('deve listar pacientes com paginacao', async () => {
-      const mockPatients = [
-        { id: '1', name: 'Rex', specie: 'cao' },
-      ];
+      const mockPatients = [{ id: '1', name: 'Rex', specie: 'cao' }];
 
       prisma.patient.findMany.mockResolvedValue(mockPatients);
       prisma.patient.count.mockResolvedValue(1);
@@ -109,9 +107,7 @@ describe('API - Pacientes', () => {
     });
 
     it('deve buscar pacientes por termo', async () => {
-      const mockPatients = [
-        { id: '1', name: 'Rex', specie: 'cao' },
-      ];
+      const mockPatients = [{ id: '1', name: 'Rex', specie: 'cao' }];
 
       prisma.patient.findMany.mockResolvedValue(mockPatients);
       prisma.patient.count.mockResolvedValue(1);

@@ -20,7 +20,9 @@ class OAuthService {
    */
   initialize() {
     if (!this.clientID || !this.clientSecret) {
-      console.log('ℹ️ Google OAuth não configurado (GOOGLE_CLIENT_ID/GOOGLE_CLIENT_SECRET)');
+      console.log(
+        'ℹ️ Google OAuth não configurado (GOOGLE_CLIENT_ID/GOOGLE_CLIENT_SECRET)',
+      );
       return false;
     }
 

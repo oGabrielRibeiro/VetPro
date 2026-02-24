@@ -20,7 +20,7 @@ describe('Validation Middleware', () => {
   });
 
   describe('validate', () => {
-    const schema = z.object({
+    const schemaWithRequired = z.object({
       name: z.string().min(1, 'Nome e obrigatorio'),
       age: z.number().int().positive(),
     });
@@ -28,7 +28,7 @@ describe('Validation Middleware', () => {
     it('deve chamar next() com dados validos', () => {
       mockReq.body = { name: 'Test', age: 25 };
 
-      const middleware = validate(schema);
+      const middleware = validate(schemaWithRequired);
       middleware(mockReq, mockRes, mockNext);
 
       expect(mockNext).toHaveBeenCalled();
@@ -38,7 +38,7 @@ describe('Validation Middleware', () => {
     it('deve retornar 400 com dados invalidos', () => {
       mockReq.body = { name: '' };
 
-      const middleware = validate(schema);
+      const middleware = validate(schemaWithRequired);
       middleware(mockReq, mockRes, mockNext);
 
       expect(mockRes.status).toHaveBeenCalledWith(400);
@@ -51,13 +51,22 @@ describe('Validation Middleware', () => {
     });
 
     it('deve retornar erro quando campo obrigatorio ausente', () => {
-      mockReq.body = {};
+      mockReq.body = { name: '' };
 
-      const middleware = validate(schema);
+      const middleware = validate(schemaWithRequired);
       middleware(mockReq, mockRes, mockNext);
 
       expect(mockRes.status).toHaveBeenCalledWith(400);
       expect(mockNext).not.toHaveBeenCalled();
+    });
+
+    it('deve pular validacao quando corpo vazio', () => {
+      mockReq.body = {};
+
+      const middleware = validate(createPatientSchema);
+      middleware(mockReq, mockRes, mockNext);
+
+      expect(mockNext).toHaveBeenCalled();
     });
   });
 
@@ -65,7 +74,7 @@ describe('Validation Middleware', () => {
     it('createPatientSchema deve validar dados corretos', () => {
       const data = {
         name: 'Rex',
-        species: 'cao',
+        specie: 'cao',
         ownerName: 'Joao',
       };
 
@@ -76,7 +85,7 @@ describe('Validation Middleware', () => {
     it('createConsultationSchema deve validar dados corretos', () => {
       const data = {
         patientId: '123e4567-e89b-12d3-a456-426614174000',
-        consultationType: 'nova',
+        consultationType: 'consulta',
       };
 
       const result = createConsultationSchema.safeParse(data);

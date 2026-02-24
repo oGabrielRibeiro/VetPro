@@ -17,7 +17,7 @@ class WebSocketService {
    */
   initialize(server) {
     const { Server } = require('socket.io');
-    
+
     this.io = new Server(server, {
       cors: {
         origin: process.env.CORS_ORIGIN || '*',
@@ -45,7 +45,9 @@ class WebSocketService {
 
     // Conexão de clientes
     this.io.on('connection', (socket) => {
-      console.log(`🔌 Cliente conectado: ${socket.id} (User: ${socket.user?.id})`);
+      console.log(
+        `🔌 Cliente conectado: ${socket.id} (User: ${socket.user?.id})`,
+      );
 
       // Registrar usuário conectado
       if (socket.user?.id) {
@@ -82,9 +84,11 @@ class WebSocketService {
       });
 
       socket.on('typing:stop', (data) => {
-        socket.to(`consultation:${data.consultationId}`).emit('user:stop-typing', {
-          userId: socket.user.id,
-        });
+        socket
+          .to(`consultation:${data.consultationId}`)
+          .emit('user:stop-typing', {
+            userId: socket.user.id,
+          });
       });
 
       // Desconexão
@@ -177,7 +181,7 @@ class WebSocketService {
     if (!this.io) return [];
     const room = this.io.sockets.adapter.rooms.get(`clinic:${clinicId}`);
     if (!room) return [];
-    return Array.from(room).map(socketId => {
+    return Array.from(room).map((socketId) => {
       const socket = this.io.sockets.sockets.get(socketId);
       return {
         socketId,

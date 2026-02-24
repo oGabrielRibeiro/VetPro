@@ -17,51 +17,54 @@ enum ExamType {
 }
 
 model User {
-  id       String  @id @default(uuid())
-  name     String
-  email    String  @unique
-  password String
-  crmv     String?
-  phone    String?
-  specialty String?
+  id           String  @id @default(uuid())
+  name         String
+  email        String  @unique
+  password     String
+  googleId     String? // ID do Google OAuth
+  crmv         String?
+  phone        String?
+  specialty    String?
   profilePhoto String?
   signature    String?
-  clinicId String
-  clinic   Clinic  @relation(fields: [clinicId], references: [id])
+  clinicId     String
+  clinic       Clinic  @relation(fields: [clinicId], references: [id])
 
   consultations Consultation[]
   patients      Patient[]
   appointments  Appointment[]
+
+  @@index([googleId])
 }
 
 model Patient {
-  id         String   @id @default(uuid())
-  name       String
-  specie     String
-  subcategory String?
-  breed      String?
-  sex        String?
-  age        Int?
-  birthDate  DateTime?
-  weight     Float?
-  color      String?
-  microchip  String?
-  photoUrl   String?
-  status     String   @default("ativo")
-  porte      String?
-  ownerName  String
-  ownerPhone String?
-  ownerAltPhone String?
-  ownerEmail String?
-  ownerCpf   String?
-  ownerAddress String?
-  ownerNotes String?
-  emergencyFlag Boolean @default(false)
-  responsibleVet String?
-  originClinic String?
+  id                  String    @id @default(uuid())
+  name                String
+  specie              String
+  subcategory         String?
+  breed               String?
+  sex                 String?
+  age                 Int?
+  birthDate           DateTime?
+  weight              Float?
+  color               String?
+  microchip           String?
+  photoUrl            String?
+  status              String    @default("ativo")
+  porte               String?
+  ownerName           String
+  ownerPhone          String?
+  ownerAltPhone       String?
+  ownerEmail          String?
+  ownerCpf            String?
+  ownerAddress        String?
+  ownerNotes          String?
+  emergencyFlag       Boolean   @default(false)
+  responsibleVet      String?
+  originClinic        String?
   anestheticRiskScore Int?
-  persistentProfile Json?
-  createdAt  DateTime @default(now())
+  persistentProfile   Json?
+  createdAt           DateTime  @default(now())
 
   clinicId String
   clinic   Clinic @relation(fields: [clinicId], references: [id])
@@ -77,14 +80,12 @@ model Consultation {
   id               String   @id @default(uuid())
   numeroProntuario Int
   recipeNumber     Int?
-  recipeYear       Int?
+  recipeYear      Int?
   clinicId         String
   clinic           Clinic   @relation(fields: [clinicId], references: [id])
   createdAt        DateTime @default(now())
 
-  // -----------------------------
   // RELAÇÕES
-  // -----------------------------
   patientId String
   patient   Patient @relation(fields: [patientId], references: [id])
 
@@ -96,22 +97,16 @@ model Consultation {
   previousConsultation   Consultation?  @relation("ConsultationReturn", fields: [previousConsultationId], references: [id])
   returns                Consultation[] @relation("ConsultationReturn")
 
-  // -----------------------------
   // IDENTIFICAÇÃO
-  // -----------------------------
   consultationType String? // nova | retorno | emergencia
 
-  // -----------------------------
   // PARÂMETROS VITAIS
-  // -----------------------------
   weight          Float?
   temperature     Float?
   heartRate       Int?
   respiratoryRate Int?
 
-  // -----------------------------
   // CONTEÚDO CLÍNICO
-  // -----------------------------
   chiefComplaint       String? // motivo da consulta
   anamnesis            String? // histórico relatado
   physicalExam         String? // exame físico
@@ -122,14 +117,10 @@ model Consultation {
   notes                String? // observações gerais
   returnRecommendation String?
 
-  // -----------------------------
   // CONTROLE CLÍNICO
-  // -----------------------------
   vaccinationUpToDate Boolean?
 
-  // -----------------------------
   // ASSINATURA
-  // -----------------------------
   veterinarianName String?
   veterinarianCrmv String?
 

@@ -24,12 +24,12 @@ export const queryClient = new QueryClient({
 
 // Hooks customizados para operações comuns
 export const queryKeys = {
-  patients: ['patients'] as const,
-  patient: (id: string) => ['patients', id] as const,
-  consultations: ['consultations'] as const,
-  consultation: (id: string) => ['consultations', id] as const,
-  appointments: ['appointments'] as const,
-  dashboard: ['dashboard'] as const,
+  patients: ['patients'],
+  patient: (id) => ['patients', id],
+  consultations: ['consultations'],
+  consultation: (id) => ['consultations', id],
+  appointments: ['appointments'],
+  dashboard: ['dashboard'],
 };
 
 export default queryClient;
