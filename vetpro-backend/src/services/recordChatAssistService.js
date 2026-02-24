@@ -2,6 +2,12 @@ const fs = require('fs');
 const path = require('path');
 const { parseClinicalFieldsFromSegments } = require('./fieldAssistService');
 const {
+  buildFieldExtractionGuide,
+  buildFieldRefinementPrompt,
+  buildPortePromptRules,
+  selectFewShotExamples,
+} = require('./promptService');
+const {
   CLINICAL_SCHEMA_VERSION,
   validateStructuredClinicalRecord,
 } = require('../ai/clinicalStructuredSchema');
@@ -119,44 +125,14 @@ function runUnifiedClinicalBrain(messages = []) {
   };
 }
 
-const EXAMPLES_FILE_PATH = path.join(
-  __dirname,
-  '..',
-  'ai',
-  'recordChatExamples.json',
-);
 const PORTE_DICTIONARY_FILE_PATH = path.join(
   __dirname,
   '..',
   'ai',
   'porteDetectionDictionary.json',
 );
-let examplesCache = null;
-let examplesCacheMtime = 0;
 let porteDictionaryCache = null;
 let porteDictionaryCacheMtime = 0;
-
-function safeReadExamplesFile() {
-  if (!fs.existsSync(EXAMPLES_FILE_PATH)) return [];
-
-  try {
-    const stat = fs.statSync(EXAMPLES_FILE_PATH);
-    const mtime = Number(stat.mtimeMs || 0);
-    if (examplesCache && mtime === examplesCacheMtime) {
-      return examplesCache;
-    }
-
-    const raw = fs.readFileSync(EXAMPLES_FILE_PATH, 'utf8');
-    const parsed = JSON.parse(raw);
-    const list = Array.isArray(parsed?.examples) ? parsed.examples : [];
-    examplesCache = list;
-    examplesCacheMtime = mtime;
-    return list;
-  } catch (error) {
-    console.error('Falha ao carregar exemplos de IA:', error.message);
-    return [];
-  }
-}
 
 function defaultPorteDictionary() {
   return {
@@ -254,38 +230,6 @@ function jaccardSimilarityScore(a = '', b = '') {
 
   const union = new Set([...ta, ...tb]).size || 1;
   return Number((intersection / union).toFixed(4));
-}
-
-function selectFewShotExamples({
-  mode = 'nova',
-  porte = 'pequeno',
-  sourceText = '',
-  maxExamples = 3,
-}) {
-  const pool = safeReadExamplesFile();
-  if (!pool.length) return [];
-
-  const normalizedMode = mode === 'retorno' ? 'retorno' : 'nova';
-  const normalizedPorte = porte === 'grande' ? 'grande' : 'pequeno';
-
-  const scored = pool
-    .filter((example) => {
-      const eMode = String(example?.mode || 'nova').toLowerCase();
-      const ePorte = String(example?.porte || 'pequeno').toLowerCase();
-      return eMode === normalizedMode && ePorte === normalizedPorte;
-    })
-    .map((example) => {
-      const score = jaccardSimilarityScore(
-        sourceText,
-        String(example?.input || ''),
-      );
-      return { example, score };
-    })
-    .sort((a, b) => b.score - a.score);
-
-  return scored
-    .slice(0, Math.max(0, maxExamples))
-    .map((entry) => entry.example);
 }
 
 const SPECIES_PROFILES = [

@@ -49,8 +49,8 @@ function Show-NodeVersionStatus {
     return
   }
 
-  if ($major -eq 20) {
-    Write-Host "Node.js no host: OK (20.x)." -ForegroundColor Green
+  if ($major -ge 20) {
+    Write-Host "Node.js no host: OK ($rawVersion)." -ForegroundColor Green
     return
   }
 
