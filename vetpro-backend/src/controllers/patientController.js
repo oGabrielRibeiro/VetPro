@@ -1,8 +1,9 @@
 const patientService = require('../services/patientService');
 const websocketService = require('../services/websocketService');
+const logger = require('../utils/logger');
 
 function handlePatientError(res, error, fallbackMessage) {
-  console.error(error);
+  logger.error(error.message, { stack: error.stack });
   const statusCode = Number(error?.statusCode || 500);
   if (statusCode >= 400 && statusCode < 500) {
     return res

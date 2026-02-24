@@ -99,4 +99,7 @@ app.get('/health', (req, res) => {
   });
 });
 
+// Middleware de erro centralizado
+app.use(require('./middlewares/errorHandler'));
+
 module.exports = app;

@@ -5,6 +5,7 @@ const path = require('path');
 const app = require('./app');
 const prisma = require('./lib/prisma');
 const websocketService = require('./services/websocketService');
+const logger = require('./utils/logger');
 
 const PORT = Number(process.env.PORT || 5000);
 const HOST = process.env.HOST || '0.0.0.0';
@@ -36,7 +37,7 @@ const httpsOptions = HTTPS_ENABLED ? loadHttpsOptions() : null;
 let server;
 
 async function shutdown(signal) {
-  console.log(`${signal} recebido. Encerrando servidor...`);
+  logger.info(`${signal} recebido. Encerrando servidor...`);
   if (server) {
     await new Promise((resolve) => {
       server.close(() => resolve());
@@ -51,12 +52,12 @@ if (HTTPS_ENABLED && httpsOptions) {
   server.keepAliveTimeout = 65000;
   server.headersTimeout = 66000;
   server.listen(PORT, HOST, () => {
-    console.log(`Servidor HTTPS rodando em https://${HOST}:${PORT}`);
+    logger.info(`Servidor HTTPS rodando em https://${HOST}:${PORT}`);
     websocketService.initialize(server);
   });
 } else {
   if (HTTPS_ENABLED && !httpsOptions) {
-    console.warn(
+    logger.warn(
       'HTTPS ativado no .env, mas certificados nao encontrados. Subindo em HTTP.',
     );
   }
@@ -65,21 +66,21 @@ if (HTTPS_ENABLED && httpsOptions) {
   server.keepAliveTimeout = 65000;
   server.headersTimeout = 66000;
   server.listen(PORT, HOST, () => {
-    console.log(`Servidor HTTP rodando em http://${HOST}:${PORT}`);
+    logger.info(`Servidor HTTP rodando em http://${HOST}:${PORT}`);
     websocketService.initialize(server);
   });
 }
 
 process.on('SIGINT', () => {
   shutdown('SIGINT').catch((error) => {
-    console.error('Erro ao encerrar o servidor:', error);
+    logger.error('Erro ao encerrar o servidor:', { error: error.message });
     process.exit(1);
   });
 });
 
 process.on('SIGTERM', () => {
   shutdown('SIGTERM').catch((error) => {
-    console.error('Erro ao encerrar o servidor:', error);
+    logger.error('Erro ao encerrar o servidor:', { error: error.message });
     process.exit(1);
   });
 });
