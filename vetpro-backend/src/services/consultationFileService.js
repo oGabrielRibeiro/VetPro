@@ -2,6 +2,33 @@ const sharp = require('sharp');
 const path = require('path');
 const prisma = require('../lib/prisma');
 
+// Detecta o tipo de exame a partir do nome/mimetype
+function detectExamType(file) {
+  const name = String(file.originalname || '').toLowerCase();
+  const mime = String(file.mimetype || '').toLowerCase();
+
+  if (name.includes('rx') || name.includes('raio') || name.includes('radio')) {
+    return 'RADIOGRAPHY';
+  }
+  if (name.includes('ultra') || name.includes('usg')) {
+    return 'ULTRASOUND';
+  }
+  if (
+    name.includes('hema') ||
+    name.includes('sangue') ||
+    name.includes('bioquim') ||
+    name.includes('lab')
+  ) {
+    return 'LAB_RESULT';
+  }
+  if (mime.startsWith('image/')) {
+    return 'CLINICAL_PHOTO';
+  }
+  if (mime.includes('pdf')) {
+    return 'DOCUMENT';
+  }
+  return 'OTHER';
+}
 
 async function attachFile(userId, consultationId, file) {
   const examType = detectExamType(file);
@@ -62,7 +89,6 @@ async function getFileById(userId, fileId) {
     },
   });
 }
-
 
 async function listFilesGrouped(userId, consultationId) {
   const files = await prisma.consultationFile.findMany({

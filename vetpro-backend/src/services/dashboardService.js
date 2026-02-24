@@ -142,7 +142,7 @@ async function getPatientsByMonth(userId, months = 6) {
   const monthlyData = {};
   const monthsList = [];
 
-  for (let i = 0; i < months; i++) {
+  for (let i = 0; i < months; i += 1) {
     const date = new Date(
       now.getFullYear(),
       now.getMonth() - (months - 1) + i,

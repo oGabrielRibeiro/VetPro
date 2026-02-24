@@ -4,6 +4,7 @@ const https = require('https');
 const path = require('path');
 const app = require('./app');
 const prisma = require('./lib/prisma');
+const websocketService = require('./services/websocketService');
 
 const PORT = Number(process.env.PORT || 5000);
 const HOST = process.env.HOST || '0.0.0.0';
@@ -51,6 +52,7 @@ if (HTTPS_ENABLED && httpsOptions) {
   server.headersTimeout = 66000;
   server.listen(PORT, HOST, () => {
     console.log(`Servidor HTTPS rodando em https://${HOST}:${PORT}`);
+    websocketService.initialize(server);
   });
 } else {
   if (HTTPS_ENABLED && !httpsOptions) {
@@ -64,6 +66,7 @@ if (HTTPS_ENABLED && httpsOptions) {
   server.headersTimeout = 66000;
   server.listen(PORT, HOST, () => {
     console.log(`Servidor HTTP rodando em http://${HOST}:${PORT}`);
+    websocketService.initialize(server);
   });
 }
 

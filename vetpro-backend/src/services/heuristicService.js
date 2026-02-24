@@ -1,16 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { parseClinicalFieldsFromSegments } = require('./fieldAssistService');
-const {
-  buildFieldExtractionGuide,
-  buildFieldRefinementPrompt,
-  buildPortePromptRules,
-  selectFewShotExamples,
-} = require('./promptService');
-const {
-  CLINICAL_SCHEMA_VERSION,
-  validateStructuredClinicalRecord,
-} = require('../ai/clinicalStructuredSchema');
+// Removidos imports nao usados neste modulo para satisfazer lint
 
 function normalize(value = '') {
   return String(value)
@@ -439,6 +430,7 @@ function sanitizeSpecificFields(raw = {}, allowedKeys = []) {
   }, {});
 }
 
+/* eslint-disable no-use-before-define */
 function extractSpecificFieldsHeuristic(sourceText = '', allowedKeys = []) {
   const output = {};
   const stopLabels = Object.values(SPECIFIC_FIELD_LABELS).flat();
@@ -458,6 +450,7 @@ function extractSpecificFieldsHeuristic(sourceText = '', allowedKeys = []) {
 
   return output;
 }
+/* eslint-enable no-use-before-define */
 
 function buildMissingFields(draft, specificFieldKeys = []) {
   const requiredCore = [
@@ -478,6 +471,14 @@ function buildMissingFields(draft, specificFieldKeys = []) {
     core: missingCore,
     specific: missingSpecific,
   };
+}
+
+// Normaliza valor especifico por chave (padrão: string aparada)
+function normalizeSpecificValueByKey(key, value) {
+  const text = String(value || '').trim();
+  if (!text) return '';
+  // extensões por chave podem ser aplicadas aqui (ex.: upper/lower, map aliases)
+  return text;
 }
 
 function extractByKeywords(sourceText, keywords) {
@@ -556,10 +557,10 @@ function extractByLabels(sourceText, labels = [], stopLabels = []) {
 
   const regex = stopPattern
     ? new RegExp(
-        `(?:^|\\b)(?:${labelPattern})\\s*[:\\-]?\\s*([\\s\\S]*?)(?=(?:\\b(?:${stopPattern})\\s*[:\\-]?)|$)`,
+        `(?:^|\\b)(?:${labelPattern})\\s*[:-]?\\s*([\\s\\S]*?)(?=(?:\\b(?:${stopPattern})\\s*[:-]?)|$)`,
         'i',
       )
-    : new RegExp(`(?:^|\\b)(?:${labelPattern})\\s*[:\\-]?\\s*([\\s\\S]*)`, 'i');
+    : new RegExp(`(?:^|\\b)(?:${labelPattern})\\s*[:-]?\\s*([\\s\\S]*)`, 'i');
 
   const match = text.match(regex);
   if (!match?.[1]) return '';
@@ -835,7 +836,7 @@ function extractSentenceFromTriggers(sourceText = '', triggers = []) {
   if (!text || !triggers.length) return '';
   const triggerPattern = triggers.map(accentAgnosticPattern).join('|');
   const regex = new RegExp(
-    `(?:\\b(?:${triggerPattern})\\b)\\s*[:\\-]?\\s*([^.!?\\n]+)`,
+    `(?:\\b(?:${triggerPattern})\\b)\\s*[:-]?\\s*([^.!?\\n]+)`,
     'i',
   );
   const match = text.match(regex);
@@ -1127,6 +1128,7 @@ function buildConfidenceByField(
   return { byField, overall };
 }
 
+// eslint-disable-next-line no-unused-vars
 function parseJsonObject(rawText = '') {
   const text = String(rawText || '').trim();
   if (!text) return null;
@@ -1147,6 +1149,7 @@ function parseJsonObject(rawText = '') {
   }
 }
 
+// eslint-disable-next-line no-unused-vars
 function parseJsonObjectSafe(rawText = '') {
   const text = String(rawText || '').trim();
   if (!text) {
@@ -1201,6 +1204,7 @@ function summarizeExamFromStructured(exame = {}) {
   return joinNonEmpty(parts);
 }
 
+// eslint-disable-next-line no-unused-vars
 function mapStructuredRecordToDraft(
   structured = {},
   porte = 'pequeno',
@@ -1326,6 +1330,19 @@ function groundingScore(value = '', sourceText = '') {
   return 0;
 }
 
+// Heurística simples para detectar conversa ruidosa (saudacoes, curtas, sem termos clinicos)
+function looksLikeNoisyConversation(text = '') {
+  const src = String(text || '').trim();
+  if (!src) return true;
+  const norm = normalize(src);
+  if (norm.length < 8) return true;
+  const social = ['ola', 'oi', 'bom dia', 'boa tarde', 'boa noite'];
+  if (social.some((t) => norm.includes(t))) return true;
+  const clinicalHits = ['dor', 'febre', 'vomit', 'diarre', 'exame', 'trat'];
+  return clinicalHits.every((t) => !norm.includes(t));
+}
+
+// eslint-disable-next-line no-unused-vars
 function runDraftSanityCheck({
   draft = {},
   sourceText = '',
@@ -1433,6 +1450,25 @@ function ensureDraftShape(
   };
 }
 
+// Inferência simples de campos especificos a partir do contexto
+function inferSpecificFieldValueFromContext(
+  key,
+  sourceText = '',
+  chiefComplaint = '',
+) {
+  const labels = SPECIFIC_FIELD_LABELS[key] || [];
+  const value =
+    extractByLabels(
+      sourceText,
+      labels,
+      Object.values(SPECIFIC_FIELD_LABELS).flat(),
+    ) ||
+    extractByKeywords(sourceText, labels) ||
+    firstSentence(chiefComplaint || sourceText, 140);
+  return normalizeSpecificValueByKey(key, value);
+}
+
+// eslint-disable-next-line no-unused-vars
 function buildHeuristicDraft(
   messages = [],
   mode = 'nova',

@@ -3,6 +3,10 @@ const fs = require('fs');
 const path = require('path');
 const jwt = require('jsonwebtoken');
 const prisma = require('../lib/prisma');
+const {
+  generateTokenPair,
+  refreshAccessToken,
+} = require('../services/authService');
 
 const { JWT_SECRET } = process.env;
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
@@ -385,4 +389,41 @@ async function deleteAccount(req, res) {
   }
 }
 
-module.exports = { register, login, me, updateProfile, deleteAccount };
+async function refreshToken(req, res) {
+  try {
+    const refreshTokenValue = req.body?.refreshToken;
+
+    if (!refreshTokenValue) {
+      return res
+        .status(400)
+        .json({ error: 'Refresh token e obrigatorio.' });
+    }
+
+    const result = await refreshAccessToken(refreshTokenValue);
+
+    return res.json({
+      message: 'Token atualizado com sucesso.',
+      ...result,
+    });
+  } catch (err) {
+    console.error('refreshToken error:', err);
+    const message = err?.message || '';
+    if (message.includes('expired')) {
+      return res
+        .status(401)
+        .json({ error: 'Refresh token expirado. Faca login novamente.' });
+    }
+    return res
+      .status(401)
+      .json({ error: 'Refresh token invalido.' });
+  }
+}
+
+module.exports = {
+  register,
+  login,
+  me,
+  updateProfile,
+  deleteAccount,
+  refreshToken,
+};

@@ -120,11 +120,7 @@ function detectSpeciesHint(value = '') {
   return matched?.id || null;
 }
 
-function scoreSpeciesAffinity({
-  sourceSpecies = null,
-  sourceText = '',
-  example = {},
-}) {
+function scoreSpeciesAffinity({ sourceSpecies = null, example = {} }) {
   if (!sourceSpecies) return 0;
 
   const exampleSpecies =
@@ -166,7 +162,6 @@ function selectFewShotExamples({
       );
       const speciesBonus = scoreSpeciesAffinity({
         sourceSpecies,
-        sourceText,
         example,
       });
       return {

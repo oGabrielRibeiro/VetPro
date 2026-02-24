@@ -10,4 +10,7 @@ router.get('/me', authMiddleware, authController.me);
 router.put('/profile', authMiddleware, authController.updateProfile);
 router.delete('/account', authMiddleware, authController.deleteAccount);
 
+// Nova rota para refresh token
+router.post('/refresh', authController.refreshToken);
+
 module.exports = router;

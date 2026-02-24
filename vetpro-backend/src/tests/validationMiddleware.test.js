@@ -1,8 +1,8 @@
-const { ZodError } = require('zod');
+const { z } = require('zod');
 const {
-  validateBody,
-  validateQuery,
-  validateParams,
+  validate,
+  createPatientSchema,
+  createConsultationSchema,
 } = require('../middlewares/validationMiddleware');
 
 describe('Validation Middleware', () => {
@@ -11,7 +11,7 @@ describe('Validation Middleware', () => {
   let mockNext;
 
   beforeEach(() => {
-    mockReq = { body: {}, query: {}, params: {} };
+    mockReq = { body: {} };
     mockRes = {
       status: jest.fn().mockReturnThis(),
       json: jest.fn(),
@@ -19,59 +19,68 @@ describe('Validation Middleware', () => {
     mockNext = jest.fn();
   });
 
-  describe('validateBody', () => {
-    it('deve chamar next() com dados válidos', () => {
-      const schema = {
-        parse: jest.fn().mockReturnValue({ name: 'Test', age: 25 }),
-      };
-
-      validateBody(schema)(mockReq, mockRes, mockNext);
-
-      expect(mockNext).toHaveBeenCalled();
-      expect(mockReq.body).toEqual({ name: 'Test', age: 25 });
+  describe('validate', () => {
+    const schema = z.object({
+      name: z.string().min(1, 'Nome e obrigatorio'),
+      age: z.number().int().positive(),
     });
 
-    it('deve retornar 400 com dados inválidos', () => {
-      const schema = {
-        parse: jest.fn().mockImplementation(() => {
-          throw new ZodError([{ path: ['name'], message: 'Required' }]);
-        }),
-      };
+    it('deve chamar next() com dados validos', () => {
+      mockReq.body = { name: 'Test', age: 25 };
 
-      validateBody(schema)(mockReq, mockRes, mockNext);
+      const middleware = validate(schema);
+      middleware(mockReq, mockRes, mockNext);
+
+      expect(mockNext).toHaveBeenCalled();
+      expect(mockReq.validatedData).toEqual({ name: 'Test', age: 25 });
+    });
+
+    it('deve retornar 400 com dados invalidos', () => {
+      mockReq.body = { name: '' };
+
+      const middleware = validate(schema);
+      middleware(mockReq, mockRes, mockNext);
 
       expect(mockRes.status).toHaveBeenCalledWith(400);
-      expect(mockRes.json).toHaveBeenCalledWith({
-        error: 'Erro de validação',
-        details: [{ path: ['name'], message: 'Required' }],
-      });
+      expect(mockRes.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          error: 'Dados inválidos',
+        }),
+      );
+      expect(mockNext).not.toHaveBeenCalled();
+    });
+
+    it('deve retornar erro quando campo obrigatorio ausente', () => {
+      mockReq.body = {};
+
+      const middleware = validate(schema);
+      middleware(mockReq, mockRes, mockNext);
+
+      expect(mockRes.status).toHaveBeenCalledWith(400);
       expect(mockNext).not.toHaveBeenCalled();
     });
   });
 
-  describe('validateQuery', () => {
-    it('deve validar query params', () => {
-      mockReq.query = { page: '1', limit: '10' };
-      const schema = {
-        parse: jest.fn().mockReturnValue({ page: 1, limit: 10 }),
+  describe('schemas individually', () => {
+    it('createPatientSchema deve validar dados corretos', () => {
+      const data = {
+        name: 'Rex',
+        species: 'cao',
+        ownerName: 'Joao',
       };
 
-      validateQuery(schema)(mockReq, mockRes, mockNext);
-
-      expect(mockNext).toHaveBeenCalled();
+      const result = createPatientSchema.safeParse(data);
+      expect(result.success).toBe(true);
     });
-  });
 
-  describe('validateParams', () => {
-    it('deve validar params', () => {
-      mockReq.params = { id: '123' };
-      const schema = {
-        parse: jest.fn().mockReturnValue({ id: '123' }),
+    it('createConsultationSchema deve validar dados corretos', () => {
+      const data = {
+        patientId: '123e4567-e89b-12d3-a456-426614174000',
+        consultationType: 'nova',
       };
 
-      validateParams(schema)(mockReq, mockRes, mockNext);
-
-      expect(mockNext).toHaveBeenCalled();
+      const result = createConsultationSchema.safeParse(data);
+      expect(result.success).toBe(true);
     });
   });
 });

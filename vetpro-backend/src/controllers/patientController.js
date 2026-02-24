@@ -1,4 +1,5 @@
 const patientService = require('../services/patientService');
+const websocketService = require('../services/websocketService');
 
 function handlePatientError(res, error, fallbackMessage) {
   console.error(error);
@@ -18,6 +19,7 @@ async function create(req, res) {
       req.user.clinicId,
       req.body,
     );
+    websocketService.notifyPatientUpdate(req.user.clinicId, patient, 'created');
     return res.status(201).json(patient);
   } catch (error) {
     return handlePatientError(res, error, 'Erro ao criar paciente');
@@ -27,7 +29,6 @@ async function create(req, res) {
 async function list(req, res) {
   try {
     const result = await patientService.getPatients(req.user.id, req.query);
-
     return res.json(result);
   } catch (error) {
     return handlePatientError(res, error, 'Erro ao listar pacientes');
@@ -40,10 +41,9 @@ async function getById(req, res) {
       req.user.id,
       req.params.id,
     );
-
-    if (!patient)
+    if (!patient) {
       return res.status(404).json({ error: 'Paciente não encontrado' });
-
+    }
     return res.json(patient);
   } catch (error) {
     return handlePatientError(res, error, 'Erro ao buscar paciente');
@@ -52,7 +52,12 @@ async function getById(req, res) {
 
 async function update(req, res) {
   try {
-    await patientService.updatePatient(req.user.id, req.params.id, req.body);
+    const patient = await patientService.updatePatient(
+      req.user.id,
+      req.params.id,
+      req.body,
+    );
+    websocketService.notifyPatientUpdate(req.user.clinicId, patient, 'updated');
     return res.json({ message: 'Paciente atualizado' });
   } catch (error) {
     return handlePatientError(res, error, 'Erro ao atualizar paciente');
@@ -62,6 +67,11 @@ async function update(req, res) {
 async function remove(req, res) {
   try {
     await patientService.deletePatient(req.user.id, req.params.id);
+    websocketService.notifyPatientUpdate(
+      req.user.clinicId,
+      { id: req.params.id },
+      'deleted',
+    );
     return res.json({ message: 'Paciente removido' });
   } catch (error) {
     return handlePatientError(res, error, 'Erro ao remover paciente');

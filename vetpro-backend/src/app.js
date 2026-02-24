@@ -1,5 +1,8 @@
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
+const fs = require('fs');
+const passport = require('passport');
 const patientRoutes = require('./routes/patientRoutes');
 const consultationRoutes = require('./routes/consultationRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
@@ -8,6 +11,7 @@ const {
   generalLimiter,
   authLimiter,
 } = require('./middlewares/rateLimitMiddleware');
+const cacheService = require('./services/cacheService');
 require('dotenv').config();
 
 const app = express();
@@ -19,17 +23,33 @@ app.disable('x-powered-by');
 app.use(express.json({ limit: '20mb' }));
 app.use(express.urlencoded({ extended: true, limit: '20mb' }));
 
+// Passport para OAuth
+app.use(passport.initialize());
+
 // Rate limiting geral para todas as rotas API
 app.use('/api', generalLimiter);
 
 // Rotas de autenticação com limitador específico
 app.use('/api/auth', authLimiter, require('./routes/authRoutes'));
+app.use('/api/oauth', require('./routes/oauthRoutes'));
 app.use('/api/reports', require('./routes/reportRoutes'));
 
 app.use('/api/patients', patientRoutes);
 app.use('/api/consultations', consultationRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/clinic', clinicRoutes);
+
+// Rota de cache (para debugging/admin)
+app.get('/api/cache/stats', async (req, res) => {
+  const stats = await cacheService.stats();
+  res.json(stats);
+});
+
+app.post('/api/cache/flush', async (req, res) => {
+  const result = await cacheService.flush();
+  res.json({ success: result });
+});
+
 app.use(
   '/uploads',
   express.static('uploads', {
@@ -39,9 +59,30 @@ app.use(
   }),
 );
 
+// Swagger UI - servir specification JSON
+app.get('/api-docs.json', (req, res) => {
+  const specPath = path.join(__dirname, 'docs', 'openapi.json');
+  if (fs.existsSync(specPath)) {
+    return res.json(JSON.parse(fs.readFileSync(specPath, 'utf8')));
+  }
+  return res.status(404).json({ error: 'Specification not found' });
+});
+
+// Swagger UI redirect
+app.get('/api-docs', (req, res) => {
+  res.redirect('/api-docs.html');
+});
+
+// Servir Swagger UI estático
+app.use('/api-docs', express.static(path.join(__dirname, '..', 'node_modules', 'swagger-ui-dist')));
+
 // Rota base
 app.get('/', (req, res) => {
-  res.json({ message: 'VetPro API rodando 🚀' });
+  res.json({
+    message: 'VetPro API rodando 🚀',
+    docs: '/api-docs',
+    health: '/health'
+  });
 });
 
 app.get('/health', (req, res) => {

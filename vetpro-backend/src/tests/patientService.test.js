@@ -4,10 +4,9 @@ jest.mock('../lib/prisma', () => ({
   patient: {
     findMany: jest.fn(),
     findFirst: jest.fn(),
-    findUnique: jest.fn(),
     create: jest.fn(),
-    update: jest.fn(),
-    delete: jest.fn(),
+    updateMany: jest.fn(),
+    deleteMany: jest.fn(),
     count: jest.fn(),
   },
 }));
@@ -19,47 +18,38 @@ describe('patientService', () => {
     jest.clearAllMocks();
   });
 
-  describe('searchPatients', () => {
-    it('deve buscar pacientes por termo', async () => {
+  describe('getPatients', () => {
+    it('deve buscar pacientes com paginacao', async () => {
       const mockPatients = [
-        { id: '1', name: 'Rex', specie: 'cão' },
-        { id: '2', name: 'Rex Junior', specie: 'cão' },
+        { id: '1', name: 'Rex', specie: 'cao' },
+        { id: '2', name: 'Rex Junior', specie: 'cao' },
       ];
 
       prisma.patient.findMany.mockResolvedValue(mockPatients);
+      prisma.patient.count.mockResolvedValue(2);
 
-      const result = await patientService.searchPatients(
-        'user123',
-        'clinic1',
-        'Rex',
-      );
+      const result = await patientService.getPatients('user123', {
+        page: 1,
+        limit: 10,
+      });
 
-      expect(result).toEqual(mockPatients);
-      expect(prisma.patient.findMany).toHaveBeenCalled();
-    });
-
-    it('deve listar todos os pacientes sem termo de busca', async () => {
-      const mockPatients = [{ id: '1', name: 'Rex' }];
-      prisma.patient.findMany.mockResolvedValue(mockPatients);
-
-      const result = await patientService.searchPatients('user123', 'clinic1');
-
-      expect(result).toEqual(mockPatients);
+      expect(result.data).toHaveLength(2);
+      expect(result.meta.total).toBe(2);
     });
   });
 
   describe('getPatientById', () => {
     it('deve retornar paciente pelo ID', async () => {
-      const mockPatient = { id: '1', name: 'Rex' };
-      prisma.patient.findUnique.mockResolvedValue(mockPatient);
+      const mockPatient = { id: '1', name: 'Rex', specie: 'cao' };
+      prisma.patient.findFirst.mockResolvedValue(mockPatient);
 
       const result = await patientService.getPatientById('user123', '1');
 
-      expect(result).toEqual(mockPatient);
+      expect(result).toEqual({ ...mockPatient, species: mockPatient.specie });
     });
 
-    it('deve retornar null quando paciente não encontrado', async () => {
-      prisma.patient.findUnique.mockResolvedValue(null);
+    it('deve retornar null quando paciente nao encontrado', async () => {
+      prisma.patient.findFirst.mockResolvedValue(null);
 
       const result = await patientService.getPatientById('user123', '999');
 
@@ -71,32 +61,78 @@ describe('patientService', () => {
     it('deve criar um novo paciente', async () => {
       const patientData = {
         name: 'Rex',
-        specie: 'cão',
+        specie: 'cao',
         breed: 'Labrador',
-        ownerName: 'João',
+        ownerName: 'Joao',
         ownerPhone: '11999999999',
+      };
+
+      const mockCreated = {
+        id: '1',
+        ...patientData,
         userId: 'user123',
         clinicId: 'clinic1',
       };
-
-      const mockCreated = { id: '1', ...patientData };
       prisma.patient.create.mockResolvedValue(mockCreated);
 
-      const result = await patientService.createPatient(patientData);
+      const result = await patientService.createPatient(
+        'user123',
+        'clinic1',
+        patientData,
+      );
 
       expect(result).toEqual(mockCreated);
-      expect(prisma.patient.create).toHaveBeenCalledWith({
-        data: patientData,
-      });
+      expect(prisma.patient.create).toHaveBeenCalled();
+    });
+
+    it('deve lancar erro quando nome vazio', async () => {
+      const patientData = {
+        name: '',
+        specie: 'cao',
+        ownerName: 'Joao',
+      };
+
+      await expect(
+        patientService.createPatient('user123', 'clinic1', patientData),
+      ).rejects.toThrow('Nome do paciente e obrigatorio.');
+    });
+
+    it('deve lancar erro quando especie vazia', async () => {
+      const patientData = {
+        name: 'Rex',
+        specie: '',
+        ownerName: 'Joao',
+      };
+
+      await expect(
+        patientService.createPatient('user123', 'clinic1', patientData),
+      ).rejects.toThrow('Especie e obrigatoria.');
+    });
+
+    it('deve lancar erro quando tutor vazio', async () => {
+      const patientData = {
+        name: 'Rex',
+        specie: 'cao',
+        ownerName: '',
+      };
+
+      await expect(
+        patientService.createPatient('user123', 'clinic1', patientData),
+      ).rejects.toThrow('Tutor obrigatorio para criar paciente.');
     });
   });
 
   describe('updatePatient', () => {
     it('deve atualizar um paciente', async () => {
-      const updateData = { name: 'Rex Atualizado', weight: 25 };
-      const mockUpdated = { id: '1', name: 'Rex Atualizado', weight: 25 };
+      const updateData = {
+        name: 'Rex Atualizado',
+        specie: 'cao',
+        weight: 25,
+        ownerName: 'Joao',
+      };
+      const mockUpdated = { count: 1 };
 
-      prisma.patient.update.mockResolvedValue(mockUpdated);
+      prisma.patient.updateMany.mockResolvedValue(mockUpdated);
 
       const result = await patientService.updatePatient(
         'user123',
@@ -104,7 +140,25 @@ describe('patientService', () => {
         updateData,
       );
 
-      expect(result).toEqual(mockUpdated);
+      expect(result.count).toBe(1);
+    });
+
+    it('deve lancar erro quando especie ausente na atualizacao', async () => {
+      const updateData = { name: 'Rex Atualizado' };
+
+      await expect(
+        patientService.updatePatient('user123', '1', updateData),
+      ).rejects.toThrow('Especie e obrigatoria.');
+    });
+  });
+
+  describe('deletePatient', () => {
+    it('deve deletar um paciente', async () => {
+      prisma.patient.deleteMany.mockResolvedValue({ count: 1 });
+
+      const result = await patientService.deletePatient('user123', '1');
+
+      expect(result.count).toBe(1);
     });
   });
 });

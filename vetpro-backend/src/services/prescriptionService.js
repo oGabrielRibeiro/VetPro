@@ -47,27 +47,6 @@ function fitTextToHeight(doc, text, options = {}) {
   return best || source.slice(0, 180).trim();
 }
 
-function resolveClinicLogoPath(clinic = {}) {
-  const candidates = [];
-
-  if (clinic.logoUrl) {
-    candidates.push(path.join(__dirname, '../../', clinic.logoUrl));
-  }
-
-  if (clinic.id) {
-    candidates.push(
-      path.join(__dirname, '../assets/clinics', `${clinic.id}.png`),
-    );
-    candidates.push(
-      path.join(__dirname, '../../uploads/clinics', `${clinic.id}.png`),
-    );
-    candidates.push(
-      path.join(__dirname, '../assets/logos', `${clinic.id}.png`),
-    );
-  }
-
-  return candidates.find((candidate) => fs.existsSync(candidate)) || null;
-}
 
 function renderPrescription(doc, data) {
   const accent = '#39bdb8';

@@ -140,6 +140,7 @@ async function main() {
 
   const rows = [];
   for (const example of examples) {
+    // eslint-disable-next-line no-await-in-loop
     rows.push(await evaluateExample(example));
   }
 

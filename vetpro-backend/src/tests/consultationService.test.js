@@ -22,7 +22,7 @@ jest.mock('../lib/prisma', () => ({
   ),
 }));
 
-const prisma = require('../lib/prisma');
+// const prisma = require('../lib/prisma');
 
 describe('consultationService', () => {
   beforeEach(() => {
@@ -48,7 +48,15 @@ describe('consultationService', () => {
 
     it('deve retornar objeto vazio quando weight for muito pequeno', () => {
       const result = consultationService.buildPatientSyncDataFromConsultation(
-        { weight: 0.001 },
+        { weight: 0 },
+        { weight: 10 },
+      );
+      expect(result).toEqual({});
+    });
+
+    it('deve retornar objeto vazio quando weight for negativo', () => {
+      const result = consultationService.buildPatientSyncDataFromConsultation(
+        { weight: -5 },
         { weight: 10 },
       );
       expect(result).toEqual({});

@@ -404,9 +404,16 @@ async function createReturnFromConsultation(userId, clinicId, consultationId) {
 }
 
 module.exports = {
+  // Funções usadas pela API
   createConsultation,
   getConsultations,
   getConsultationsByPatient,
   getConsultationById,
   createReturnFromConsultation,
+  // Helpers exportados para testes
+  buildPatientSyncDataFromConsultation,
+  normalizeText,
+  isMeaningfulProfileValue,
+  sanitizePersistentProfileUpdate,
+  mergePatientPersistentProfile,
 };
