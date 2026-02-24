@@ -1,7 +1,7 @@
 const sharp = require('sharp');
 const path = require('path');
-const fs = require('fs');
 const prisma = require('../lib/prisma');
+
 
 async function attachFile(userId, consultationId, file) {
   const examType = detectExamType(file);
@@ -63,41 +63,6 @@ async function getFileById(userId, fileId) {
   });
 }
 
-function detectExamType(file) {
-  const name = file.originalname.toLowerCase();
-  const mime = file.mimetype.toLowerCase();
-
-  // radiografia
-  if (name.includes('rx') || name.includes('raio') || name.includes('radio')) {
-    return 'RADIOGRAPHY';
-  }
-
-  // ultrassom
-  if (name.includes('ultra')) {
-    return 'ULTRASOUND';
-  }
-
-  // laboratório
-  if (
-    name.includes('hema') ||
-    name.includes('sangue') ||
-    name.includes('bioquim')
-  ) {
-    return 'LAB_RESULT';
-  }
-
-  // imagem clínica
-  if (mime.startsWith('image/')) {
-    return 'CLINICAL_PHOTO';
-  }
-
-  // pdf
-  if (mime.includes('pdf')) {
-    return 'DOCUMENT';
-  }
-
-  return 'OTHER';
-}
 
 async function listFilesGrouped(userId, consultationId) {
   const files = await prisma.consultationFile.findMany({

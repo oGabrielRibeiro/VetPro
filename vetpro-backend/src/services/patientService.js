@@ -127,7 +127,7 @@ async function createPatient(userId, clinicId, data) {
   validatePatientInput(data, 'create');
   const normalized = normalizePatientInput(data);
 
-  return await prisma.patient.create({
+  return prisma.patient.create({
     data: {
       ...normalized,
       clinicId,
@@ -137,8 +137,8 @@ async function createPatient(userId, clinicId, data) {
 }
 
 async function getPatients(userId, query = {}) {
-  const page = parseInt(query.page) || 1;
-  const limit = parseInt(query.limit) || 10;
+  const page = parseInt(query.page, 10) || 1;
+  const limit = parseInt(query.limit, 10) || 10;
   const search = query.search || '';
 
   const skip = (page - 1) * limit;
@@ -187,7 +187,7 @@ async function updatePatient(userId, patientId, data) {
   validatePatientInput(data, 'update');
   const normalized = normalizePatientInput(data);
 
-  return await prisma.patient.updateMany({
+  return prisma.patient.updateMany({
     where: {
       id: patientId,
       userId,
@@ -197,7 +197,7 @@ async function updatePatient(userId, patientId, data) {
 }
 
 async function deletePatient(userId, patientId) {
-  return await prisma.patient.deleteMany({
+  return prisma.patient.deleteMany({
     where: {
       id: patientId,
       userId,

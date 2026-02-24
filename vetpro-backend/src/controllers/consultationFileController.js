@@ -16,6 +16,7 @@ async function viewFile(req, res) {
 
     const stream = fs.createReadStream(file.path);
     stream.pipe(res);
+    return undefined; // explicit return to satisfy consistent-return
   } catch (error) {
     console.error(error);
     return res.status(500).json({ error: 'Erro ao visualizar arquivo' });
@@ -68,6 +69,7 @@ async function viewThumbnail(req, res) {
 
     return res.sendFile(path.resolve(file.thumbnailPath));
   } catch (error) {
+    // log opcional
     return res.status(500).json({ error: 'Erro ao carregar miniatura' });
   }
 }
@@ -93,7 +95,7 @@ async function compareFiles(req, res) {
       });
     }
 
-    res.json({
+    return res.json({
       examType: file1.examType,
       fileA: {
         id: file1.id,

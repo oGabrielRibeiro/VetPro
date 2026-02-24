@@ -4,7 +4,10 @@ const patientRoutes = require('./routes/patientRoutes');
 const consultationRoutes = require('./routes/consultationRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
 const clinicRoutes = require('./routes/clinicRoutes');
-const { generalLimiter, authLimiter } = require('./middlewares/rateLimitMiddleware');
+const {
+  generalLimiter,
+  authLimiter,
+} = require('./middlewares/rateLimitMiddleware');
 require('dotenv').config();
 
 const app = express();

@@ -43,7 +43,10 @@ function safeReadExamplesFile() {
       : null;
     const mtimeMobile = Number(statMobile?.mtimeMs || 0);
 
-    if (mtimeGeneral <= examplesCacheMtime && mtimeMobile <= examplesCacheMtime) {
+    if (
+      mtimeGeneral <= examplesCacheMtime &&
+      mtimeMobile <= examplesCacheMtime
+    ) {
       return examplesCache;
     }
   }
@@ -117,7 +120,11 @@ function detectSpeciesHint(value = '') {
   return matched?.id || null;
 }
 
-function scoreSpeciesAffinity({ sourceSpecies = null, sourceText = '', example = {} }) {
+function scoreSpeciesAffinity({
+  sourceSpecies = null,
+  sourceText = '',
+  example = {},
+}) {
   if (!sourceSpecies) return 0;
 
   const exampleSpecies =
@@ -220,33 +227,33 @@ function buildPortePromptRules(porte = 'pequeno', detailLevel = 'standard') {
 }
 
 function buildSystemPrompt(sourceText, { mode, porte, species, maxExamples }) {
-    const relevantExamples = selectFewShotExamples({
-        mode,
-        porte,
-        sourceText,
-        maxExamples,
-        species,
-      });
+  const relevantExamples = selectFewShotExamples({
+    mode,
+    porte,
+    sourceText,
+    maxExamples,
+    species,
+  });
 
-      let systemPrompt = `Você é um assistente veterinário especialista em preenchimento de prontuários.
+  let systemPrompt = `Você é um assistente veterinário especialista em preenchimento de prontuários.
 Sua tarefa é analisar a transcrição (texto ou áudio transcrito) e extrair os dados para um formato JSON estruturado.
 Responda APENAS com o JSON válido, sem explicações adicionais.`;
 
-      // Injeta os exemplos (Few-Shot)
-      if (relevantExamples.length > 0) {
-        systemPrompt += `\n\n### Exemplos de Referência ###\n`;
+  // Injeta os exemplos (Few-Shot)
+  if (relevantExamples.length > 0) {
+    systemPrompt += `\n\n### Exemplos de Referência ###\n`;
 
-        relevantExamples.forEach((ex, index) => {
-          systemPrompt += `\n--- Exemplo ${index + 1} ---`;
-          systemPrompt += `\nEntrada: "${ex.input}"`;
-          // Minifica o JSON de saída para economizar tokens
-          systemPrompt += `\nSaída Esperada: ${JSON.stringify(ex.output)}`;
-        });
+    relevantExamples.forEach((ex, index) => {
+      systemPrompt += `\n--- Exemplo ${index + 1} ---`;
+      systemPrompt += `\nEntrada: "${ex.input}"`;
+      // Minifica o JSON de saída para economizar tokens
+      systemPrompt += `\nSaída Esperada: ${JSON.stringify(ex.output)}`;
+    });
 
-        systemPrompt += `\n\n### Fim dos Exemplos ###`;
-      }
+    systemPrompt += `\n\n### Fim dos Exemplos ###`;
+  }
 
-      return systemPrompt;
+  return systemPrompt;
 }
 
 function buildFieldRefinementPrompt({ field, mode = 'nova', patient = null }) {

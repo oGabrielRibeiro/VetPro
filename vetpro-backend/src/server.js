@@ -37,7 +37,9 @@ let server;
 async function shutdown(signal) {
   console.log(`${signal} recebido. Encerrando servidor...`);
   if (server) {
-    await new Promise((resolve) => server.close(resolve));
+    await new Promise((resolve) => {
+      server.close(() => resolve());
+    });
   }
   await prisma.$disconnect();
   process.exit(0);

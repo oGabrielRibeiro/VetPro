@@ -72,19 +72,29 @@ const chatAssistSchema = z.object({
   patientId: z.string().uuid().optional(),
   text: z.string().optional(),
   transcript: z.string().optional(),
-  messages: z.array(z.object({
-    role: z.enum(['user', 'assistant']),
-    content: z.string(),
-  })).optional(),
-  segments: z.array(z.object({
-    stamp: z.string(),
-    speaker: z.string(),
-    text: z.string(),
-  })).optional(),
-  recordProfile: z.object({
-    porte: z.enum(['pequeno', 'grande']).optional(),
-    specificFieldKeys: z.array(z.string()).optional(),
-  }).optional(),
+  messages: z
+    .array(
+      z.object({
+        role: z.enum(['user', 'assistant']),
+        content: z.string(),
+      }),
+    )
+    .optional(),
+  segments: z
+    .array(
+      z.object({
+        stamp: z.string(),
+        speaker: z.string(),
+        text: z.string(),
+      }),
+    )
+    .optional(),
+  recordProfile: z
+    .object({
+      porte: z.enum(['pequeno', 'grande']).optional(),
+      specificFieldKeys: z.array(z.string()).optional(),
+    })
+    .optional(),
 });
 
 // ============================================
@@ -96,10 +106,10 @@ function validate(schema) {
     try {
       const validatedData = schema.parse(req.body);
       req.validatedData = validatedData;
-      next();
+      return next();
     } catch (error) {
       if (error instanceof z.ZodError) {
-        const errors = error.errors.map(err => ({
+        const errors = error.errors.map((err) => ({
           field: err.path.join('.'),
           message: err.message,
         }));

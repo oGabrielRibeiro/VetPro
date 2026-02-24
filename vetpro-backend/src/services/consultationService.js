@@ -161,7 +161,7 @@ async function createConsultation({
   recipeYear,
   clinicId,
 }) {
-  return await prisma.$transaction(async (tx) => {
+  return prisma.$transaction(async (tx) => {
     const patient = await tx.patient.findFirst({
       where: {
         id: patientId,
@@ -250,7 +250,7 @@ async function createConsultation({
 }
 
 async function getConsultations(userId) {
-  return await prisma.consultation.findMany({
+  return prisma.consultation.findMany({
     where: { userId },
     include: { patient: true },
     orderBy: { createdAt: 'desc' },
@@ -258,7 +258,7 @@ async function getConsultations(userId) {
 }
 
 async function getConsultationsByPatient(userId, patientId) {
-  return await prisma.consultation.findMany({
+  return prisma.consultation.findMany({
     where: {
       userId,
       patientId,
@@ -348,7 +348,7 @@ async function getConsultationById(userId, consultationId) {
 }
 
 async function createReturnFromConsultation(userId, clinicId, consultationId) {
-  return await prisma.$transaction(async (tx) => {
+  return prisma.$transaction(async (tx) => {
     const original = await tx.consultation.findFirst({
       where: {
         id: consultationId,
@@ -379,7 +379,7 @@ async function createReturnFromConsultation(userId, clinicId, consultationId) {
       ? (lastRecipe.recipeNumber || 0) + 1
       : 1;
 
-    return await tx.consultation.create({
+    return tx.consultation.create({
       data: {
         numeroProntuario: nextNumber,
         userId,
