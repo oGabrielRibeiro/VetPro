@@ -4,6 +4,7 @@ const patientRoutes = require('./routes/patientRoutes');
 const consultationRoutes = require('./routes/consultationRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
 const clinicRoutes = require('./routes/clinicRoutes');
+const { generalLimiter, authLimiter } = require('./middlewares/rateLimitMiddleware');
 require('dotenv').config();
 
 const app = express();
@@ -15,8 +16,11 @@ app.disable('x-powered-by');
 app.use(express.json({ limit: '20mb' }));
 app.use(express.urlencoded({ extended: true, limit: '20mb' }));
 
-// Rotas
-app.use('/api/auth', require('./routes/authRoutes'));
+// Rate limiting geral para todas as rotas API
+app.use('/api', generalLimiter);
+
+// Rotas de autenticação com limitador específico
+app.use('/api/auth', authLimiter, require('./routes/authRoutes'));
 app.use('/api/reports', require('./routes/reportRoutes'));
 
 app.use('/api/patients', patientRoutes);

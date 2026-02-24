@@ -219,6 +219,36 @@ function buildPortePromptRules(porte = 'pequeno', detailLevel = 'standard') {
   return baseRules.join(' ');
 }
 
+function buildSystemPrompt(sourceText, { mode, porte, species, maxExamples }) {
+    const relevantExamples = selectFewShotExamples({
+        mode,
+        porte,
+        sourceText,
+        maxExamples,
+        species,
+      });
+
+      let systemPrompt = `Você é um assistente veterinário especialista em preenchimento de prontuários.
+Sua tarefa é analisar a transcrição (texto ou áudio transcrito) e extrair os dados para um formato JSON estruturado.
+Responda APENAS com o JSON válido, sem explicações adicionais.`;
+
+      // Injeta os exemplos (Few-Shot)
+      if (relevantExamples.length > 0) {
+        systemPrompt += `\n\n### Exemplos de Referência ###\n`;
+
+        relevantExamples.forEach((ex, index) => {
+          systemPrompt += `\n--- Exemplo ${index + 1} ---`;
+          systemPrompt += `\nEntrada: "${ex.input}"`;
+          // Minifica o JSON de saída para economizar tokens
+          systemPrompt += `\nSaída Esperada: ${JSON.stringify(ex.output)}`;
+        });
+
+        systemPrompt += `\n\n### Fim dos Exemplos ###`;
+      }
+
+      return systemPrompt;
+}
+
 function buildFieldRefinementPrompt({ field, mode = 'nova', patient = null }) {
   const patientContext = patient
     ? `Paciente: ${patient.name || ''}; especie: ${patient.species || ''}; raca: ${patient.breed || ''}; tutor: ${patient.ownerName || ''}.`
@@ -240,4 +270,5 @@ module.exports = {
   buildFieldRefinementPrompt,
   buildPortePromptRules,
   selectFewShotExamples,
+  buildSystemPrompt,
 };
