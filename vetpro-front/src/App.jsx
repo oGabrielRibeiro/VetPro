@@ -5,6 +5,7 @@ import Sidebar from "./components/Sidebar";
 import FeedbackBanner from "./components/FeedbackBanner";
 import AppIcon from "./components/AppIcon";
 import SpeciesIcon from "./components/SpeciesIcon";
+import PatientForm from "./components/PatientForm";
 import api, { buildApiUrl } from "./services/api";
 import { addToQueue } from "./services/offlineQueue";
 import { getQueue, clearQueue } from "./services/offlineQueue";
@@ -778,124 +779,20 @@ const MainApp = () => {
           />
         );
 
-      case "add-patient":
+case "add-patient":
         return (
-          <div className="max-w-2xl mx-auto">
-            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-800 dark:text-white mb-4 sm:mb-6">
-              {editingPatient ? "Editar Paciente" : "Novo Paciente"}
-            </h1>
-
-            <div className="bg-white dark:bg-dark-800 rounded-xl border border-gray-200 dark:border-dark-700 shadow-sm p-4 sm:p-6">
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  const form = e.target;
-                  const name = form.name.value.trim();
-                  const species = form.species.value;
-                  const sex = form.sex.value;
-                  const ownerName = form.ownerName.value.trim();
-
-                  // Validacao basica
-                  if (!name || !species || !sex || !ownerName) {
-                    showActionError(
-                      "Preencha os campos obrigatorios para salvar o paciente.",
-                    );
-                    return;
-                  }
-
-                  const patientData = {
-                    name,
-                    species,
-                    subcategory: form.subcategory?.value || "",
-                    breed: form.breed?.value?.trim() || "",
-                    sex,
-                    age: form.age?.value || "",
-                    birthDate: form.birthDate?.value || "",
-                    weight: form.weight?.value || "",
-                    color: form.color?.value?.trim() || "",
-                    microchip: form.microchip?.value?.trim() || "",
-                    status: form.status?.value || "ativo",
-                    porte: form.porte?.value || "",
-                    ownerName,
-                    ownerPhone: form.ownerPhone?.value || "",
-                    ownerAltPhone: form.ownerAltPhone?.value || "",
-                    ownerEmail: form.ownerEmail?.value || "",
-                    ownerCpf: form.ownerCpf?.value || "",
-                    ownerAddress: form.ownerAddress?.value || "",
-                    ownerNotes: form.ownerNotes?.value || "",
-                    emergencyFlag: Boolean(form.emergencyFlag?.checked),
-                    responsibleVet: form.responsibleVet?.value?.trim() || "",
-                    originClinic: form.originClinic?.value?.trim() || "",
-                    anestheticRiskScore: form.anestheticRiskScore?.value || "",
-                    persistentProfile: buildPersistentProfileFromPatientForm(
-                      form,
-                      editingPatient?.persistentProfile || {},
-                    ),
-                    createdAt:
-                      editingPatient?.createdAt || new Date().toISOString(),
-                  };
-
-                  if (editingPatient) {
-                    handleEditPatient(editingPatient.id, patientData);
-                  } else {
-                    handleAddPatient(patientData);
-                  }
-                }}
-                className="space-y-4 sm:space-y-6"
-              >
-                <div>
-                  <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Nome do Paciente <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    name="name"
-                    defaultValue={editingPatient?.name || ""}
-                    className="w-full px-3 py-2 sm:px-4 sm:py-3 border border-gray-300 dark:border-dark-600 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm bg-white dark:bg-dark-800 text-gray-900 dark:text-white"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Especie <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    name="species"
-                    defaultValue={editingPatient?.species || ""}
-                    className="w-full px-3 py-2 sm:px-4 sm:py-3 border border-gray-300 dark:border-dark-600 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm bg-white dark:bg-dark-800 text-gray-900 dark:text-white"
-                    required
-                  >
-                    <option value="">Selecione</option>
-                    <option value="Mamifero">Mamifero</option>
-                    <option value="Ave">Ave</option>
-                    <option value="Reptil">Reptil</option>
-                    <option value="Peixe">Peixe</option>
-                    <option value="Anfibio">Anfibio</option>
-                    <option value="Outro">Outro</option>
-                  </select>
-                </div>
-
-                <div className="flex flex-col sm:flex-row sm:justify-between space-y-2 sm:space-y-0 sm:space-x-3 pt-3 sm:pt-4 border-t border-gray-200 dark:border-dark-700">
-                  <button
-                    type="button"
-                    onClick={() => setCurrentView("patients")}
-                    className="w-full sm:w-auto bg-gray-200 dark:bg-dark-700 text-gray-800 dark:text-white font-bold py-2.5 sm:py-3 px-4 sm:px-6 rounded-xl hover:bg-gray-300 dark:hover:bg-dark-600 transition-colors text-sm"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    type="submit"
-                    className="w-full sm:w-auto bg-gradient-to-r from-emerald-600 to-cyan-700 text-white font-bold py-2.5 sm:py-3 px-4 sm:px-6 rounded-xl shadow-md hover:shadow-lg transition-all text-sm"
-                  >
-                    {editingPatient
-                      ? "Atualizar Paciente"
-                      : "Cadastrar Paciente"}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
+          <PatientForm
+            patient={editingPatient}
+            onSubmit={(patientData) => {
+              if (editingPatient) {
+                handleEditPatient(editingPatient.id, patientData);
+              } else {
+                handleAddPatient(patientData);
+              }
+            }}
+            onCancel={() => setCurrentView("patients")}
+            isEditing={!!editingPatient}
+          />
         );
 
       case "consultations":

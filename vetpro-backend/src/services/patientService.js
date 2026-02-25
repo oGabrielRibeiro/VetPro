@@ -43,8 +43,23 @@ function parseDate(value) {
 
 function parseNumber(value) {
   if (value === '' || value == null) return null;
+  if (typeof value === 'number') return value;
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : null;
+}
+
+// Tenta extrair número de uma string de idade (ex: "3 anos" -> 3)
+function parseAge(value) {
+  if (value == null) return null;
+  // Se já for número, retorna
+  if (typeof value === 'number') return Math.trunc(value);
+  // Se for string, tenta extrair números
+  const str = String(value);
+  const match = str.match(/\d+/);
+  if (match) {
+    return Math.trunc(Number(match[0]));
+  }
+  return null;
 }
 
 function validatePatientInput(data = {}, mode = 'create') {
@@ -82,7 +97,7 @@ function validatePatientInput(data = {}, mode = 'create') {
 }
 
 function normalizePatientInput(data = {}) {
-  const ageValue = parseNumber(data.age);
+  const ageValue = parseAge(data.age);
   const weightValue = parseNumber(data.weight);
   const riskValue = parseNumber(data.anestheticRiskScore);
   const birthDate = parseDate(data.birthDate);
@@ -98,7 +113,7 @@ function normalizePatientInput(data = {}) {
     subcategory: data.subcategory ? data.subcategory.trim() : null,
     breed: data.breed ? data.breed.trim() : null,
     sex: data.sex ? data.sex.trim().toUpperCase() : null,
-    age: Number.isFinite(ageValue) ? Math.trunc(ageValue) : null,
+    age: ageValue,
     birthDate,
     weight: Number.isFinite(weightValue) ? weightValue : null,
     color: data.color ? data.color.trim() : null,
