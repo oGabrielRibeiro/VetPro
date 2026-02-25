@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, lazy, Suspense } from "react";
+﻿import React, { useState, useEffect, useCallback, lazy, Suspense, useMemo, useRef } from "react";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import Login from "./pages/Login";
 import Sidebar from "./components/Sidebar";
@@ -6,6 +6,7 @@ import FeedbackBanner from "./components/FeedbackBanner";
 import AppIcon from "./components/AppIcon";
 import SpeciesIcon from "./components/SpeciesIcon";
 import PatientForm from "./components/PatientForm";
+import { ToastProvider } from "./components/Toast";
 import api, { buildApiUrl } from "./services/api";
 import { addToQueue } from "./services/offlineQueue";
 import { getQueue, clearQueue } from "./services/offlineQueue";
@@ -36,6 +37,7 @@ const MOBILE_NAV_ITEMS = [
   { id: "patients", icon: "patients", label: "Pacientes" },
   { id: "appointments", icon: "appointments", label: "Agenda" },
   { id: "consultations", icon: "consultations", label: "Pront." },
+  { id: "reports", icon: "reports", label: "Relat." },
   { id: "profile", icon: "profile", label: "Perfil" },
   { id: "logout", icon: "logout", label: "Sair" },
 ];
@@ -66,6 +68,28 @@ const MainApp = () => {
     () => localStorage.getItem("vetpro_field_mode") === "true",
   );
   const [dataError, setDataError] = useState("");
+  const saveTimeoutRef = useRef(null);
+  const MAX_LOCALSTORAGE_ITEMS = 100;
+
+  // Debounced localStorage save function
+  const debouncedSave = useCallback((key, data) => {
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+    saveTimeoutRef.current = setTimeout(() => {
+      try {
+        if (Array.isArray(data) && data.length > MAX_LOCALSTORAGE_ITEMS) {
+          const limitedData = data.slice(0, MAX_LOCALSTORAGE_ITEMS);
+          localStorage.setItem(key, JSON.stringify(limitedData));
+          console.log(`[localStorage] Limited ${key} to ${MAX_LOCALSTORAGE_ITEMS} items`);
+        } else if (data) {
+          localStorage.setItem(key, JSON.stringify(data));
+        }
+      } catch (error) {
+        console.error(`[localStorage] Error saving ${key}:`, error);
+      }
+    }, 1000);
+  }, []);
   const [actionFeedback, setActionFeedback] = useState(null);
 
   const [currentConsultation, setCurrentConsultation] = useState(null);
@@ -876,7 +900,7 @@ case "add-patient":
                     type="submit"
                     className="w-full sm:w-auto bg-gradient-to-r from-blue-600 to-indigo-700 text-white font-bold py-2.5 sm:py-3 px-4 sm:px-6 rounded-xl shadow-md hover:shadow-lg transition-all text-sm"
                   >
-                    Salvar Agendamento
+                    Salvar
                   </button>
                 </div>
               </form>
@@ -1097,7 +1121,7 @@ case "add-patient":
                     onClick={handleGoToNewConsultation}
                     className="bg-emerald-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-emerald-700 transition-colors text-sm"
                   >
-                    Registrar Primeira Consulta
+                    Primeira Consulta
                   </button>
                 </div>
               )}
@@ -1309,7 +1333,7 @@ case "add-patient":
       {/* Mobile Bottom Navigation */}
       {isMobile && (
         <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-gray-200 dark:border-dark-700 bg-white/95 dark:bg-dark-800/95 pb-[max(0.4rem,env(safe-area-inset-bottom))] backdrop-blur">
-          <div className="grid grid-cols-6">
+          <div className="grid grid-cols-7">
             {MOBILE_NAV_ITEMS.map((item) => (
               <button
                 key={item.id}
@@ -1343,7 +1367,9 @@ case "add-patient":
 const App = () => {
   return (
     <AuthProvider>
-      <MainApp />
+      <ToastProvider>
+        <MainApp />
+      </ToastProvider>
     </AuthProvider>
   );
 };

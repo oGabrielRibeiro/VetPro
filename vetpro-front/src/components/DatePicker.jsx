@@ -77,9 +77,10 @@ const DatePicker = forwardRef(({
     return new Date(year, month, 0).getDate();
   };
 
-  const [selectedYear, selectedMonth] = value 
-    ? value.split("-") 
-    : ["", ""];
+  // Garantir que o split retorne sempre 3 elementos
+  const dateParts = value ? value.split("-") : ["", "", ""];
+  const selectedYear = dateParts[0] || "";
+  const selectedMonth = dateParts[1] || "";
 
   const daysInMonth = selectedYear && selectedMonth 
     ? getDaysInMonth(parseInt(selectedYear), parseInt(selectedMonth)) 
@@ -154,15 +155,15 @@ const DatePicker = forwardRef(({
 
         {/* Dropdown do calendário */}
         {isOpen && (
-          <div className="absolute z-50 mt-1 w-full sm:w-72 bg-white dark:bg-dark-800 border border-gray-200 dark:border-dark-700 rounded-lg shadow-lg p-3">
-            <div className="grid grid-cols-3 gap-2">
+          <div className="absolute z-50 left-2 right-2 sm:relative sm:left-auto sm:right-auto mt-1 sm:mt-0 sm:w-72 w-[calc(100vw-1rem)] max-w-[280px] bg-white dark:bg-dark-800 border border-gray-200 dark:border-dark-700 rounded-lg shadow-lg p-2 sm:p-3">
+            <div className="grid grid-cols-3 gap-1 sm:gap-2">
               {/* Dia */}
               <div>
-                <label className="block text-xs text-gray-500 mb-1">Dia</label>
+                <label className="block text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 mb-0.5">Dia</label>
                 <select
                   value={value ? value.split("-")[2] : ""}
                   onChange={(e) => handleDateChange("day", e.target.value)}
-                  className="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-dark-600 rounded dark:bg-dark-700"
+                  className="w-full px-1 sm:px-2 py-1 text-xs sm:text-sm border border-gray-300 dark:border-dark-600 rounded dark:bg-dark-700 dark:text-white"
                 >
                   <option value="">Dia</option>
                   {days.map((day) => (
@@ -175,11 +176,11 @@ const DatePicker = forwardRef(({
 
               {/* Mês */}
               <div>
-                <label className="block text-xs text-gray-500 mb-1">Mês</label>
+                <label className="block text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 mb-0.5">Mês</label>
                 <select
                   value={value ? value.split("-")[1] : ""}
                   onChange={(e) => handleDateChange("month", e.target.value)}
-                  className="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-dark-600 rounded dark:bg-dark-700"
+                  className="w-full px-1 sm:px-2 py-1 text-xs sm:text-sm border border-gray-300 dark:border-dark-600 rounded dark:bg-dark-700 dark:text-white"
                 >
                   <option value="">Mês</option>
                   {months.map((month) => (
@@ -192,11 +193,11 @@ const DatePicker = forwardRef(({
 
               {/* Ano */}
               <div>
-                <label className="block text-xs text-gray-500 mb-1">Ano</label>
+                <label className="block text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 mb-0.5">Ano</label>
                 <select
                   value={value ? value.split("-")[0] : ""}
                   onChange={(e) => handleDateChange("year", e.target.value)}
-                  className="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-dark-600 rounded dark:bg-dark-700"
+                  className="w-full px-1 sm:px-2 py-1 text-xs sm:text-sm border border-gray-300 dark:border-dark-600 rounded dark:bg-dark-700 dark:text-white"
                 >
                   <option value="">Ano</option>
                   {years.map((year) => (
@@ -209,14 +210,14 @@ const DatePicker = forwardRef(({
             </div>
 
             {/* Botões de atalho */}
-            <div className="mt-3 pt-3 border-t border-gray-200 dark:border-dark-700 flex gap-2">
+            <div className="mt-2 sm:mt-3 pt-2 sm:pt-3 border-t border-gray-200 dark:border-dark-700 flex gap-2">
               <button
                 type="button"
                 onClick={() => {
                   onChange(today);
                   setIsOpen(false);
                 }}
-                className="flex-1 text-xs text-emerald-600 hover:text-emerald-700 font-medium"
+                className="flex-1 text-xs text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 font-medium"
               >
                 Hoje
               </button>
@@ -226,7 +227,7 @@ const DatePicker = forwardRef(({
                   onChange("");
                   setIsOpen(false);
                 }}
-                className="flex-1 text-xs text-gray-500 hover:text-gray-700 font-medium"
+                className="flex-1 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 font-medium"
               >
                 Limpar
               </button>

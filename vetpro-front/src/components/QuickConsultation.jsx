@@ -2116,12 +2116,12 @@ const QuickConsultation = ({
         Voltar
       </button>
 
-      <div className="rounded-2xl border border-emerald-200 bg-gradient-to-r from-emerald-50 to-cyan-50 p-4 sm:p-5">
-        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Consulta Clinica Completa</h1>
-        <p className="text-sm text-gray-700 mt-1">
+      <div className="rounded-2xl border border-emerald-200 dark:border-emerald-800 bg-gradient-to-r from-emerald-50 to-cyan-50 dark:from-emerald-900 dark:to-cyan-900 p-4 sm:p-5">
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">Consulta Clinica Completa</h1>
+        <p className="text-sm text-gray-700 dark:text-gray-200 mt-1">
           Paciente: <strong>{patient.name}</strong> - Tutor: {patient.ownerName}
         </p>
-        <p className="text-xs text-emerald-800 mt-1 font-semibold">
+        <p className="text-xs text-emerald-800 dark:text-emerald-300 mt-1 font-semibold">
           Contexto ativo: {consultationContext.label}
         </p>
         <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-2">

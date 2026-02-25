@@ -1,117 +1,122 @@
-import React from "react";
+import React from 'react';
 
-const Skeleton = ({ 
-  className = "", 
-  variant = "text",
-  width,
-  height,
-  animate = true 
-}) => {
-  const baseClasses = `
-    bg-gray-200 dark:bg-dark-700 rounded
-    ${animate ? "animate-pulse" : ""}
-    ${className}
-  `;
-
-  const variants = {
-    text: "h-4 w-full",
-    title: "h-6 w-3/4",
-    avatar: "h-12 w-12 rounded-full",
-    thumbnail: "h-32 w-full rounded-lg",
-    card: "h-40 w-full rounded-xl",
-    button: "h-10 w-24 rounded-lg",
-    input: "h-10 w-full rounded-lg",
-  };
-
-  const style = {
-    width: width || (variants[variant] ? undefined : "100%"),
-    height: height || (variants[variant] ? undefined : "auto"),
+// Skeleton base para qualquer elemento
+export const Skeleton = ({ className = '', variant = 'rect' }) => {
+  const baseClasses = 'animate-pulse bg-gray-200 dark:bg-dark-700';
+  
+  const variantClasses = {
+    rect: 'rounded-lg',
+    circle: 'rounded-full',
+    text: 'rounded h-4',
   };
 
   return (
     <div 
-      className={baseClasses} 
-      style={variant === "custom" ? style : undefined}
-    >
-      {variant !== "custom" && (
-        <div className={variants[variant]} style={style} />
-      )}
+      className={`${baseClasses} ${variantClasses[variant]} ${className}`}
+    />
+  );
+};
+
+// Skeleton paraCard de paciente
+export const PatientCardSkeleton = () => {
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 animate-pulse">
+      <div className="flex items-center gap-3">
+        <Skeleton variant="circle" className="h-12 w-12" />
+        <div className="flex-1 space-y-2">
+          <Skeleton className="h-5 w-1/2" />
+          <Skeleton className="h-3 w-2/3" />
+        </div>
+      </div>
+      <div className="mt-4 flex gap-2">
+        <Skeleton className="h-6 w-16" />
+        <Skeleton className="h-6 w-20" />
+        <Skeleton className="h-6 w-12" />
+      </div>
+      <div className="mt-4 pt-4 border-t border-gray-100 grid grid-cols-2 gap-2">
+        <Skeleton className="h-8" />
+        <Skeleton className="h-8" />
+      </div>
     </div>
   );
 };
 
 // Skeleton para lista de pacientes
-export const PatientListSkeleton = ({ count = 5 }) => {
+export const PatientListSkeleton = ({ count = 6 }) => {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-      {[...Array(count)].map((_, i) => (
-        <div key={i} className="bg-white rounded-xl border border-gray-200 p-4">
-          <div className="flex items-start space-x-3">
-            <Skeleton variant="avatar" />
-            <div className="flex-1 space-y-2">
-              <Skeleton variant="title" />
-              <Skeleton variant="text" width="60%" />
-              <div className="flex gap-2">
-                <Skeleton className="h-6 w-16 rounded-full" />
-                <Skeleton className="h-6 w-20 rounded-full" />
-              </div>
-            </div>
-          </div>
-          <div className="mt-4 pt-4 border-t grid grid-cols-2 gap-2">
-            <Skeleton variant="button" />
-            <Skeleton variant="button" />
-          </div>
-        </div>
+      {Array.from({ length: count }).map((_, i) => (
+        <PatientCardSkeleton key={i} />
       ))}
+    </div>
+  );
+};
+
+// Skeleton para card de consulta
+export const ConsultationCardSkeleton = () => {
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 animate-pulse">
+      <div className="flex justify-between items-start mb-3">
+        <div className="space-y-2">
+          <Skeleton className="h-5 w-32" />
+          <Skeleton className="h-3 w-24" />
+        </div>
+        <Skeleton className="h-6 w-20" />
+      </div>
+      <div className="space-y-2">
+        <Skeleton className="h-4 w-full" />
+        <Skeleton className="h-4 w-3/4" />
+      </div>
+      <div className="mt-4 flex gap-2">
+        <Skeleton className="h-8 flex-1" />
+        <Skeleton className="h-8 flex-1" />
+        <Skeleton className="h-8 flex-1" />
+      </div>
     </div>
   );
 };
 
 // Skeleton para lista de consultas
-export const ConsultationListSkeleton = ({ count = 3 }) => {
+export const ConsultationListSkeleton = ({ count = 4 }) => {
   return (
     <div className="space-y-4">
-      {[...Array(count)].map((_, i) => (
-        <div key={i} className="bg-white rounded-xl border border-gray-200 p-4">
-          <div className="flex justify-between items-start mb-4">
-            <div className="flex items-center space-x-3">
-              <Skeleton variant="avatar" />
-              <div>
-                <Skeleton variant="title" width="120px" />
-                <Skeleton variant="text" width="80px" />
-              </div>
-            </div>
-            <div className="text-right">
-              <Skeleton variant="text" width="60px" />
-              <Skeleton variant="text" width="100px" />
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Skeleton variant="text" />
-            <Skeleton variant="text" width="80%" />
-          </div>
-          <div className="mt-4 pt-4 border-t flex gap-2">
-            <Skeleton variant="button" width="100px" />
-            <Skeleton variant="button" width="100px" />
-            <Skeleton variant="button" width="100px" />
-          </div>
-        </div>
+      {Array.from({ length: count }).map((_, i) => (
+        <ConsultationCardSkeleton key={i} />
       ))}
     </div>
   );
 };
 
-// Skeleton para cards de estatísticas
-export const StatsCardSkeleton = ({ count = 4 }) => {
+// Skeleton para card de agendamento
+export const AppointmentCardSkeleton = () => {
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-      {[...Array(count)].map((_, i) => (
-        <div key={i} className="bg-white rounded-xl border border-gray-200 p-4">
-          <Skeleton variant="text" width="40px" />
-          <Skeleton variant="title" className="mt-2" />
-          <Skeleton variant="text" width="60px" />
+    <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 animate-pulse">
+      <div className="flex gap-4">
+        <div className="space-y-2 text-center">
+          <Skeleton className="h-8 w-12" />
+          <Skeleton className="h-4 w-8" />
         </div>
-      ))}
+        <div className="flex-1 space-y-2">
+          <Skeleton className="h-5 w-1/2" />
+          <Skeleton className="h-4 w-3/4" />
+          <Skeleton className="h-3 w-1/3" />
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Skeleton para dashboard stats
+export const StatsCardSkeleton = () => {
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 animate-pulse">
+      <div className="flex items-center gap-3">
+        <Skeleton variant="circle" className="h-10 w-10" />
+        <div className="flex-1">
+          <Skeleton className="h-8 w-12 mb-1" />
+          <Skeleton className="h-3 w-20" />
+        </div>
+      </div>
     </div>
   );
 };
@@ -121,19 +126,41 @@ export const TableSkeleton = ({ rows = 5, cols = 4 }) => {
   return (
     <div className="space-y-3">
       {/* Header */}
-      <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}>
-        {[...Array(cols)].map((_, i) => (
-          <Skeleton key={i} variant="text" height="20px" />
+      <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}>
+        {Array.from({ length: cols }).map((_, i) => (
+          <Skeleton key={i} className="h-4" />
         ))}
       </div>
       {/* Rows */}
-      {[...Array(rows)].map((_, rowIndex) => (
-        <div key={rowIndex} className="grid gap-3" style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}>
-          {[...Array(cols)].map((_, colIndex) => (
-            <Skeleton key={colIndex} variant="text" height="16px" />
+      {Array.from({ length: rows }).map((_, rowIndex) => (
+        <div 
+          key={rowIndex} 
+          className="grid gap-4 border-t border-gray-100 pt-3" 
+          style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}
+        >
+          {Array.from({ length: cols }).map((_, colIndex) => (
+            <Skeleton key={colIndex} className="h-4" />
           ))}
         </div>
       ))}
+    </div>
+  );
+};
+
+// Skeleton para formulário
+export const FormSkeleton = () => {
+  return (
+    <div className="space-y-4 animate-pulse">
+      <Skeleton className="h-4 w-1/4" />
+      <Skeleton className="h-10 w-full" />
+      <Skeleton className="h-4 w-1/3" />
+      <Skeleton className="h-10 w-full" />
+      <Skeleton className="h-4 w-1/2" />
+      <Skeleton className="h-24 w-full" />
+      <div className="flex gap-4 pt-4">
+        <Skeleton className="h-10 w-24" />
+        <Skeleton className="h-10 w-32" />
+      </div>
     </div>
   );
 };

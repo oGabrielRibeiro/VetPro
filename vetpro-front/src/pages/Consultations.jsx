@@ -8,7 +8,8 @@ const Consultations = ({
   patients,
   onNewConsultation,
   onViewPatientConsultations,
-  onViewConsultation
+  onViewConsultation,
+  onBack
 }) => {
   const [filterPatientId, setFilterPatientId] = useState("");
   const [filterDateRange, setFilterDateRange] = useState({ start: "", end: "" });
@@ -75,6 +76,18 @@ const Consultations = ({
 
   return (
     <div className="max-w-7xl mx-auto">
+      {onBack && (
+        <div className="flex justify-end mb-2">
+          <button
+            onClick={onBack}
+            className="flex items-center gap-1 text-sm text-gray-600 hover:text-emerald-600 transition-colors"
+          >
+            <AppIcon name="back" className="h-4 w-4" />
+            Voltar
+          </button>
+        </div>
+      )}
+
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 sm:mb-6">
         <div>
           <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-800">Prontuarios Veterinarios</h1>

@@ -24,7 +24,31 @@ const emojiByName = {
   cow: "🐮",
   sheep: "🐑",
   goat: "🐐",
-  pig: "🐷"
+  pig: "🐷",
+  // Ações
+  edit: "✏️",
+  delete: "🗑️",
+  confirm: "✅",
+  back: "⬅️",
+  save: "💾",
+  cancel: "❌",
+  view: "👁️",
+  warning: "⚠️",
+  success: "✓",
+  error: "✗",
+  info: "ℹ️",
+  medical: "🩺",
+  heart: "❤️",
+  thermometer: "🌡️",
+  weight: "⚖️",
+  phone: "📞",
+  email: "📧",
+  address: "📍",
+  calendar: "📆",
+  clock: "🕐",
+  star: "⭐",
+  heartRate: "💗",
+  signature: "✍️"
 };
 
 const toneByName = {

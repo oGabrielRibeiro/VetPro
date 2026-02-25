@@ -1,105 +1,135 @@
-import React from "react";
+import React from 'react';
+import AppIcon from './AppIcon';
 
 const Table = ({
   columns = [],
   data = [],
-  emptyMessage = "Nenhum registro encontrado",
-  loading = false,
   onRowClick,
-  rowClassName = "",
-  className = "",
+  emptyMessage = 'Nenhum registro encontrado',
+  emptyIcon = 'search',
+  loading = false,
+  striped = true,
+  hoverable = true,
+  responsive = true,
+  className = '',
 }) => {
-  const LoadingRow = () => (
-    <tr>
-      {columns.map((col, index) => (
-        <td key={index} className="px-6 py-4 whitespace-nowrap">
-          <div className="h-4 bg-gray-200 rounded animate-pulse w-3/4"></div>
-        </td>
-      ))}
-    </tr>
-  );
+  const renderCell = (row, column) => {
+    if (column.render) {
+      return column.render(row[column.key], row);
+    }
+    return row[column.key] || '-';
+  };
 
-  const EmptyRow = () => (
-    <tr>
-      <td
-        colSpan={columns.length}
-        className="px-6 py-12 text-center text-gray-500"
-      >
-        <div className="flex flex-col items-center">
-          <svg
-            className="w-12 h-12 text-gray-300 mb-3"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={1.5}
-              d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-            />
-          </svg>
-          <p className="text-sm">{emptyMessage}</p>
+  if (loading) {
+    return (
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+        <div className="animate-pulse p-4">
+          <div className="h-4 bg-gray-200 rounded w-1/4 mb-4"></div>
+          {[...Array(5)].map((_, i) => (
+            <div key={i} className="h-12 bg-gray-100 rounded mb-2"></div>
+          ))}
         </div>
-      </td>
-    </tr>
-  );
+      </div>
+    );
+  }
 
-  return (
-    <div className={`overflow-x-auto rounded-xl border border-gray-200 ${className}`}>
-      <table className="min-w-full divide-y divide-gray-200">
-        <thead className="bg-gray-50">
-          <tr>
-            {columns.map((column, index) => (
-              <th
-                key={index}
-                scope="col"
+  if (data.length === 0) {
+    return (
+      <div className="bg-white rounded-xl border border-dashed border-gray-300 p-8 text-center">
+        <div className="mx-auto mb-3 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-gray-100 text-gray-400">
+          <AppIcon name={emptyIcon} />
+        </div>
+        <h3 className="text-lg font-bold text-gray-600 mb-2">
+          {emptyMessage}
+        </h3>
+      </div>
+    );
+  }
+
+  const TableContent = () => (
+    <table className="w-full">
+      <thead>
+        <tr className="border-b border-gray-200 bg-gray-50">
+          {columns.map((column, index) => (
+            <th
+              key={column.key || index}
+              className={`
+                px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider
+                ${column.align === 'right' ? 'text-right' : column.align === 'center' ? 'text-center' : 'text-left'}
+                ${column.className || ''}
+              `}
+              style={{ width: column.width }}
+            >
+              {column.header}
+            </th>
+          ))}
+        </tr>
+      </thead>
+      <tbody className="divide-y divide-gray-100">
+        {data.map((row, rowIndex) => (
+          <tr
+            key={row.id || rowIndex}
+            className={`
+              ${striped && rowIndex % 2 === 1 ? 'bg-gray-50' : 'bg-white'}
+              ${hoverable ? 'hover:bg-emerald-50 transition-colors' : ''}
+              ${onRowClick ? 'cursor-pointer' : ''}
+            `}
+            onClick={() => onRowClick && onRowClick(row)}
+          >
+            {columns.map((column, colIndex) => (
+              <td
+                key={column.key || colIndex}
                 className={`
-                  px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider
-                  ${column.headerClassName || ""}
+                  px-4 py-3 text-sm text-gray-700
+                  ${column.align === 'right' ? 'text-right' : column.align === 'center' ? 'text-center' : 'text-left'}
+                  ${column.className || ''}
                 `}
-                style={{ width: column.width }}
               >
-                {column.header}
-              </th>
+                {renderCell(row, column)}
+              </td>
             ))}
           </tr>
-        </thead>
-        <tbody className="bg-white divide-y divide-gray-200">
-          {loading ? (
-            [...Array(5)].map((_, i) => <LoadingRow key={i} />)
-          ) : data.length === 0 ? (
-            <EmptyRow />
-          ) : (
-            data.map((row, rowIndex) => (
-              <tr
-                key={rowIndex}
-                onClick={() => onRowClick?.(row)}
-                className={`
-                  hover:bg-gray-50 transition-colors
-                  ${onRowClick ? "cursor-pointer" : ""}
-                  ${rowClassName(row, rowIndex)}
-                `}
-              >
-                {columns.map((column, colIndex) => (
-                  <td
-                    key={colIndex}
-                    className={`
-                      px-6 py-4 whitespace-nowrap text-sm text-gray-700
-                      ${column.cellClassName || ""}
-                    `}
-                  >
-                    {column.render
-                      ? column.render(row[rowIndex === 0 ? "id" : column.accessor], row)
-                      : row[column.accessor]}
-                  </td>
-                ))}
-              </tr>
-            ))
-          )}
-        </tbody>
-      </table>
+        ))}
+      </tbody>
+    </table>
+  );
+
+  if (responsive) {
+    return (
+      <div className={`bg-white rounded-xl border border-gray-200 shadow-sm overflow-x-auto ${className}`}>
+        <TableContent />
+      </div>
+    );
+  }
+
+  return (
+    <div className={`bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden ${className}`}>
+      <TableContent />
     </div>
+  );
+};
+
+// Componente para Actions (botões de ação em linhas)
+export const TableActions = ({ children }) => (
+  <div className="flex items-center gap-1">
+    {children}
+  </div>
+);
+
+// Componente para Badge/Tag em células
+export const TableBadge = ({ children, variant = 'default' }) => {
+  const variants = {
+    default: 'bg-gray-100 text-gray-700',
+    success: 'bg-emerald-100 text-emerald-700',
+    warning: 'bg-amber-100 text-amber-700',
+    error: 'bg-red-100 text-red-700',
+    info: 'bg-blue-100 text-blue-700',
+  };
+
+  return (
+    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${variants[variant]}`}>
+      {children}
+    </span>
   );
 };
 

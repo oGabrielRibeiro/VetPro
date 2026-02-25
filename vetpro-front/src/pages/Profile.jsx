@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import FeedbackBanner from "../components/FeedbackBanner";
+import AppIcon from "../components/AppIcon";
 
 const emptyForm = {
   name: "",
@@ -61,7 +62,7 @@ function buildInitialForm(profile = {}) {
   };
 }
 
-const Profile = ({ profile, onSave, onCancel, onDeleteAccount }) => {
+const Profile = ({ profile, onSave, onCancel, onDeleteAccount, onBack }) => {
   const [form, setForm] = useState(buildInitialForm(profile));
   const [clinicLogoFileName, setClinicLogoFileName] = useState("");
   const [formError, setFormError] = useState("");
@@ -165,6 +166,18 @@ const Profile = ({ profile, onSave, onCancel, onDeleteAccount }) => {
 
   return (
     <div className="max-w-4xl mx-auto">
+      {onBack && (
+        <div className="flex justify-end mb-2">
+          <button
+            onClick={onBack}
+            className="flex items-center gap-1 text-sm text-gray-600 hover:text-emerald-600 transition-colors"
+          >
+            <AppIcon name="back" className="h-4 w-4" />
+            Voltar
+          </button>
+        </div>
+      )}
+
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6 sm:mb-8">
         <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-800">
           Meu Perfil
@@ -172,15 +185,17 @@ const Profile = ({ profile, onSave, onCancel, onDeleteAccount }) => {
         <div className="grid grid-cols-2 gap-2 sm:flex sm:space-x-3 sm:gap-0 w-full sm:w-auto">
           <button
             onClick={onCancel}
-            className="w-full sm:w-auto min-h-[44px] bg-gray-200 text-gray-800 font-bold py-2 px-4 sm:py-2.5 sm:px-6 rounded-xl hover:bg-gray-300 transition-colors text-sm sm:text-base"
+            className="w-full sm:w-auto min-h-[44px] bg-red-100 text-red-700 font-bold py-2 px-4 sm:py-2.5 sm:px-6 rounded-xl border border-red-300 hover:bg-red-200 transition-colors text-sm sm:text-base"
           >
+            <AppIcon name="cancel" className="h-4 w-4 mr-1" />
             Cancelar
           </button>
           <button
             onClick={handleSubmit}
             className="w-full sm:w-auto min-h-[44px] bg-emerald-600 text-white font-bold py-2 px-4 sm:py-2.5 sm:px-6 rounded-xl shadow-md hover:shadow-lg transition-all text-sm sm:text-base"
           >
-            Salvar Alteracoes
+            <AppIcon name="save" className="h-4 w-4 mr-1" />
+            Salvar
           </button>
         </div>
       </div>
@@ -523,7 +538,7 @@ const Profile = ({ profile, onSave, onCancel, onDeleteAccount }) => {
                 </div>
               ) : (
                 <div>
-                  <div className="text-5xl mb-4">✍️</div>
+                  <div className="text-5xl mb-4"><AppIcon name="signature" className="h-12 w-12" /></div>
                   <p className="text-gray-600 mb-4">
                     Carregue uma imagem da sua assinatura para uso nos prontuarios
                   </p>

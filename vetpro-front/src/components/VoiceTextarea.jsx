@@ -98,11 +98,21 @@ const VoiceTextarea = ({
         <button
           type="button"
           onClick={toggleRecording}
-          className={`w-full sm:w-auto min-h-[42px] rounded-lg px-3 py-2 text-xs font-semibold text-white ${
+          className={`w-full sm:w-auto min-h-[42px] rounded-lg px-3 py-2 text-xs font-semibold text-white flex items-center justify-center gap-2 ${
             isRecording ? "bg-red-600" : "bg-indigo-600"
           }`}
         >
-          {isRecording ? "Gravando..." : "Preencher por voz"}
+          {isRecording ? (
+            <>
+              <span className="animate-pulse">🎤</span>
+              <span className="hidden sm:inline">Gravando...</span>
+            </>
+          ) : (
+            <>
+              <span>🎤</span>
+              <span className="hidden sm:inline">Por voz</span>
+            </>
+          )}
         </button>
       </div>
       <textarea

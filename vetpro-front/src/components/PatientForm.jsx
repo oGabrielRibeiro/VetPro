@@ -1,14 +1,72 @@
-import React from 'react';
-import { useForm } from 'react-hook-form';
+import React, { useEffect, useState } from 'react';
+import { useForm, Controller } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import Input from './Input';
 import Select from './Select';
 import DatePicker from './DatePicker';
-import FeedbackBanner from "./FeedbackBanner";
 import { patientSchema } from '../utils/validationSchemas';
 import { formatPhone } from '../utils/validationSchemas';
 
+// Mapeamento de porte por subcategoria
+const porteMap = {
+  // Grande porte
+  "Equino": "Grande",
+  "Bovino": "Grande",
+  "Suíno": "Grande",
+  // Médio porte
+  "Caprino": "Médio",
+  "Ovino": "Médio",
+  // Pequeno porte
+  "Canino": "Pequeno",
+  "Felino": "Pequeno",
+};
+
+// Função para calcular idade a partir da data de nascimento
+const calculateAge = (birthDate) => {
+  if (!birthDate) return null;
+  
+  const today = new Date();
+  const birth = new Date(birthDate);
+  
+  let years = today.getFullYear() - birth.getFullYear();
+  let months = today.getMonth() - birth.getMonth();
+  
+  // Ajusta se o mês de nascimento ainda não passou este ano
+  if (months < 0 || (months === 0 && today.getDate() < birth.getDate())) {
+    years--;
+    months += 12;
+  }
+  
+  // Ajusta se o dia ainda não passou neste mês
+  if (today.getDate() < birth.getDate()) {
+    months--;
+    if (months < 0) months += 12;
+  }
+  
+  // Retorna objeto com idade formatada (anos e meses) e número
+  if (years > 0 && months > 0) {
+    return { 
+      formatted: `${years} Ano${years > 1 ? 's' : ''}, ${months} Mês${months > 1 ? 'es' : ''}`, 
+      numeric: years 
+    };
+  } else if (years > 0) {
+    return { 
+      formatted: `${years} Ano${years > 1 ? 's' : ''}`, 
+      numeric: years 
+    };
+  } else if (months > 0) {
+    return { 
+      formatted: `${months} Mês${months > 1 ? 'es' : ''}`, 
+      numeric: 0 
+    };
+  } else {
+    return { formatted: 'Recém-nascido', numeric: 0 };
+  }
+};
+
 const PatientForm = ({ patient, onSubmit, onCancel, isEditing }) => {
+  const [calculatedAge, setCalculatedAge] = useState(null);
+  
   const speciesOptions = [
     { value: "Mamífero", label: "Mamífero" },
     { value: "Ave", label: "Ave" },
@@ -48,6 +106,9 @@ const PatientForm = ({ patient, onSubmit, onCancel, isEditing }) => {
     setValue,
     trigger,
     getValues,
+    control,
+    setError,
+    clearErrors,
     formState: { errors, isSubmitting },
   } = useForm({
     resolver: yupResolver(patientSchema),
@@ -72,6 +133,30 @@ const PatientForm = ({ patient, onSubmit, onCancel, isEditing }) => {
   });
 
   const selectedSpecies = watch("species");
+  const selectedSubcategory = watch("subcategory");
+  const birthDateValue = watch("birthDate");
+
+  // Effect para calcular idade automaticamente quando a data de nascimento muda
+  useEffect(() => {
+    if (birthDateValue) {
+      const ageResult = calculateAge(birthDateValue);
+      if (ageResult) {
+        setCalculatedAge(ageResult);
+        // Define o valor numérico para o campo age (para o backend)
+        setValue("age", ageResult.numeric, { shouldValidate: true });
+      }
+    } else {
+      setCalculatedAge(null);
+    }
+  }, [birthDateValue, setValue]);
+
+  // Effect para calcular porte automaticamente baseado na subcategoria
+  useEffect(() => {
+    if (selectedSubcategory && porteMap[selectedSubcategory]) {
+      const porteCalculado = porteMap[selectedSubcategory];
+      setValue("porte", porteCalculado, { shouldValidate: true });
+    }
+  }, [selectedSubcategory, setValue]);
 
   // Handler para formatar telefone em tempo real
   const handlePhoneChange = (e, fieldName) => {
@@ -79,9 +164,35 @@ const PatientForm = ({ patient, onSubmit, onCancel, isEditing }) => {
     setValue(fieldName, formatted, { shouldValidate: false });
   };
 
+  // Handler para quando o usuário digita manualmente a idade
+  const handleAgeChange = (e) => {
+    // Limpa o erro de birthDate se o usuário começar a digitar idade manualmente
+    if (birthDateValue) {
+      clearErrors("birthDate");
+    }
+    setCalculatedAge(null);
+    // Aceita o valor digitado (pode ser string ou número)
+    const value = e.target.value;
+    // Tenta converter para número se for possível
+    const numericValue = parseInt(value);
+    if (!isNaN(numericValue)) {
+      setValue("age", numericValue, { shouldValidate: true });
+    } else {
+      setValue("age", value, { shouldValidate: true });
+    }
+  };
+
   const onFormSubmit = (data) => {
     console.log("Form submitted with data:", data);
-    onSubmit(data);
+    // Garante que age e weight sejam números para o backend
+    const submissionData = {
+      ...data,
+      age: typeof data.age === 'string' ? parseInt(data.age) || null : data.age,
+      weight: typeof data.weight === 'string' ? parseFloat(data.weight) || null : data.weight,
+      porte: data.porte ? data.porte.toLowerCase() : null,
+    };
+    console.log("Data to submit:", submissionData);
+    onSubmit(submissionData);
   };
 
   const handleButtonClick = async () => {
@@ -92,8 +203,17 @@ const PatientForm = ({ patient, onSubmit, onCancel, isEditing }) => {
     
     if (isValid) {
       const data = getValues();
-      console.log("Form data after validation:", data);
-      onSubmit(data);
+      console.log("Raw form data:", JSON.stringify(data));
+      
+      // Garante que age e weight sejam números para o backend, e porte em minúsculo
+      const submissionData = {
+        ...data,
+        age: data.age ? (typeof data.age === 'string' ? parseInt(data.age, 10) || null : data.age) : null,
+        weight: data.weight ? (typeof data.weight === 'string' ? parseFloat(data.weight) || null : data.weight) : null,
+        porte: data.porte ? String(data.porte).toLowerCase() : null,
+      };
+      console.log("Form data after conversion:", JSON.stringify(submissionData));
+      onSubmit(submissionData);
     } else {
       console.log("Form has validation errors, not submitting");
     }
@@ -153,19 +273,36 @@ const PatientForm = ({ patient, onSubmit, onCancel, isEditing }) => {
                 {...register("sex")}
               />
               
-              <Input
-                label="Idade"
-                placeholder="Ex: 3 anos, 6 meses"
-                required
-                error={errors.age?.message}
-                {...register("age")}
+              {/* DatePicker com Controller para react-hook-form */}
+              <Controller
+                name="birthDate"
+                control={control}
+                render={({ field }) => (
+                  <DatePicker
+                    label="Data de Nascimento"
+                    value={field.value || ""}
+                    onChange={(value) => field.onChange(value)}
+                    error={errors.birthDate?.message}
+                    allowFutureDates={false}
+                  />
+                )}
               />
               
-              <DatePicker
-                label="Data de Nascimento"
-                error={errors.birthDate?.message}
-                {...register("birthDate")}
-              />
+              {/* Campo de idade - calculado automaticamente ou manual */}
+              <div>
+                <Input
+                  label="Idade"
+                  placeholder={calculatedAge ? calculatedAge.formatted : "Ex: 3 Anos, 6 Meses"}
+                  value={calculatedAge ? calculatedAge.numeric : undefined}
+                  error={errors.age?.message}
+                  onChange={handleAgeChange}
+                />
+                {calculatedAge && (
+                  <p className="text-xs text-emerald-600 mt-1 font-medium">
+                    ✨ Calculado automaticamente
+                  </p>
+                )}
+              </div>
               
               <Input
                 label="Peso (kg)"
@@ -190,12 +327,19 @@ const PatientForm = ({ patient, onSubmit, onCancel, isEditing }) => {
                 {...register("microchip")}
               />
               
-              <Select
-                label="Porte"
-                options={porteOptions}
-                error={errors.porte?.message}
-                {...register("porte")}
-              />
+              <div>
+                <Select
+                  label="Porte"
+                  options={porteOptions}
+                  error={errors.porte?.message}
+                  {...register("porte")}
+                />
+                {selectedSubcategory && porteMap[selectedSubcategory] && (
+                  <p className="text-xs text-emerald-600 mt-1 font-medium">
+                    ✨ Calculado automaticamente para {selectedSubcategory}
+                  </p>
+                )}
+              </div>
             </div>
           </div>
 

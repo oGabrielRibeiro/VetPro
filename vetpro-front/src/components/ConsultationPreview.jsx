@@ -522,7 +522,7 @@ const ConsultationPreview = ({
               className="btn btn-success btn-md btn-block sm:w-auto"
             >
               {uploading && <LoadingDot />}
-              {uploading ? "Enviando..." : "Enviar"}
+              {uploading ? "Enviando..." : "📤 Enviar"}
             </button>
           </div>
         </div>

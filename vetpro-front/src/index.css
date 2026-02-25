@@ -18,12 +18,12 @@
 
 /* Dark mode variables */
 .dark {
-  --vp-bg: #0d0d0f;
-  --vp-card: #1a1a1f;
-  --vp-border: #2d2d35;
-  --vp-text: #f3f4f6;
-  --vp-text-secondary: #9ca3af;
-  --vp-shadow: 0 10px 24px rgba(0, 0, 0, 0.3);
+  --vp-bg: #121218;
+  --vp-card: #1e1e26;
+  --vp-border: #2e2e3a;
+  --vp-text: #f5f5f7;
+  --vp-text-secondary: #a1a1aa;
+  --vp-shadow: 0 10px 24px rgba(0, 0, 0, 0.4);
 }
 
 body {
@@ -313,4 +313,421 @@ textarea:focus {
   .no-print {
     display: none !important;
   }
+}
+
+/* ============================================
+   DARK MODE - CORES MELHORADAS ADICIONAIS
+   ============================================ */
+
+/* Backgrounds mais vis�veis no dark mode */
+.dark body {
+  background-color: #121218;
+  color: #f5f5f7;
+}
+
+/* Cards com melhor contraste */
+.dark .bg-white,
+.dark .card {
+  background-color: #1e1e26 !important;
+  border-color: #2e2e3a !important;
+}
+
+/* Textos mais claros */
+.dark .text-gray-900 {
+  color: #fafafa !important;
+}
+
+.dark .text-gray-800 {
+  color: #f3f4f6 !important;
+}
+
+.dark .text-gray-700 {
+  color: #e5e7eb !important;
+}
+
+.dark .text-gray-600 {
+  color: #d1d5db !important;
+}
+
+.dark .text-gray-500 {
+  color: #a1a1aa !important;
+}
+
+.dark .text-gray-400 {
+  color: #9ca3af !important;
+}
+
+/* Bordas mais vis�veis */
+.dark .border {
+  border-color: #2e2e3a !important;
+}
+
+.dark .border-gray-200 {
+  border-color: #2e2e3a !important;
+}
+
+.dark .border-gray-300 {
+  border-color: #3e3e4a !important;
+}
+
+/* Inputs com melhor contraste no dark mode */
+.dark input,
+.dark select,
+.dark textarea {
+  background-color: #252530 !important;
+  border-color: #3e3e4a !important;
+  color: #f5f5f7 !important;
+}
+
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: #6b7280 !important;
+}
+
+/* Bot�es com cores vibrantes no dark mode */
+.dark .btn-success {
+  background: linear-gradient(120deg, #059669, #0f766e);
+  box-shadow: 0 8px 20px rgba(5, 150, 105, 0.3);
+}
+
+.dark .btn-success:hover {
+  background: linear-gradient(120deg, #10b981, #34d399);
+}
+
+.dark .btn-primary {
+  background: linear-gradient(120deg, #6366f1, #818cf8);
+  box-shadow: 0 8px 20px rgba(99, 102, 241, 0.3);
+}
+
+.dark .btn-primary:hover {
+  background: linear-gradient(120deg, #818cf8, #a5b4fc);
+}
+
+/* Badges e tags com cores vibrantes */
+.dark .bg-blue-50 {
+  background-color: rgba(59, 130, 246, 0.2) !important;
+}
+
+.dark .text-blue-700 {
+  color: #60a5fa !important;
+}
+
+.dark .bg-purple-50 {
+  background-color: rgba(139, 92, 246, 0.2) !important;
+}
+
+.dark .text-purple-700 {
+  color: #a78bfa !important;
+}
+
+.dark .bg-amber-50 {
+  background-color: rgba(245, 158, 11, 0.2) !important;
+}
+
+.dark .text-amber-700 {
+  color: #fbbf24 !important;
+}
+
+.dark .bg-emerald-50 {
+  background-color: rgba(16, 185, 129, 0.2) !important;
+}
+
+.dark .text-emerald-700 {
+  color: #34d399 !important;
+}
+
+/* Tabelas no dark mode */
+.dark table,
+.dark .table {
+  background-color: transparent;
+}
+
+.dark th {
+  background-color: #252530 !important;
+  color: #f5f5f7 !important;
+  border-color: #3e3e4a !important;
+}
+
+.dark td {
+  border-color: #2e2e3a !important;
+  color: #e5e7eb !important;
+}
+
+.dark tr:hover {
+  background-color: #252530 !important;
+}
+
+/* Scrollbar melhorada para dark mode */
+.dark ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.dark ::-webkit-scrollbar-track {
+  background: #1e1e26;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #4b5563;
+  border-radius: 4px;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #6b7280;
+}
+
+/* Selection color melhorada */
+.dark ::selection {
+  background-color: #38bdf8;
+  color: #ffffff;
+}
+
+/* Links no dark mode */
+.dark a {
+  color: #38bdf8;
+}
+
+.dark a:hover {
+  color: #7dd3fc;
+}
+
+/* Focus states mais vis�veis */
+.dark button:focus-visible,
+.dark input:focus-visible,
+.dark select:focus-visible,
+.dark textarea:focus-visible {
+  outline: 2px solid #38bdf8;
+  outline-offset: 2px;
+}
+
+/* Hover states para elementos interativos */
+.dark .hover\:bg-gray-100:hover {
+  background-color: #2e2e3a !important;
+}
+
+.dark .hover\:bg-gray-200:hover {
+  background-color: #3e3e4a !important;
+}
+
+/* ============================================
+   MELHORIAS VISUAIS - INPUTS E BLOCOS
+   ============================================ */
+
+/* Inputs com maior contraste e diferenciação do fundo */
+.input-contrast {
+  background-color: #ffffff !important;
+  border: 2px solid #e2e8f0 !important;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.dark .input-contrast {
+  background-color: #2a2a38 !important;
+  border: 2px solid #404050 !important;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* Blocos de seções com cores distintas - Pequeno Porte */
+.section-block-small {
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+  border-left: 4px solid #3b82f6;
+  border-radius: 0 12px 12px 0;
+}
+
+.dark .section-block-small {
+  background: linear-gradient(135deg, #1e3a5f 0%, #172554 100%);
+  border-left: 4px solid #60a5fa;
+}
+
+/* Blocos de seções com cores distintas - Grande Porte */
+.section-block-large {
+  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+  border-left: 4px solid #f59e0b;
+  border-radius: 0 12px 12px 0;
+}
+
+.dark .section-block-large {
+  background: linear-gradient(135deg, #451a03 0%, #78350f 100%);
+  border-left: 4px solid #fbbf24;
+}
+
+/* Bloco de informações clínicas - Verde */
+.section-block-clinical {
+  background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+  border-left: 4px solid #10b981;
+  border-radius: 0 12px 12px 0;
+}
+
+.dark .section-block-clinical {
+  background: linear-gradient(135deg, #064e3b 0%, #065f46 100%);
+  border-left: 4px solid #34d399;
+}
+
+/* Bloco de medicamentos - Roxo */
+.section-block-meds {
+  background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%);
+  border-left: 4px solid #8b5cf6;
+  border-radius: 0 12px 12px 0;
+}
+
+.dark .section-block-meds {
+  background: linear-gradient(135deg, #2e1065 0%, #4c1d95 100%);
+  border-left: 4px solid #a78bfa;
+}
+
+/* Bloco de retorno - Coral/Laranja */
+.section-block-return {
+  background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
+  border-left: 4px solid #f97316;
+  border-radius: 0 12px 12px 0;
+}
+
+.dark .section-block-return {
+  background: linear-gradient(135deg, #431407 0%, #7c2d12 100%);
+  border-left: 4px solid #fb923c;
+}
+
+/* Card elevado com sombra */
+.card-elevated {
+  background: var(--vp-card);
+  border: 1px solid var(--vp-border);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  border-radius: 16px;
+}
+
+.dark .card-elevated {
+  background: #1e1e26;
+  border-color: #2e2e3a;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+/* Labels flutuantes com fundo para melhor leitura */
+.label-bubble {
+  background-color: rgba(255, 255, 255, 0.9);
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-weight: 600;
+}
+
+.dark .label-bubble {
+  background-color: rgba(30, 30, 38, 0.9);
+}
+
+/* Separadores decorativos entre seções */
+.section-divider {
+  height: 3px;
+  background: linear-gradient(90deg, transparent, #10b981, transparent);
+  border-radius: 2px;
+  margin: 16px 0;
+}
+
+.dark .section-divider {
+  background: linear-gradient(90deg, transparent, #34d399, transparent);
+}
+
+/* Status badges com cores mais vibrantes */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.status-badge-success {
+  background-color: #d1fae5;
+  color: #047857;
+}
+
+.dark .status-badge-success {
+  background-color: rgba(16, 185, 129, 0.2);
+  color: #34d399;
+}
+
+.status-badge-warning {
+  background-color: #fef3c7;
+  color: #b45309;
+}
+
+.dark .status-badge-warning {
+  background-color: rgba(245, 158, 11, 0.2);
+  color: #fbbf24;
+}
+
+.status-badge-info {
+  background-color: #dbeafe;
+  color: #1d4ed8;
+}
+
+.dark .status-badge-info {
+  background-color: rgba(59, 130, 246, 0.2);
+  color: #60a5fa;
+}
+
+/* Animação subtle para destaque */
+@keyframes highlight-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
+  50% { box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+}
+
+.highlight-animation {
+  animation: highlight-pulse 2s ease-in-out;
+}
+
+/* Ícone de seção decorativa */
+.section-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+}
+
+.section-icon-blue {
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  color: white;
+}
+
+.section-icon-amber {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: white;
+}
+
+.section-icon-green {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white;
+}
+
+.section-icon-purple {
+  background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+  color: white;
+}
+
+.section-icon-orange {
+  background: linear-gradient(135deg, #f97316, #ea580c);
+  color: white;
+}
+
+.dark .section-icon-blue {
+  background: linear-gradient(135deg, #60a5fa, #3b82f6);
+}
+
+.dark .section-icon-amber {
+  background: linear-gradient(135deg, #fbbf24, #f59e0b);
+}
+
+.dark .section-icon-green {
+  background: linear-gradient(135deg, #34d399, #10b981);
+}
+
+.dark .section-icon-purple {
+  background: linear-gradient(135deg, #a78bfa, #8b5cf6);
+}
+
+.dark .section-icon-orange {
+  background: linear-gradient(135deg, #fb923c, #f97316);
 }

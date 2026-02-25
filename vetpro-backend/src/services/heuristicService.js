@@ -98,7 +98,31 @@ function buildClinicalSegmentsFromMessages(messages = []) {
   return segments;
 }
 
+// Contador global para evitar loops infinitos
+let runUnifiedBrainCallCount = 0;
+const MAX_UNIFIED_BRAIN_CALLS = 5;
+
 function runUnifiedClinicalBrain(messages = []) {
+  // Reset contador a cada nova requisição de alto nível
+  if (messages && messages.length > 0 && messages[0].role === 'user') {
+    runUnifiedBrainCallCount = 0;
+  }
+
+  // Protecao contra loop infinito
+  runUnifiedBrainCallCount += 1;
+  if (runUnifiedBrainCallCount > MAX_UNIFIED_BRAIN_CALLS) {
+    logger.warn('runUnifiedClinicalBrain - limite de chamadas excedido', {
+      callCount: runUnifiedBrainCallCount,
+    });
+    return {
+      sourceText: '',
+      segments: [],
+      parsed: {},
+      context: {},
+      pipeline: {},
+    };
+  }
+
   const sourceText = (Array.isArray(messages) ? messages : [])
     .map((item) => String(item?.content || '').trim())
     .filter(Boolean)
@@ -106,7 +130,11 @@ function runUnifiedClinicalBrain(messages = []) {
     .trim();
 
   const segments = buildClinicalSegmentsFromMessages(messages);
-  const parsedResult = parseClinicalFieldsFromSegments(segments, sourceText);
+
+  // Passa um parametro para indicar que NAO deve chamar runUnifiedClinicalBrain novamente
+  const parsedResult = parseClinicalFieldsFromSegments(segments, sourceText, {
+    skipUnifiedBrain: true,
+  });
 
   return {
     sourceText,

@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import AppIcon from "../components/AppIcon";
 import SpeciesIcon from "../components/SpeciesIcon";
 
-const Patients = ({ patients, onEditPatient, onAddPatient, onViewConsultations }) => {
+const Patients = ({ patients, onEditPatient, onAddPatient, onViewConsultations, onBack }) => {
   const [searchQuery, setSearchQuery] = useState("");
 
   const filteredPatients = patients.filter(
@@ -16,8 +16,23 @@ const Patients = ({ patients, onEditPatient, onAddPatient, onViewConsultations }
 
   return (
     <div className="max-w-7xl mx-auto">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 sm:mb-6">
-        <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-800 mb-3 sm:mb-0">Meus Pacientes</h1>
+      {/* Botão Voltar no canto superior direito */}
+      {onBack && (
+        <div className="flex justify-end mb-2">
+          <button
+            onClick={onBack}
+            className="flex items-center gap-1 text-sm text-gray-600 hover:text-emerald-600 transition-colors"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            Voltar
+          </button>
+        </div>
+      )}
+
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-3 sm:mb-4">
+        <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-800 mb-2 sm:mb-0">Meus Pacientes</h1>
 
         <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 sm:space-x-3">
           <div className="relative flex-1 min-w-[180px] sm:min-w-[200px]">
@@ -73,16 +88,18 @@ const Patients = ({ patients, onEditPatient, onAddPatient, onViewConsultations }
                 </div>
 
                 <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-gray-100 grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  <button
-                    onClick={() => onEditPatient(patient)}
-                    className="btn btn-info-soft btn-sm btn-block"
-                  >
-                    Editar
-                  </button>
+                    <button
+                      onClick={() => onEditPatient(patient)}
+                      className="btn btn-info-soft btn-sm btn-block"
+                    >
+                      <AppIcon name="edit" className="h-3 w-3 mr-1" />
+                      Editar
+                    </button>
                   <button
                     onClick={() => onViewConsultations(patient)}
                     className="btn btn-primary btn-sm btn-block"
                   >
+                    <AppIcon name="consultations" className="h-3 w-3 mr-1" />
                     Prontuario
                   </button>
                 </div>

@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import AppIcon from "../components/AppIcon";
 import SpeciesIcon from "../components/SpeciesIcon";
 
-const Appointments = ({ appointments = [], patients = [], onNewAppointment, onEditAppointment, onDeleteAppointment }) => {
+const Appointments = ({ appointments = [], patients = [], onNewAppointment, onEditAppointment, onDeleteAppointment, onBack }) => {
   const [filterDate, setFilterDate] = useState("");
   const [filterPatient, setFilterPatient] = useState("");
 
@@ -24,8 +24,16 @@ const Appointments = ({ appointments = [], patients = [], onNewAppointment, onEd
 
   return (
     <div className="max-w-7xl mx-auto">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 sm:mb-8">
-        <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-800">Agenda de Consultas</h1>
+      {onBack && (
+        <div className="flex justify-end mb-2">
+          <button onClick={onBack} className="flex items-center gap-1 text-sm text-gray-600 hover:text-emerald-600">
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+            Voltar
+          </button>
+        </div>
+      )}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 sm:mb-6">
+        <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-800">Agenda de Consultas</h1>
         <button
           onClick={onNewAppointment}
           className="mt-4 sm:mt-0 btn btn-primary btn-lg"
@@ -115,9 +123,9 @@ const Appointments = ({ appointments = [], patients = [], onNewAppointment, onEd
                   </div>
 
                   <div className="grid grid-cols-3 gap-2 w-full sm:w-auto">
-                    <button onClick={() => onEditAppointment && onEditAppointment(appointment)} className="btn btn-neutral btn-sm btn-block text-xs sm:text-sm">Editar</button>
-                    <button onClick={() => onDeleteAppointment && onDeleteAppointment(appointment.id)} className="btn btn-danger-soft btn-sm btn-block text-xs sm:text-sm">Excluir</button>
-                    <button className="btn btn-success btn-sm btn-block text-xs sm:text-sm">Confirmar</button>
+                    <button onClick={() => onEditAppointment && onEditAppointment(appointment)} className="btn btn-neutral btn-sm btn-block text-xs sm:text-sm"><AppIcon name="edit" className="h-3 w-3 mr-1" />Editar</button>
+                    <button onClick={() => onDeleteAppointment && onDeleteAppointment(appointment.id)} className="btn btn-danger-soft btn-sm btn-block text-xs sm:text-sm"><AppIcon name="delete" className="h-3 w-3 mr-1" />Excluir</button>
+                    <button className="btn btn-success btn-sm btn-block text-xs sm:text-sm"><AppIcon name="confirm" className="h-3 w-3 mr-1" />Confirmar</button>
                   </div>
                 </div>
               </div>

@@ -226,8 +226,18 @@ function basicFieldExtraction(text = '') {
 
 /**
  * Parses clinical fields from conversation segments
+ * @param {Array} segments - Array de segmentos da conversa
+ * @param {string} sourceText - Texto original da conversa
+ * @param {Object} options - Opções adicionais
+ * @param {boolean} options.skipUnifiedBrain - Se true, pula a chamada ao runUnifiedClinicalBrain para evitar loop infinito
  */
-function parseClinicalFieldsFromSegments(segments = [], sourceText = '') {
+function parseClinicalFieldsFromSegments(
+  segments = [],
+  sourceText = '',
+  options = {},
+) {
+  const { skipUnifiedBrain = false } = options;
+
   try {
     const allText =
       (Array.isArray(sourceText) ? sourceText.join(' ') : sourceText) || '';
@@ -242,6 +252,7 @@ function parseClinicalFieldsFromSegments(segments = [], sourceText = '') {
       sourceTextLength: sourceText ? sourceText.length : 0,
       combinedTextLength: combinedText.length,
       combinedTextPreview: combinedText.substring(0, 200),
+      skipUnifiedBrain,
     });
 
     // Tenta importar do heuristicService para usar as funções existentes
@@ -265,7 +276,9 @@ function parseClinicalFieldsFromSegments(segments = [], sourceText = '') {
     const context = {};
     const pipeline = {};
 
+    // ONLY call runUnifiedClinicalBrain if NOT already called (to avoid infinite loop)
     if (
+      !skipUnifiedBrain &&
       runUnifiedClinicalBrain &&
       typeof runUnifiedClinicalBrain === 'function'
     ) {
@@ -287,7 +300,11 @@ function parseClinicalFieldsFromSegments(segments = [], sourceText = '') {
       pipeline.pipeline = result.pipeline || {};
     } else {
       // Fallback: extração básica de campos clínicos
-      logger.info('Usando fallback basicFieldExtraction');
+      logger.info('Usando fallback basicFieldExtraction', {
+        reason: skipUnifiedBrain
+          ? 'skipUnifiedBrain=true'
+          : 'runUnifiedBrain nao disponivel',
+      });
       const basicResult = basicFieldExtraction(combinedText);
       Object.assign(parsed, basicResult);
     }
@@ -458,26 +475,69 @@ async function analyzeFieldConversation({
     const aiFields = aiResult.fields || {};
     const heuristicFields = heuristicResult?.parsed || {};
 
+    // Mapeia os novos campos da IA para o formato do frontend
     combinedParsed = {
-      // IA (mais detalhado)
+      // Identificação (novos campos)
+      nome_animal: aiFields.nome_animal || '',
+      especie: aiFields.especie || '',
+      raca: aiFields.raca || '',
+      idade: aiFields.idade || '',
+      sexo: aiFields.sexo || '',
+      peso: aiFields.peso || '',
+
+      // Anamnese
       chiefComplaint:
         aiFields.queixa_principal || heuristicFields.chiefComplaint || '',
-      anamnese: aiFields.anamnese || heuristicFields.anamnesis || '',
-      physicalExam: aiFields.exame_fisico || heuristicFields.physicalExam || '',
+      anamnese:
+        aiFields.historico_do_problema ||
+        aiFields.anamnese ||
+        heuristicFields.anamnesis ||
+        '',
+      alimentacao: aiFields.alimentacao || '',
+      ambiente: aiFields.ambiente || '',
+      vacinacao: aiFields.vacinacao || '',
+      vermifugacao: aiFields.vermifugacao || '',
+      doencas_previas: aiFields.doencas_previas || '',
+      uso_medicacao: aiFields.uso_medicacao || '',
+
+      // Exame físico
+      physicalExam:
+        aiFields.achados_relevantes ||
+        aiFields.exame_fisico ||
+        heuristicFields.physicalExam ||
+        '',
+      estado_geral: aiFields.estado_geral || '',
+      temperatura: aiFields.temperatura || '',
+      frequencia_cardiaca: aiFields.frequencia_cardiaca || '',
+      frequencia_respiratoria: aiFields.frequencia_respiratoria || '',
+      mucosas: aiFields.mucosas || '',
+      hidratacao: aiFields.hidratacao || '',
+
+      // Avaliação
       diagnosis:
-        aiFields.diagnostico_sugestivo || heuristicFields.diagnosis || '',
-      treatment: Array.isArray(aiFields.tratamento)
-        ? aiFields.tratamento.join('; ')
-        : aiFields.tratamento || heuristicFields.treatment || '',
-      procedures: heuristicFields.procedures || '',
-      medications: heuristicFields.medications || '',
-      examDetails: Array.isArray(aiFields.exames_solicitados)
-        ? aiFields.exames_solicitados.join('; ')
-        : '',
-      notes: heuristicFields.notes || '',
-      returnRecommendation: Array.isArray(aiFields.recomendacoes)
-        ? aiFields.recomendacoes.join('; ')
-        : '',
+        aiFields.diagnostico_presuntivo ||
+        aiFields.diagnostico_sugestivo ||
+        heuristicFields.diagnosis ||
+        '',
+      suspeitas_clinicas: aiFields.suspeitas_clinicas || '',
+
+      // Plano
+      treatment:
+        aiFields.orientacoes_ao_tutor ||
+        aiFields.tratamento ||
+        heuristicFields.treatment ||
+        '',
+      medications:
+        aiFields.medicacoes_prescritas || heuristicFields.medications || '',
+      examDetails: aiFields.exames_solicitados || '',
+      returnRecommendation:
+        aiFields.retorno ||
+        aiFields.recomendacoes ||
+        heuristicFields.returnRecommendation ||
+        '',
+
+      // Transcrição organizada
+      transcricao_organizada: aiFields.transcricao_organizada || '',
     };
 
     logger.info('Resultado combinado: IA + Heurística', {
@@ -539,6 +599,11 @@ function readHeuristicMemory() {
 
 /**
  * Usa IA para separar speakers e extrair campos clínicos detalhados
+ * Segue pipeline de 4 etapas:
+ * 1) Whisper/ASR → Transcrição bruta
+ * 2) LLM 1 → Separação Vet / Tutor
+ * 3) LLM 2 → Extração estruturada
+ * 4) LLM 3 → Refinamento clínico
  */
 async function analyzeWithAI(transcript = '', existingSegments = []) {
   const apiKey = process.env.OPENAI_API_KEY;
@@ -557,43 +622,127 @@ async function analyzeWithAI(transcript = '', existingSegments = []) {
     return null;
   }
 
-  const systemPrompt = `Você é um assistente de transcrição veterinária. Analise a conversa entre TUTOR (dono do animal) e VETERINÁRIO e:
+  // ETAPA 1-3: Separação de falas, extração estruturada e refinamento em um único prompt
+  const systemPrompt = `Você é um assistente clínico veterinário especializado em:
 
-1. IDENTIFIQUE O SPEAKER DE CADA TRECHO: Marque cada fala como "Tutor" ou "Veterinário"
-2. EXTRAIA OS CAMPOS CLÍNICOS de forma DETALHADA e PROFISSIONAL:
+1) Transcrição médica veterinária
+2) Identificação de interlocutores (Veterinário e Tutor)
+3) Estruturação de prontuário clínico
+4) Correção gramatical mantendo fidelidade clínica
 
-- **queixa_principal**: O que o tutor relatado como motivo da consulta (detalhe: quando começou, sintomas observados, comportamento do animal)
-- **anamnese**: Histórico completo mencionaDO pelo tutor (alimentação, comportamento, ambiente, contatos com outros animais, histórico de doenças, vaccinação, vermifugação)
-- **exame_fisico**: O que o veterinário observou no exame clínico (FC, FR, temperatura, mucosas, hidratação, palpação, ausculta)
-- **diagnostico_sugestivo**: Diagnóstico ou suspeita diagnóstica identificada pelo veterinário
-- **tratamento**: Conduta e tratamento prescrito pelo veterinário (medicações com doses, vias, frequência)
-- **exames_solicitados**: Exames complementares solicitados
-- **recomendações**: Orientações de retorno, cuidados, medicações
+REGRAS OBRIGATÓRIAS:
 
-IMPORTANTE: 
-- Seja detalhado nos campos extraídos
-- Não invente informações - extraia apenas o que está na transcrição
-- Use linguagem técnica profissional兽医
-- Se um campo não for mencionado, use null`;
+- NÃO invente informações.
+- NÃO altere significado clínico.
+- NÃO presuma dados que não foram falados.
+- Se algo estiver incompleto, marque como "Não informado na consulta".
+- Se houver ambiguidade, mantenha a forma mais fiel ao áudio.
+- Use linguagem técnica veterinária adequada.
+- Corrija erros gramaticais mantendo o contexto original.
 
-  const userPrompt = `Analise esta transcrição de consulta veterinária e retorne um JSON com a estrutura:
+ETAPA 1 — TRANSCRIÇÃO ORGANIZADA
+
+Separe claramente as falas em:
+- [VETERINÁRIO]: para falas do veterinário
+- [TUTOR]: para falas do tutor/dono do animal
+
+Se houver dúvida na identificação do interlocutor, use:
+[INDEFINIDO]:
+
+ETAPA 2 — EXTRAÇÃO CLÍNICA ESTRUTURADA
+
+Com base na conversa, preencha os seguintes campos. SE NÃO HOUVER CERTEZA ABSOLUTA, use "Não informado na consulta":
 
 {
-  "segments": [
-    {"speaker": "Tutor|Veterinário", "text": "texto da fala"}
-  ],
-  "fields": {
-    "queixa_principal": "detalhes da queixa",
-    "anamnese": "histórico detalhado",
-    "exame_fisico": "achados do exame",
-    "diagnostico_sugestivo": "diagnóstico",
-    "tratamento": "tratamento prescrito",
-    "exames_solicitados": ["exame1", "exame2"],
-    "recomendacoes": ["retorno em X dias", "cuidados"]
+  "identificacao": {
+    "nome_animal": "",
+    "especie": "",
+    "raca": "",
+    "idade": "",
+    "sexo": "",
+    "peso": ""
+  },
+  "anamnese": {
+    "queixa_principal": "",
+    "historico_do_problema": "",
+    "alimentacao": "",
+    "ambiente": "",
+    "vacinacao": "",
+    "vermifugacao": "",
+    "doencas_previas": "",
+    "uso_medicacao": ""
+  },
+  "exame_fisico": {
+    "estado_geral": "",
+    "temperatura": "",
+    "frequencia_cardiaca": "",
+    "frequencia_respiratoria": "",
+    "mucosas": "",
+    "hidratacao": "",
+    "achados_relevantes": ""
+  },
+  "avaliacao": {
+    "suspeitas_clinicas": "",
+    "diagnostico_presuntivo": ""
+  },
+  "plano": {
+    "exames_solicitados": "",
+    "medicacoes_prescritas": "",
+    "orientacoes_ao_tutor": "",
+    "retorno": ""
   }
 }
 
-Transcrição:
+ETAPA 3 — MELHORIA TEXTUAL
+
+Reescreva os campos (Queixa principal, Histórico, Avaliação, Plano) de forma técnica, clara e objetiva, mantendo integralmente o significado original.`;
+
+  const userPrompt = `Analise esta transcrição de consulta veterinária e retorne UM JSON com a estrutura COMPLETA (todas as chaves obrigatórias):
+
+{
+  "transcricao_organizada": "[VETERINÁRIO]: ...\n[TUTOR]: ...\n[INDEFINIDO]: ...",
+  "identificacao": {
+    "nome_animal": "nome do animal mencionado",
+    "especie": "canino, felino, bovino, etc",
+    "raca": "raça mencionada",
+    "idade": "idade mencionada",
+    "sexo": "macho/fêmea",
+    "peso": "peso mencionado"
+  },
+  "anamnese": {
+    "queixa_principal": "o que o tutor relatou como motivo da consulta",
+    "historico_do_problema": "como começou, evolução, tratamentos anteriores",
+    "alimentacao": "ração, frequência, quantidade",
+    "ambiente": "onde vive, acesso à rua, outros animais",
+    "vacinacao": "vacinas em dia, últimas vacinas",
+    "vermifugacao": "vermifugação em dia",
+    "doencas_previas": "histórico de doenças",
+    "uso_medicacao": "medicações atuais"
+  },
+  "exame_fisico": {
+    "estado_geral": "alerta, prostrado, depressivo",
+    "temperatura": "temperatura corporal",
+    "frequencia_cardiaca": "FC",
+    "frequencia_respiratoria": "FR",
+    "mucosas": "cor, tempo de preenchimento capilar",
+    "hidratacao": "hidratado, desidratado",
+    "achados_relevantes": "palpação, ausculta, outros achados"
+  },
+  "avaliacao": {
+    "suspeitas_clinicas": "hipóteses diagnósticas",
+    "diagnostico_presuntivo": "diagnóstico presuntivo"
+  },
+  "plano": {
+    "exames_solicitados": "exames complementares pedidos",
+    "medicacoes_prescritas": "medicações com dose, via e frequência",
+    "orientacoes_ao_tutor": "cuidados em casa, alimentação",
+    "retorno": "retorno recomendado"
+  }
+}
+
+IMPORTANTE: Se qualquer campo não puder ser preenchido com ABSOLUTA CERTEZA baseada na conversa, use exatamente: "Não informado na consulta"
+
+Transcrição a analisar:
 ${combinedText}`;
 
   try {
@@ -633,11 +782,112 @@ ${combinedText}`;
 
     const parsed = JSON.parse(content);
     logger.info('Análise IA concluída', {
-      hasSegments: !!parsed.segments,
-      hasFields: !!parsed.fields,
+      hasTranscricao: !!parsed.transcricao_organizada,
+      hasIdentificacao: !!parsed.identificacao,
+      hasAnamnese: !!parsed.anamnese,
+      hasExameFisico: !!parsed.exame_fisico,
+      hasAvaliacao: !!parsed.avaliacao,
+      hasPlano: !!parsed.plano,
     });
 
-    return parsed;
+    // Mapeia a nova estrutura para o formato esperado pelo frontend
+    const mappedFields = {
+      // Transcrição organizada
+      transcricao_organizada: parsed.transcricao_organizada || '',
+
+      // Identificação
+      nome_animal: parsed.identificacao?.nome_animal || '',
+      especie: parsed.identificacao?.especie || '',
+      raca: parsed.identificacao?.raca || '',
+      idade: parsed.identificacao?.idade || '',
+      sexo: parsed.identificacao?.sexo || '',
+      peso: parsed.identificacao?.peso || '',
+
+      // Anamnese
+      queixa_principal: parsed.anamnese?.queixa_principal || '',
+      historico_do_problema: parsed.anamnese?.historico_do_problema || '',
+      alimentacao: parsed.anamnese?.alimentacao || '',
+      ambiente: parsed.anamnese?.ambiente || '',
+      vacinacao: parsed.anamnese?.vacinacao || '',
+      vermifugacao: parsed.anamnese?.vermifugacao || '',
+      doencas_previas: parsed.anamnese?.doencas_previas || '',
+      uso_medicacao: parsed.anamnese?.uso_medicacao || '',
+
+      // Exame físico
+      estado_geral: parsed.exame_fisico?.estado_geral || '',
+      temperatura: parsed.exame_fisico?.temperatura || '',
+      frequencia_cardiaca: parsed.exame_fisico?.frequencia_cardiaca || '',
+      frequencia_respiratoria:
+        parsed.exame_fisico?.frequencia_respiratoria || '',
+      mucosas: parsed.exame_fisico?.mucosas || '',
+      hidratacao: parsed.exame_fisico?.hidratacao || '',
+      achados_relevantes: parsed.exame_fisico?.achados_relevantes || '',
+
+      // Avaliação
+      suspeitas_clinicas: parsed.avaliacao?.suspeitas_clinicas || '',
+      diagnostico_presuntivo: parsed.avaliacao?.diagnostico_presuntivo || '',
+
+      // Plano
+      exames_solicitados: parsed.plano?.exames_solicitados || '',
+      medicacoes_prescritas: parsed.plano?.medicacoes_prescritas || '',
+      orientacoes_ao_tutor: parsed.plano?.orientacoes_ao_tutor || '',
+      retorno: parsed.plano?.retorno || '',
+    };
+
+    // Gera segments a partir da transcrição organizada
+    const segments = [];
+    if (parsed.transcricao_organizada) {
+      const lines = parsed.transcricao_organizada.split('\n');
+      let currentSpeaker = 'Tutor';
+      let currentText = '';
+
+      for (const line of lines) {
+        const vetMatch = line.match(/^\[VETERINÁRIO\]:\s*(.*)/i);
+        const tutorMatch = line.match(/^\[TUTOR\]:\s*(.*)/i);
+        const indefinidoMatch = line.match(/^\[INDEFINIDO\]:\s*(.*)/i);
+
+        if (vetMatch) {
+          if (currentText && currentSpeaker) {
+            segments.push({
+              speaker: currentSpeaker,
+              text: currentText.trim(),
+            });
+          }
+          currentSpeaker = 'Medico';
+          currentText = vetMatch[1];
+        } else if (tutorMatch) {
+          if (currentText && currentSpeaker) {
+            segments.push({
+              speaker: currentSpeaker,
+              text: currentText.trim(),
+            });
+          }
+          currentSpeaker = 'Tutor';
+          currentText = tutorMatch[1];
+        } else if (indefinidoMatch) {
+          if (currentText && currentSpeaker) {
+            segments.push({
+              speaker: currentSpeaker,
+              text: currentText.trim(),
+            });
+          }
+          currentSpeaker = 'Tutor';
+          currentText = indefinidoMatch[1];
+        } else if (line.trim()) {
+          currentText += ' ' + line;
+        }
+      }
+
+      if (currentText && currentSpeaker) {
+        segments.push({ speaker: currentSpeaker, text: currentText.trim() });
+      }
+    }
+
+    return {
+      fields: mappedFields,
+      segments: segments,
+      raw: parsed, // Mantém o resultado original para debug
+    };
   } catch (error) {
     logger.error('Erro na análise com IA:', error.message);
     return null;

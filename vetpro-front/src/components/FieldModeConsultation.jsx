@@ -1618,14 +1618,14 @@ const FieldModeConsultation = ({
 
   return (
     <div className="max-w-3xl mx-auto space-y-4 pb-36 sm:pb-28">
-      <div className="rounded-2xl border border-cyan-200 bg-gradient-to-r from-cyan-50 to-emerald-50 p-4 sm:p-5 shadow-sm">
+      <div className="rounded-2xl border border-cyan-200 dark:border-cyan-800 bg-gradient-to-r from-cyan-50 to-emerald-50 dark:from-cyan-900 dark:to-emerald-900 p-4 sm:p-5 shadow-sm">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Modo Campo</h1>
-            <p className="text-sm text-gray-700 mt-1">
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">Modo Campo</h1>
+            <p className="text-sm text-gray-700 dark:text-gray-200 mt-1">
               Paciente: <strong>{patient.name}</strong> · Tutor: {patient.ownerName}
             </p>
-            <p className="text-xs text-cyan-800 mt-1 font-semibold">
+            <p className="text-xs text-cyan-800 dark:text-cyan-300 mt-1 font-semibold">
               Contexto ativo: {consultationTypeLabel}
             </p>
           </div>

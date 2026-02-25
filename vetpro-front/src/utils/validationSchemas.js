@@ -24,11 +24,24 @@ export const patientSchema = yup.object().shape({
 
   sex: yup.string().optional(),
 
-  age: yup.string().required("Idade é obrigatória"),
+  // Age pode ser número (do cálculo automático) ou string (digitado manualmente)
+  age: yup.lazy((value) => {
+    if (typeof value === "number") {
+      return yup
+        .number()
+        .nullable()
+        .positive("Idade deve ser um número positivo");
+    }
+    return yup.string().optional();
+  }),
 
   birthDate: yup.string().optional(),
 
-  weight: yup.number().positive("Peso deve ser um número positivo").optional(),
+  weight: yup
+    .number()
+    .positive("Peso deve ser um número positivo")
+    .nullable()
+    .transform((value, original) => (original === "" ? null : value)),
 
   color: yup.string().optional(),
 

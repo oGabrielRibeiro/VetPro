@@ -264,3 +264,115 @@ code {
     grid-template-columns: 1fr;
   }
 }
+/* ============================================
+   TOUCH-FRIENDLY STYLES FOR MOBILE
+   ============================================ */
+
+/* Touch-friendly buttons - minimum 44px height */
+.btn {
+  min-height: 44px;
+  min-width: 44px;
+  padding: 10px 16px;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.btn-sm {
+  min-height: 36px;
+  min-width: 36px;
+  padding: 8px 12px;
+}
+
+.btn-lg {
+  min-height: 52px;
+  padding: 14px 24px;
+}
+
+/* Touch-friendly inputs - 16px font to prevent iOS zoom */
+input, select, textarea {
+  font-size: 16px;
+  min-height: 44px;
+  touch-action: manipulation;
+}
+
+input:focus, select:focus, textarea:focus {
+  font-size: 16px;
+}
+
+/* Touch-friendly form controls */
+.form-control {
+  min-height: 44px;
+  padding: 12px;
+  font-size: 16px;
+}
+
+/* Touch-friendly list items */
+button, a, [role=button] {
+  min-height: 44px;
+  min-width: 44px;
+  touch-action: manipulation;
+}
+
+/* Touch-friendly navigation items */
+.nav-link {
+  min-height: 44px;
+  padding: 12px 16px;
+}
+
+/* Mobile-optimized spacing */
+@media (max-width: 768px) {
+  .p-2 { padding: 12px; }
+  .p-3 { padding: 16px; }
+  .p-4 { padding: 20px; }
+  .p-5 { padding: 24px; }
+  .gap-2 { gap: 12px; }
+  .gap-3 { gap: 16px; }
+  .gap-4 { gap: 20px; }
+}
+
+/* Full-width cards on mobile */
+@media (max-width: 768px) {
+  .card {
+    margin-left: -8px;
+    margin-right: -8px;
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+  }
+  .container {
+    padding: 0 8px;
+  }
+}
+
+/* Improved touch feedback */
+.btn:active {
+  transform: scale(0.97);
+  opacity: 0.9;
+}
+
+/* Scrollable containers with touch */
+.overflow-x-auto {
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+}
+
+/* Mobile bottom navigation improvements */
+@media (max-width: 768px) {
+  .bottom-nav-item {
+    min-height: 56px;
+    padding: 8px 4px;
+  }
+  .bottom-nav-item span {
+    font-size: 10px;
+  }
+}
+
+/* Safe area insets for notched phones */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .pb-safe {
+    padding-bottom: calc(12px + env(safe-area-inset-bottom));
+  }
+  .fixed.bottom-0 {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
