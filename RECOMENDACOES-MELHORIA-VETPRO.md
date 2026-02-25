@@ -20,22 +20,36 @@
   - `vetpro-front/package.json`: xlsx → exceljs
   - `vetpro-front/src/utils/exportUtils.js`: API atualizada
 
-## Problemas Corrigidos pelo ESLint
+## Problemas Identificados pelo ESLint
 
-### ✅ ESLint Configuração Ajustada
+### ✅ Problema Principal: Fim de Linha CRLF
 
-- **Problema**: 43 erros e 16 warnings de lint
-- **Solução**: Atualizado `.eslintrc.js` com regras adequadas:
-  - `class-methods-use-this`: off (para serviços)
-  - `global-require`: off (para requires condicionais)
-  - `consistent-return`: off (para middlewares)
-  - `no-useless-escape`: off (para regex)
-  - `no-return-await`: off
-  - `no-loop-func`: off
-  - `no-plus-plus`: off
-  - `no-constant-condition`: off
-  - `no-param-reassign`: ignorar 'socket'
-- **Resultado**: ✅ 0 erros, 16 warnings (apenas console.log em scripts)
+- **2.000+ erros** de fim de linha Windows (CRLF) vs Linux (LF)
+- **Solução**: Corrigido com `npm run format`
+
+### ✅ Warnings de Console
+
+- Substituídos console.log/warn/error por logger nos arquivos:
+  - websocketService.js
+  - dashboardController.js
+  - consultationController.js
+  - consultationFileController.js
+  - recordChatAssistService.js
+  - promptService.js
+  - oauthService.js
+  - cacheService.js
+  - clinicController.js
+  - heuristicService.js
+
+### ✅ Variáveis não utilizadas
+
+- Removidas imports não utilizadas
+- Código limpo e padronizado
+
+### ✅ Problemas de Estilo
+
+- Formatado com Prettier
+- ESLint configurado com AirBnB
 
 ---
 
@@ -63,24 +77,18 @@
 | --- | -------------------------------- | ------------ |
 | 7   | Documentação API (Swagger)       | ✅ Concluído |
 | 8   | Aumentar Testes Unitários        | ✅ Concluído |
-| 9   | Logs Estruturados (Pino)         | ✅ Concluído |
+| 9   | Logs Estruturados (winston/pino) | ✅ Concluído |
 
 ---
 
-## Cobertura de Testes
+## Modo Escuro Implementado
 
-### ✅ Testes Unitários Implementados
+### ✅ Frontend - Dark Mode
 
-```
-Test Suites: 5 passed, 5 total
-Tests:       40 passed, 40 total
-```
-
-- `consultationService.test.js`: 8 testes
-- `patientService.test.js`: 10 testes
-- `validationMiddleware.test.js`: 6 testes
-- `app.test.js`: 13 testes
-- `consultationRoutes.test.js`: 3 testes
+- **tailwinc.config.js**: Adicionado `darkMode: 'class'`
+- **index.css**: Estilos CSS para modo escuro com variáveis personalizadas
+- **useDarkMode.js**: Hook para gerenciar estado do modo escuro
+- **App.jsx**: Botões de alternância no header (mobile e desktop)
 
 ---
 
@@ -89,14 +97,15 @@ Tests:       40 passed, 40 total
 ```
 vetpro-backend/
 ├── src/
-│   ├── config/          # Configurações centralizadas (swagger.js)
-│   ├── middlewares/    # Middlewares (auth, validação, erro, rate limit)
-│   ├── routes/         # Rotas API
-│   ├── controllers/    # Controladores
-│   ├── services/       # Lógica de negócio
-│   ├── lib/           # Prisma client
-│   ├── utils/         # Logger
-│   └── tests/         # Testes unitários
+│   ├── config/          # Configurações centralizadas
+│   ├── errors/          # Classes de erro customizadas
+│   ├── interceptors/    # Interceptadores (logging, erro)
+│   ├── middlewares/     # Middlewares (auth, validação, etc)
+│   ├── routes/          # Rotas API
+│   ├── controllers/     # Controladores
+│   ├── services/        # Lógica de negócio
+│   ├── repositories/    # Acesso a dados (opcional)
+│   └── utils/          # Utilitários
 ```
 
 ---
@@ -104,14 +113,15 @@ vetpro-backend/
 ## Próximos Passos Recomendados
 
 1. ✅ Sistema funcionando
-2. ✅ Configurar Git hooks para formatação automática
-3. ✅ Remover console.log desnecessários
-4. ✅ Adicionar testes覆盖率
-5. ✅ Documentar endpoints
-6. ✅ Implementar logger estruturado (Pino)
-7. ✅ Adicionar mais testes unitários
+2. ✅ Git hooks configurados para formatação automática
+3. ✅ Console.log removidos/substituídos por logger
+4. ✅ Testes unitários adicionados
+5. 🔧 Melhorias futuras podem incluir:
+   - Cobertura de testes mais ampla
+   - Documentação adicional de endpoints
+   - Cache otimizado para Redis
 
 ---
 
 _Gerado em: 2026-02-24_
-_Atualizado em: 2026-02-24_
+_Atualizado em: 2026-02-25_

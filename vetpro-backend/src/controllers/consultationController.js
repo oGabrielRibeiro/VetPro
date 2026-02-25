@@ -367,6 +367,17 @@ async function fieldAssist(req, res) {
     const audioBuffer = req.file?.buffer || null;
     const mimeType = req.file?.mimetype || req.body?.mimeType || 'audio/webm';
 
+    // Log de debug para entender o que está chegando
+    logger.info('fieldAssist receber requisição', {
+      hasFile: !!req.file,
+      hasAudioBuffer: !!(audioBuffer && audioBuffer.length > 0),
+      audioBufferSize: audioBuffer ? audioBuffer.length : 0,
+      mimeType,
+      filename: req.file?.originalname,
+      segmentsCount: segments.length,
+      transcriptLength: transcript.length,
+    });
+
     const result = await analyzeFieldConversation({
       audioBuffer,
       mimeType,

@@ -2,6 +2,30 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --vp-primary: #0ea5e9;
+  --vp-primary-strong: #0284c7;
+  --vp-accent: #10b981;
+  --vp-bg: #f7f9fc;
+  --vp-card: #ffffff;
+  --vp-border: #e2e8f0;
+  --vp-text: #1f2937;
+  --vp-text-secondary: #6b7280;
+  --vp-radius: 12px;
+  --vp-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+  --vp-transition: 160ms ease;
+}
+
+/* Dark mode variables */
+.dark {
+  --vp-bg: #0d0d0f;
+  --vp-card: #1a1a1f;
+  --vp-border: #2d2d35;
+  --vp-text: #f3f4f6;
+  --vp-text-secondary: #9ca3af;
+  --vp-shadow: 0 10px 24px rgba(0, 0, 0, 0.3);
+}
+
 body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
@@ -9,7 +33,9 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: #f9fafb;
+  background-color: var(--vp-bg);
+  color: var(--vp-text);
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 code {
@@ -22,7 +48,11 @@ code {
 }
 
 ::-webkit-scrollbar-track {
-  background: #f1f5f9;
+  background: var(--vp-bg);
+}
+
+.dark ::-webkit-scrollbar-track {
+  background: #1a1a1f;
 }
 
 ::-webkit-scrollbar-thumb {
@@ -30,30 +60,20 @@ code {
   border-radius: 4px;
 }
 
+.dark ::-webkit-scrollbar-thumb {
+  background: #4b5563;
+}
+
 ::-webkit-scrollbar-thumb:hover {
   background: #64748b;
 }
 
 button:focus-visible,
-input:focus-visible {
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
   outline: 2px solid #10b981;
   outline-offset: 2px;
-}
-
-:root {
-  --vp-primary: #0ea5e9;
-  --vp-primary-strong: #0284c7;
-  --vp-accent: #10b981;
-  --vp-bg: #f7f9fc;
-  --vp-card: #ffffff;
-  --vp-border: #e2e8f0;
-  --vp-radius: 12px;
-  --vp-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
-  --vp-transition: 160ms ease;
-}
-
-body {
-  background-color: var(--vp-bg);
 }
 
 button {
@@ -130,14 +150,18 @@ button:active {
 }
 
 .btn-neutral {
-  background: #ffffff;
-  color: #374151;
-  border-color: #d1d5db;
+  background: var(--vp-card);
+  color: var(--vp-text);
+  border-color: var(--vp-border);
 }
 
-.btn-neutral:hover {
-  background: #f9fafb;
-  border-color: #9ca3af;
+.dark .btn-neutral {
+  background: #2d2d35;
+  border-color: #4b5563;
+}
+
+.dark .btn-neutral:hover {
+  background: #4b5563;
 }
 
 .btn-info-soft {
@@ -158,17 +182,108 @@ button:active {
   border-color: #fca5a5;
 }
 
+/* Form elements dark mode */
 input,
 select,
 textarea {
   border-radius: 10px;
-  transition: border-color var(--vp-transition), box-shadow var(--vp-transition);
+  transition: border-color var(--vp-transition), box-shadow var(--vp-transition),
+    background-color var(--vp-transition), color var(--vp-transition);
+  background-color: var(--vp-card);
+  border-color: var(--vp-border);
+  color: var(--vp-text);
+}
+
+.dark input,
+.dark select,
+.dark textarea {
+  background-color: #1a1a1f;
+  border-color: #2d2d35;
+  color: #f3f4f6;
+}
+
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: #6b7280;
 }
 
 input:focus,
 select:focus,
 textarea:focus {
   box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.15);
+}
+
+/* Dark mode card styles */
+.dark .bg-white {
+  background-color: #1a1a1f !important;
+}
+
+.dark .bg-gray-50 {
+  background-color: #151518 !important;
+}
+
+.dark .bg-gray-100 {
+  background-color: #1f1f23 !important;
+}
+
+.dark .text-gray-800 {
+  color: #f3f4f6 !important;
+}
+
+.dark .text-gray-700 {
+  color: #e5e7eb !important;
+}
+
+.dark .text-gray-600 {
+  color: #d1d5db !important;
+}
+
+.dark .text-gray-500 {
+  color: #9ca3af !important;
+}
+
+.dark .border-gray-200 {
+  border-color: #2d2d35 !important;
+}
+
+.dark .border-gray-300 {
+  border-color: #3d3d45 !important;
+}
+
+/* Dark mode hover effects */
+.dark .hover\:bg-gray-300:hover {
+  background-color: #3d3d45 !important;
+}
+
+/* Dark mode FeedbackBanner */
+.dark .bg-red-50 {
+  background-color: #450a0a !important;
+}
+
+.dark .text-red-800 {
+  color: #fca5a5 !important;
+}
+
+.dark .bg-green-50 {
+  background-color: #052e16 !important;
+}
+
+.dark .text-green-800 {
+  color: #86efac !important;
+}
+
+.dark .bg-yellow-50 {
+  background-color: #451a03 !important;
+}
+
+.dark .text-yellow-800 {
+  color: #fde047 !important;
+}
+
+/* Selection color for dark mode */
+.dark ::selection {
+  background-color: #10b981;
+  color: #ffffff;
 }
 
 @media print {

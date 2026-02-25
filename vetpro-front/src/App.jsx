@@ -14,6 +14,7 @@ import {
   buildReturnConsultationInitialData,
   resolveConsultationContext,
 } from "./utils/consultationContext";
+import useDarkMode from "./hooks/useDarkMode";
 
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Patients = lazy(() => import("./pages/Patients"));
@@ -43,6 +44,7 @@ const MainApp = () => {
   const { user, loading, logout, updateProfile } = useAuth();
   const [currentView, setCurrentView] = useState("dashboard");
   const [isMobile, setIsMobile] = useState(false);
+  const { isDark, toggleDarkMode } = useDarkMode();
 
   // Estados para dados
   const [patients, setPatients] = useState([]);
@@ -81,7 +83,7 @@ const MainApp = () => {
       <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-emerald-600"></div>
     </div>
   );
-
+ 
   const handleToggleFieldMode = () => {
     setFieldMode((prev) => {
       const next = !prev;
@@ -206,7 +208,7 @@ const MainApp = () => {
 
     return nextProfile;
   };
-
+ 
   const showActionError = useCallback((message) => {
     setActionFeedback({ type: "error", message });
   }, []);
@@ -779,11 +781,11 @@ const MainApp = () => {
       case "add-patient":
         return (
           <div className="max-w-2xl mx-auto">
-            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-800 mb-4 sm:mb-6">
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-800 dark:text-white mb-4 sm:mb-6">
               {editingPatient ? "Editar Paciente" : "Novo Paciente"}
             </h1>
 
-            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 sm:p-6">
+            <div className="bg-white dark:bg-dark-800 rounded-xl border border-gray-200 dark:border-dark-700 shadow-sm p-4 sm:p-6">
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
@@ -842,26 +844,26 @@ const MainApp = () => {
                 className="space-y-4 sm:space-y-6"
               >
                 <div>
-                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Nome do Paciente <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
                     name="name"
                     defaultValue={editingPatient?.name || ""}
-                    className="w-full px-3 py-2 sm:px-4 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
+                    className="w-full px-3 py-2 sm:px-4 sm:py-3 border border-gray-300 dark:border-dark-600 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm bg-white dark:bg-dark-800 text-gray-900 dark:text-white"
                     required
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Especie <span className="text-red-500">*</span>
                   </label>
                   <select
                     name="species"
                     defaultValue={editingPatient?.species || ""}
-                    className="w-full px-3 py-2 sm:px-4 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
+                    className="w-full px-3 py-2 sm:px-4 sm:py-3 border border-gray-300 dark:border-dark-600 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm bg-white dark:bg-dark-800 text-gray-900 dark:text-white"
                     required
                   >
                     <option value="">Selecione</option>
@@ -874,371 +876,11 @@ const MainApp = () => {
                   </select>
                 </div>
 
-                <div>
-                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
-                    Subcategoria
-                  </label>
-                  <input
-                    type="text"
-                    name="subcategory"
-                    defaultValue={editingPatient?.subcategory || ""}
-                    className="w-full px-3 py-2 sm:px-4 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
-                    placeholder="Canino, Felino, Equino, Bovino..."
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
-                      Sexo <span className="text-red-500">*</span>
-                    </label>
-                    <select
-                      name="sex"
-                      defaultValue={editingPatient?.sex || ""}
-                      className="w-full px-3 py-2 sm:px-4 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
-                      required
-                    >
-                      <option value="">Selecione</option>
-                      <option value="M">Macho</option>
-                      <option value="F">Femea</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
-                      Status
-                    </label>
-                    <select
-                      name="status"
-                      defaultValue={editingPatient?.status || "ativo"}
-                      className="w-full px-3 py-2 sm:px-4 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
-                    >
-                      <option value="ativo">Ativo</option>
-                      <option value="obito">Obito</option>
-                      <option value="transferido">Transferido</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Raca</label>
-                  <input
-                    type="text"
-                    name="breed"
-                    defaultValue={editingPatient?.breed || ""}
-                    className="w-full px-3 py-2 sm:px-4 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
-                    placeholder="Labrador, Quarto de Milha, Girolando..."
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Nascimento</label>
-                    <input
-                      type="date"
-                      name="birthDate"
-                      defaultValue={editingPatient?.birthDate ? String(editingPatient.birthDate).slice(0, 10) : ""}
-                      className="w-full px-3 py-2 sm:px-4 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Idade (anos)</label>
-                    <input
-                      type="number"
-                      min="0"
-                      max="60"
-                      step="1"
-                      name="age"
-                      defaultValue={editingPatient?.age || ""}
-                      className="w-full px-3 py-2 sm:px-4 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Peso (kg)</label>
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      name="weight"
-                      defaultValue={editingPatient?.weight || ""}
-                      className="w-full px-3 py-2 sm:px-4 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Porte</label>
-                    <select
-                      name="porte"
-                      defaultValue={editingPatient?.porte || ""}
-                      className="w-full px-3 py-2 sm:px-4 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
-                    >
-                      <option value="">Nao definido</option>
-                      <option value="pequeno">Pequeno porte</option>
-                      <option value="grande">Grande porte</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Cor</label>
-                    <input
-                      type="text"
-                      name="color"
-                      defaultValue={editingPatient?.color || ""}
-                      className="w-full px-3 py-2 sm:px-4 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Microchip</label>
-                    <input
-                      type="text"
-                      name="microchip"
-                      defaultValue={editingPatient?.microchip || ""}
-                      className="w-full px-3 py-2 sm:px-4 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
-                    Nome do Tutor <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    name="ownerName"
-                    defaultValue={editingPatient?.ownerName || ""}
-                    className="w-full px-3 py-2 sm:px-4 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
-                    Telefone do Tutor
-                  </label>
-                  <input
-                    type="text"
-                    name="ownerPhone"
-                    defaultValue={editingPatient?.ownerPhone || ""}
-                    className="w-full px-3 py-2 sm:px-4 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
-                    placeholder="(00) 00000-0000"
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
-                      Telefone alternativo
-                    </label>
-                    <input
-                      type="text"
-                      name="ownerAltPhone"
-                      defaultValue={editingPatient?.ownerAltPhone || ""}
-                      className="w-full px-3 py-2 sm:px-4 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
-                      placeholder="(00) 00000-0000"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
-                      CPF do Tutor
-                    </label>
-                    <input
-                      type="text"
-                      name="ownerCpf"
-                      defaultValue={editingPatient?.ownerCpf || ""}
-                      className="w-full px-3 py-2 sm:px-4 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
-                      placeholder="Somente numeros (11 digitos)"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
-                    Email do Tutor
-                  </label>
-                  <input
-                    type="email"
-                    name="ownerEmail"
-                    defaultValue={editingPatient?.ownerEmail || ""}
-                    className="w-full px-3 py-2 sm:px-4 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
-                    placeholder="tutor@email.com"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
-                    Endereco do Tutor
-                  </label>
-                  <input
-                    type="text"
-                    name="ownerAddress"
-                    defaultValue={editingPatient?.ownerAddress || ""}
-                    className="w-full px-3 py-2 sm:px-4 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
-                    placeholder="Rua, numero, bairro, cidade"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
-                    Observacoes do Tutor
-                  </label>
-                  <textarea
-                    name="ownerNotes"
-                    defaultValue={editingPatient?.ownerNotes || ""}
-                    className="w-full min-h-[84px] px-3 py-2 sm:px-4 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
-                    placeholder="Alergias conhecidas, preferencia de contato, observacoes gerais..."
-                  />
-                </div>
-
-                <div className="rounded-lg border border-gray-200 p-3 space-y-3">
-                  <p className="text-xs sm:text-sm font-semibold text-gray-700">
-                    Extras profissionais
-                  </p>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Veterinario responsavel</label>
-                      <input
-                        type="text"
-                        name="responsibleVet"
-                        defaultValue={editingPatient?.responsibleVet || ""}
-                        className="w-full px-3 py-2 sm:px-4 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Clinica de origem</label>
-                      <input
-                        type="text"
-                        name="originClinic"
-                        defaultValue={editingPatient?.originClinic || ""}
-                        className="w-full px-3 py-2 sm:px-4 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Risco anestesico (0-5)</label>
-                      <input
-                        type="number"
-                        min="0"
-                        max="5"
-                        step="1"
-                        name="anestheticRiskScore"
-                        defaultValue={editingPatient?.anestheticRiskScore ?? ""}
-                        className="w-full px-3 py-2 sm:px-4 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
-                      />
-                    </div>
-                    <label className="inline-flex items-center gap-2 text-xs sm:text-sm font-medium text-gray-700">
-                      <input
-                        type="checkbox"
-                        name="emergencyFlag"
-                        defaultChecked={Boolean(editingPatient?.emergencyFlag)}
-                        className="h-4 w-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
-                      />
-                      Paciente com alerta de emergencia
-                    </label>
-                  </div>
-                </div>
-
-                <details className="rounded-lg border border-cyan-200 bg-cyan-50 p-3 space-y-3">
-                  <summary className="cursor-pointer text-xs sm:text-sm font-semibold text-cyan-900">
-                    Dados persistentes da ficha (base formulario)
-                  </summary>
-                  <p className="mt-2 text-[11px] sm:text-xs text-cyan-800">
-                    Esses dados entram como base nas proximas consultas e podem ser atualizados pelo prontuario.
-                  </p>
-                  <p className="text-[11px] sm:text-xs text-cyan-700">
-                    Preencha apenas informacoes estaveis (identificacao, manejo base e historico cronico).
-                  </p>
-
-                  <div className="rounded-lg border border-cyan-200 bg-white p-3 space-y-3">
-                    <p className="text-xs sm:text-sm font-semibold text-gray-700">Propriedade e manejo</p>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Responsavel local</label>
-                        <input
-                          type="text"
-                          name="pp_responsavel_local"
-                          defaultValue=""
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Contato propriedade</label>
-                        <input
-                          type="text"
-                          name="pp_contato_propriedade"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                          placeholder="(00) 00000-0000"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Fazenda / sitio</label>
-                        <input
-                          type="text"
-                          name="pp_fazenda"
-                          defaultValue={editingPatient?.persistentProfile?.grande?.fields?.farmName || ""}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Endereco da propriedade</label>
-                        <input
-                          type="text"
-                          name="pp_endereco_propriedade"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Tipo de criacao</label>
-                        <input
-                          type="text"
-                          name="pp_tipo_criacao"
-                          defaultValue={editingPatient?.persistentProfile?.grande?.fields?.productionSystem || ""}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                          placeholder="Leite, corte, confinado, semi-extensivo..."
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Finalidade zootecnica</label>
-                        <input
-                          type="text"
-                          name="pp_animal_function"
-                          defaultValue={editingPatient?.persistentProfile?.grande?.fields?.animalFunction || ""}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                          placeholder="Leite, corte, esporte, reproducao..."
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Tipo de alimentacao</label>
-                        <input
-                          type="text"
-                          name="pp_tipo_alimentacao"
-                          defaultValue=""
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Sal mineral</label>
-                        <input
-                          type="text"
-                          name="pp_sal_mineral"
-                          defaultValue=""
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Contactantes (csv)</label>
-                        <input
-                          type="text"
-                          name="pp_contactantes"
-                          defaultValue={editingPatient?.persistentProfile?.grande?.fields?.contactAnimals || ""}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                          placeholder="Bovinos, Equinos, Ovinos..."
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </details>
-
-                <div className="flex flex-col sm:flex-row sm:justify-between space-y-2 sm:space-y-0 sm:space-x-3 pt-3 sm:pt-4 border-t border-gray-200">
+                <div className="flex flex-col sm:flex-row sm:justify-between space-y-2 sm:space-y-0 sm:space-x-3 pt-3 sm:pt-4 border-t border-gray-200 dark:border-dark-700">
                   <button
                     type="button"
                     onClick={() => setCurrentView("patients")}
-                    className="w-full sm:w-auto bg-gray-200 text-gray-800 font-bold py-2.5 sm:py-3 px-4 sm:px-6 rounded-xl hover:bg-gray-300 transition-colors text-sm"
+                    className="w-full sm:w-auto bg-gray-200 dark:bg-dark-700 text-gray-800 dark:text-white font-bold py-2.5 sm:py-3 px-4 sm:px-6 rounded-xl hover:bg-gray-300 dark:hover:bg-dark-600 transition-colors text-sm"
                   >
                     Cancelar
                   </button>
@@ -1287,11 +929,11 @@ const MainApp = () => {
       case "new-appointment":
         return (
           <div className="max-w-2xl mx-auto">
-            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-800 mb-4 sm:mb-6">
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-800 dark:text-white mb-4 sm:mb-6">
               {editingAppointment ? "Editar Agendamento" : "Novo Agendamento"}
             </h1>
 
-            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 sm:p-6">
+            <div className="bg-white dark:bg-dark-800 rounded-xl border border-gray-200 dark:border-dark-700 shadow-sm p-4 sm:p-6">
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
@@ -1322,87 +964,14 @@ const MainApp = () => {
                 }}
                 className="space-y-4 sm:space-y-6"
               >
-                <div>
-                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
-                    Paciente <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    name="patientId"
-                    defaultValue={editingAppointment?.patientId || ""}
-                    className="w-full px-3 py-2 sm:px-4 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
-                    required
-                  >
-                    <option value="">Selecione um paciente</option>
-                    {patients.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name} - {p.ownerName}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
-                      Data <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="date"
-                      name="date"
-                      defaultValue={editingAppointment?.date || ""}
-                      className="w-full px-3 py-2 sm:px-4 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
-                      Hora <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="time"
-                      name="time"
-                      defaultValue={editingAppointment?.time || ""}
-                      className="w-full px-3 py-2 sm:px-4 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
-                    Tipo de atendimento
-                  </label>
-                  <select
-                    name="type"
-                    defaultValue={editingAppointment?.type || "consulta"}
-                    className="w-full px-3 py-2 sm:px-4 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
-                  >
-                    <option value="consulta">Consulta</option>
-                    <option value="cirurgia">Cirurgia</option>
-                    <option value="retorno">Retorno</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
-                    Motivo <span className="text-red-500">*</span>
-                  </label>
-                  <textarea
-                    name="reason"
-                    defaultValue={editingAppointment?.reason || ""}
-                    className="w-full px-3 py-2 sm:px-4 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm min-h-[90px]"
-                    required
-                  />
-                </div>
-
-                <div className="flex flex-col sm:flex-row sm:justify-between gap-2 pt-3 border-t border-gray-200">
+                <div className="flex flex-col sm:flex-row sm:justify-between gap-2 pt-3 border-t border-gray-200 dark:border-dark-700">
                   <button
                     type="button"
                     onClick={() => {
                       setEditingAppointment(null);
                       setCurrentView("appointments");
                     }}
-                    className="w-full sm:w-auto bg-gray-200 text-gray-800 font-bold py-2.5 sm:py-3 px-4 sm:px-6 rounded-xl hover:bg-gray-300 transition-colors text-sm"
+                    className="w-full sm:w-auto bg-gray-200 dark:bg-dark-700 text-gray-800 dark:text-white font-bold py-2.5 sm:py-3 px-4 sm:px-6 rounded-xl hover:bg-gray-300 dark:hover:bg-dark-600 transition-colors text-sm"
                   >
                     Cancelar
                   </button>
@@ -1514,13 +1083,13 @@ const MainApp = () => {
           <div className="max-w-4xl mx-auto">
             <button
               onClick={() => setCurrentView("patients")}
-              className="text-gray-600 hover:text-gray-800 font-medium mb-4 flex items-center text-sm"
+              className="text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white font-medium mb-4 flex items-center text-sm"
             >
               <span className="mr-2">&lt;-</span> Voltar para Pacientes
             </button>
 
             <div className="flex flex-col sm:flex-row sm:items-center space-y-3 sm:space-y-0 sm:space-x-3">
-              <div className="w-20 h-20 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center">
+              <div className="w-20 h-20 rounded-full bg-emerald-100 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-300 flex items-center justify-center">
                 <SpeciesIcon
                   species={currentConsultationPatient.species}
                   subcategory={currentConsultationPatient.subcategory}
@@ -1528,22 +1097,22 @@ const MainApp = () => {
                 />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-800">
+                <h1 className="text-2xl font-bold text-gray-800 dark:text-white">
                   {currentConsultationPatient.name}
                 </h1>
-                <p className="text-gray-600">
+                <p className="text-gray-600 dark:text-gray-400">
                   {currentConsultationPatient.ownerName}
                 </p>
                 <div className="mt-2 flex flex-wrap gap-2">
-                  <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs">
+                  <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-xs">
                     {currentConsultationPatient.species}
                   </span>
                   {currentConsultationPatient.subcategory && (
-                    <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded-full text-xs">
+                    <span className="px-2 py-1 bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 rounded-full text-xs">
                       {currentConsultationPatient.subcategory}
                     </span>
                   )}
-                  <span className="px-2 py-1 bg-amber-100 text-amber-800 rounded-full text-xs">
+                  <span className="px-2 py-1 bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-200 rounded-full text-xs">
                     {currentConsultationPatient.age}
                   </span>
                 </div>
@@ -1557,17 +1126,17 @@ const MainApp = () => {
                   .map((consultation) => (
                     <div
                       key={consultation.id}
-                      className="bg-white rounded-xl border border-gray-200 shadow-sm"
+                      className="bg-white dark:bg-dark-800 rounded-xl border border-gray-200 dark:border-dark-700 shadow-sm"
                     >
-                      <div className="border-b border-gray-200 bg-gray-50 px-4 py-3 flex flex-col sm:flex-row sm:justify-between sm:items-center">
+                      <div className="border-b border-gray-200 dark:border-dark-700 bg-gray-50 dark:bg-dark-900 px-4 py-3 flex flex-col sm:flex-row sm:justify-between sm:items-center">
                         <div>
-                          <h2 className="font-bold text-lg text-gray-800">
+                          <h2 className="font-bold text-lg text-gray-800 dark:text-white">
                             Consulta em{" "}
                             {new Date(
                               consultation.createdAt,
                             ).toLocaleDateString("pt-BR")}
                           </h2>
-                          <p className="text-xs text-gray-600 mt-0.5">
+                          <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
                             No {consultation.numeroProntuario} -{" "}
                             {resolveConsultationContext(
                               consultation.consultationType,
@@ -1579,7 +1148,7 @@ const MainApp = () => {
                             onClick={() =>
                               handleViewConsultation(consultation.id)
                             }
-                            className="inline-flex items-center rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1.5 text-xs font-semibold text-emerald-700 transition-colors hover:bg-emerald-100"
+                            className="inline-flex items-center rounded-lg border border-emerald-200 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-900/50 px-2.5 py-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-300 transition-colors hover:bg-emerald-100 dark:hover:bg-emerald-900"
                           >
                             <span className="mr-1">
                               <AppIcon name="consultations" className="h-3.5 w-3.5" />
@@ -1588,7 +1157,7 @@ const MainApp = () => {
                           </button>
                           <button
                             onClick={() => handleCreateReturn(consultation)}
-                            className="rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1.5 text-xs font-semibold text-blue-700 transition-colors hover:bg-blue-100"
+                            className="rounded-lg border border-blue-200 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/50 px-2.5 py-1.5 text-xs font-semibold text-blue-700 dark:text-blue-300 transition-colors hover:bg-blue-100 dark:hover:bg-blue-900"
                           >
                             Criar Retorno
                           </button>
@@ -1596,7 +1165,7 @@ const MainApp = () => {
                             onClick={() =>
                               handleGeneratePrescription(consultation)
                             }
-                            className="rounded-lg border border-indigo-200 bg-indigo-50 px-2.5 py-1.5 text-xs font-semibold text-indigo-700 transition-colors hover:bg-indigo-100"
+                            className="rounded-lg border border-indigo-200 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/50 px-2.5 py-1.5 text-xs font-semibold text-indigo-700 dark:text-indigo-300 transition-colors hover:bg-indigo-100 dark:hover:bg-indigo-900"
                           >
                             Gerar Receita
                           </button>
@@ -1605,69 +1174,25 @@ const MainApp = () => {
 
                       <div className="p-4 space-y-3">
                         <div>
-                          <h3 className="font-bold text-gray-800 text-sm mb-1">
+                          <h3 className="font-bold text-gray-800 dark:text-white text-sm mb-1">
                             Queixa Principal
                           </h3>
-                          <p className="text-gray-700 text-sm">
+                          <p className="text-gray-700 dark:text-gray-300 text-sm">
                             {consultation.chiefComplaint || "Não informado"}
                           </p>
                         </div>
-
-                        {consultation.anamnesis && (
-                          <div>
-                            <h3 className="font-bold text-gray-800 text-sm mb-1">
-                              Anamnese
-                            </h3>
-                            <p className="text-gray-700 text-sm">
-                              {consultation.anamnesis}
-                            </p>
-                          </div>
-                        )}
-
-                        {consultation.clinicalAssessment && (
-                          <div>
-                            <h3 className="font-bold text-gray-800 text-sm mb-1">
-                              Avaliacao Clinica
-                            </h3>
-                            <p className="text-gray-700 text-sm">
-                              {consultation.clinicalAssessment}
-                            </p>
-                          </div>
-                        )}
-
-                        {consultation.diagnosis && (
-                          <div>
-                            <h3 className="font-bold text-gray-800 text-sm mb-1">
-                              Diagnostico
-                            </h3>
-                            <p className="text-gray-700 text-sm">
-                              {consultation.diagnosis}
-                            </p>
-                          </div>
-                        )}
-
-                        {consultation.treatment && (
-                          <div>
-                            <h3 className="font-bold text-gray-800 text-sm mb-1">
-                              Conduta / Tratamento
-                            </h3>
-                            <p className="text-gray-700 text-sm">
-                              {consultation.treatment}
-                            </p>
-                          </div>
-                        )}
                       </div>
                     </div>
                   ))
               ) : (
-                <div className="bg-white rounded-xl border border-dashed border-gray-300 p-8 text-center">
-                  <div className="mx-auto mb-3 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-gray-100 text-gray-700">
+                <div className="bg-white dark:bg-dark-800 rounded-xl border border-dashed border-gray-300 dark:border-dark-600 p-8 text-center">
+                  <div className="mx-auto mb-3 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-gray-100 dark:bg-dark-700 text-gray-700 dark:text-gray-300">
                     <AppIcon name="consultations" />
                   </div>
-                  <h3 className="text-lg font-bold text-gray-800 mb-2">
+                  <h3 className="text-lg font-bold text-gray-800 dark:text-white mb-2">
                     Nenhum prontuario registrado
                   </h3>
-                  <p className="text-sm text-gray-500 mb-4">
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
                     Este paciente ainda não possui consultas registradas no
                     sistema.
                   </p>
@@ -1720,7 +1245,7 @@ const MainApp = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-dark-900">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600"></div>
       </div>
     );
@@ -1731,12 +1256,11 @@ const MainApp = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="min-h-screen bg-gray-50 dark:bg-dark-900 flex">
       {/* INDICADOR OFFLINE */}
       {!isOnline && (
-        <div className="bg-yellow-500 text-white text-center py-2 text-sm font-medium">
-          ! Modo Offline - Seus dados serao sincronizados quando voltar
-          internet
+        <div className="bg-yellow-500 text-white text-center py-2 text-sm font-medium w-full">
+          ! Modo Offline - Seus dados serao sincronizados quando voltar internet
         </div>
       )}
       {/* Desktop Sidebar */}
@@ -1751,27 +1275,37 @@ const MainApp = () => {
 
       {/* Mobile top bar */}
       {isMobile && (
-        <header className="fixed top-0 left-0 right-0 z-40 bg-white/95 backdrop-blur border-b border-gray-200 px-3 sm:px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))] flex items-center justify-between gap-2">
+        <header className="fixed top-0 left-0 right-0 z-40 bg-white/95 dark:bg-dark-800/95 backdrop-blur border-b border-gray-200 dark:border-dark-700 px-3 sm:px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))] flex items-center justify-between gap-2">
           <div className="flex items-center space-x-2">
-            <span className="h-8 w-8 rounded-full bg-emerald-100 text-emerald-700 grid place-items-center text-sm font-bold">
+            <span className="h-8 w-8 rounded-full bg-emerald-100 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-300 grid place-items-center text-sm font-bold">
               {user?.name?.charAt(0)?.toUpperCase() || "V"}
             </span>
             <div className="leading-tight">
-              <p className="text-xs text-gray-500">VetPro</p>
-              <p className="text-sm font-semibold text-gray-800">{currentViewTitle()}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">VetPro</p>
+              <p className="text-sm font-semibold text-gray-800 dark:text-white">{currentViewTitle()}</p>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={handleToggleFieldMode}
-            className={`px-3 py-1.5 text-[11px] font-semibold rounded-full border transition ${
-              fieldMode
-                ? "bg-emerald-600 text-white border-emerald-600"
-                : "bg-white text-gray-700 border-gray-200"
-            }`}
-          >
-            {fieldMode ? "Desativar Campo" : "Ativar Campo"}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={toggleDarkMode}
+              className={`p-2 rounded-full transition ${isDark ? 'bg-yellow-500 text-white' : 'bg-gray-200 dark:bg-dark-700 text-gray-700 dark:text-gray-300'}`}
+              title={isDark ? "Modo Claro" : "Modo Escuro"}
+            >
+              {isDark ? '☀️' : '🌙'}
+            </button>
+            <button
+              type="button"
+              onClick={handleToggleFieldMode}
+              className={`px-3 py-1.5 text-[11px] font-semibold rounded-full border transition ${
+                fieldMode
+                  ? "bg-emerald-600 text-white border-emerald-600"
+                  : "bg-white dark:bg-dark-700 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-dark-600"
+              }`}
+            >
+              {fieldMode ? "Desativar Campo" : "Ativar Campo"}
+            </button>
+          </div>
         </header>
       )}
 
@@ -1782,20 +1316,32 @@ const MainApp = () => {
         }`}
       >
         {!isMobile && (
-          <div className="sticky top-0 z-30 mb-4 flex items-center justify-between bg-white/90 backdrop-blur border border-gray-200 rounded-2xl px-4 py-3 shadow-sm">
+          <div className="sticky top-0 z-30 mb-4 flex items-center justify-between bg-white/90 dark:bg-dark-800/90 backdrop-blur border border-gray-200 dark:border-dark-700 rounded-2xl px-4 py-3 shadow-sm">
             <div className="leading-tight">
-              <p className="text-xs text-gray-500">VetPro</p>
-              <p className="text-sm font-semibold text-gray-800">{currentViewTitle()}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">VetPro</p>
+              <p className="text-sm font-semibold text-gray-800 dark:text-white">{currentViewTitle()}</p>
             </div>
-            <button
-              type="button"
-              onClick={handleToggleFieldMode}
-              className={`rounded-full px-4 py-2 text-xs font-bold shadow-sm ${
-                fieldMode ? "bg-emerald-600 text-white" : "bg-white border border-gray-300 text-gray-700"
-              }`}
-            >
-              {fieldMode ? "Desativar Modo Campo" : "Ativar Modo Campo"}
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={toggleDarkMode}
+                className={`p-2 rounded-full transition ${isDark ? 'bg-yellow-500 text-white' : 'bg-gray-200 dark:bg-dark-700 text-gray-700 dark:text-gray-300'}`}
+                title={isDark ? "Modo Claro" : "Modo Escuro"}
+              >
+                {isDark ? '☀️' : '🌙'}
+              </button>
+              <button
+                type="button"
+                onClick={handleToggleFieldMode}
+                className={`rounded-full px-4 py-2 text-xs font-bold shadow-sm ${
+                  fieldMode 
+                    ? "bg-emerald-600 text-white" 
+                    : "bg-white dark:bg-dark-700 border border-gray-300 dark:border-dark-600 text-gray-700 dark:text-gray-300"
+                }`}
+              >
+                {fieldMode ? "Desativar Modo Campo" : "Ativar Modo Campo"}
+              </button>
+            </div>
           </div>
         )}
         {dataError && (
@@ -1823,18 +1369,18 @@ const MainApp = () => {
 
       {showPatientPicker && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-xl">
-            <h2 className="text-lg font-bold text-gray-800">
+          <div className="w-full max-w-md rounded-2xl bg-white dark:bg-dark-800 p-5 shadow-xl">
+            <h2 className="text-lg font-bold text-gray-800 dark:text-white">
               Escolher paciente
             </h2>
-            <p className="mt-1 text-sm text-gray-600">
+            <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
               Selecione o paciente para iniciar a consulta.
             </p>
 
             <select
               value={selectedConsultationPatientId}
               onChange={(e) => setSelectedConsultationPatientId(e.target.value)}
-              className="mt-4 w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500"
+              className="mt-4 w-full rounded-lg border border-gray-300 dark:border-dark-600 px-3 py-2.5 text-sm bg-white dark:bg-dark-800 text-gray-900 dark:text-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500"
             >
               {patients.map((patient) => (
                 <option key={patient.id} value={patient.id}>
@@ -1847,7 +1393,7 @@ const MainApp = () => {
               <button
                 type="button"
                 onClick={() => setShowPatientPicker(false)}
-                className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                className="rounded-lg border border-gray-300 dark:border-dark-600 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-dark-700"
               >
                 Cancelar
               </button>
@@ -1865,7 +1411,7 @@ const MainApp = () => {
 
       {/* Mobile Bottom Navigation */}
       {isMobile && (
-        <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-gray-200 bg-white/95 pb-[max(0.4rem,env(safe-area-inset-bottom))] backdrop-blur">
+        <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-gray-200 dark:border-dark-700 bg-white/95 dark:bg-dark-800/95 pb-[max(0.4rem,env(safe-area-inset-bottom))] backdrop-blur">
           <div className="grid grid-cols-6">
             {MOBILE_NAV_ITEMS.map((item) => (
               <button
@@ -1881,8 +1427,8 @@ const MainApp = () => {
                 }}
                 className={`py-2.5 flex flex-col items-center space-y-1 ${
                   isMobileTabActive(item.id)
-                    ? "text-emerald-600 font-semibold"
-                    : "text-gray-500"
+                    ? "text-emerald-600 dark:text-emerald-400 font-semibold"
+                    : "text-gray-500 dark:text-gray-400"
                 }`}
               >
                 {item.id === "profile" ? renderProfileBubble(user) : <AppIcon name={item.icon} variant="colorful" />}
@@ -1907,22 +1453,17 @@ const App = () => {
 
 export default App;
 
-
-
-
-
-
 function renderProfileBubble(profileUser) {
     const initial = (profileUser?.name || "U").charAt(0).toUpperCase();
     if (profileUser?.profilePhoto) {
       return (
-        <span className="h-6 w-6 rounded-full overflow-hidden border border-gray-200">
+        <span className="h-6 w-6 rounded-full overflow-hidden border border-gray-200 dark:border-dark-600">
           <img src={profileUser.profilePhoto} alt="Perfil" className="h-full w-full object-cover" />
         </span>
       );
     }
     return (
-      <span className="h-6 w-6 rounded-full bg-emerald-100 text-emerald-700 text-xs font-bold grid place-items-center">
+      <span className="h-6 w-6 rounded-full bg-emerald-100 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-300 text-xs font-bold grid place-items-center">
         {initial}
       </span>
     );

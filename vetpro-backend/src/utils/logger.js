@@ -1,48 +1,54 @@
 /**
  * Logger Estruturado - VetPro
- * Implementa logging estruturado com Pino para melhor performance e flexibilidade
+ * Implementa logging estruturado com Winston e rotação de arquivos
  */
 
-const pino = require('pino');
+const winston = require('winston');
+const path = require('path');
 
-const LOG_LEVELS = {
-  error: 'error',
-  warn: 'warn',
-  info: 'info',
-  debug: 'debug',
-};
+// Importar DailyRotateFile separadamente
+const DailyRotateFile = require('winston-daily-rotate-file');
 
-const currentLevel = LOG_LEVELS[process.env.LOG_LEVEL] || LOG_LEVELS.info;
+// Configuração de rotação de arquivos
+const logDir = process.env.LOG_DIR || 'logs';
 
-const logger = pino({
-  level: currentLevel,
-  transport:
-    process.env.NODE_ENV !== 'production'
-      ? { target: 'pino-pretty', options: { colorize: true } }
-      : undefined,
-  formatters: {
-    level: (label) => {
-      return { level: label };
-    },
-  },
-  timestamp: pino.stdTimeFunctions.isoTime,
-  base: { service: 'vetpro-backend' },
-  // Reduzir overhead em produção
-  browser: undefined,
-  // Configurações de serialização
-  serializers: {
-    err: pino.stdSerializers.err,
-    req: (req) => ({
-      method: req.method,
-      url: req.url,
-      path: req.path,
-      parameters: req.params,
-      query: req.query,
+const logger = winston.createLogger({
+  level: process.env.LOG_LEVEL || 'info',
+  format: winston.format.combine(
+    winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+    winston.format.errors({ stack: true }),
+    winston.format.json(),
+  ),
+  defaultMeta: { service: 'vetpro-backend' },
+  transports: [
+    // Arquivo de erros
+    new DailyRotateFile({
+      filename: path.join(logDir, 'error-%DATE%.log'),
+      datePattern: 'YYYY-MM-DD',
+      level: 'error',
+      maxSize: '20m',
+      maxFiles: '14d',
     }),
-    res: (res) => ({
-      statusCode: res.statusCode,
+    // Arquivo de logs geral
+    new DailyRotateFile({
+      filename: path.join(logDir, 'combined-%DATE%.log'),
+      datePattern: 'YYYY-MM-DD',
+      maxSize: '20m',
+      maxFiles: '7d',
     }),
-  },
+  ],
 });
+
+// Em desenvolvimento, também exibe no console
+if (process.env.NODE_ENV !== 'production') {
+  logger.add(
+    new winston.transports.Console({
+      format: winston.format.combine(
+        winston.format.colorize(),
+        winston.format.simple(),
+      ),
+    }),
+  );
+}
 
 module.exports = logger;

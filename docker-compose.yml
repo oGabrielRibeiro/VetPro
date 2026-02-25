@@ -62,6 +62,11 @@ services:
       
       # Frontend URL
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+      
+      # OpenAI for audio transcription
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
+      OPENAI_FEWSHOT_EXAMPLES: ${OPENAI_FEWSHOT_EXAMPLES:-3}
     depends_on:
       postgres:
         condition: service_healthy

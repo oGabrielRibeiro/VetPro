@@ -311,10 +311,6 @@ const SPECIFIC_FIELDS_BY_PORTE = {
     'propertyAndManagement',
     'contactAnimals',
     'animalIdentificationDetails',
-    'neonateAndReproduction',
-    'previousTreatmentHistory',
-    'physicalExamDetailed',
-    'requestedExamPanel',
   ],
 };
 
@@ -1889,3 +1885,112 @@ function buildHeuristicDraft(
     },
   };
 }
+
+/**
+ * Mescla drafts dando preferência para campos da IA
+ * AI tem prioridade, heurística preenche campos vazios
+ */
+function mergeDraftsPreferAI(
+  aiDraft = {},
+  heuristicDraft = {},
+  specificFieldKeys = [],
+  mode = 'nova',
+  porte = 'pequeno',
+) {
+  const coreFields = [
+    'chiefComplaint',
+    'anamnesis',
+    'physicalExam',
+    'diagnosis',
+    'treatment',
+    'procedures',
+    'medications',
+    'examDetails',
+    'notes',
+    'returnRecommendation',
+  ];
+
+  const merged = { ...aiDraft };
+
+  // Para campos core, IA tem prioridade, heuristic preenche vazios
+  for (const field of coreFields) {
+    const aiValue = String(aiDraft[field] || '').trim();
+    const heuristicValue = String(heuristicDraft[field] || '').trim();
+
+    if (!aiValue && heuristicValue) {
+      merged[field] = heuristicValue;
+    }
+  }
+
+  // Para campos específicos, mescla também
+  const aiSpecific = aiDraft.specificFields || {};
+  const heuristicSpecific = heuristicDraft.specificFields || {};
+  const mergedSpecific = { ...aiSpecific };
+
+  for (const key of specificFieldKeys) {
+    const aiValue = String(aiSpecific[key] || '').trim();
+    const heuristicValue = String(heuristicSpecific[key] || '').trim();
+
+    if (!aiValue && heuristicValue) {
+      mergedSpecific[key] = heuristicValue;
+    }
+  }
+
+  merged.specificFields = mergedSpecific;
+
+  // Garante shape correto
+  return ensureDraftShape(merged, mode, specificFieldKeys, porte);
+}
+
+module.exports = {
+  // Funções principais
+  buildHeuristicDraft,
+  ensureDraftShape,
+  runDraftSanityCheck,
+  mergeDraftsPreferAI,
+  // Funções auxiliares
+  runUnifiedClinicalBrain,
+  classifyPorteFromContext,
+  resolveSpecificFieldKeys,
+  splitDialogueByRole,
+  detectSpeciesProfile,
+  titleByMode,
+  buildConfidenceByField,
+  buildMissingFields,
+  parseJsonObjectSafe,
+  mapStructuredRecordToDraft,
+  // Funções utilitárias
+  normalize,
+  splitConversationSentences,
+  splitDialogueLines,
+  isLikelySocialOnlySentence,
+  scoreClinicalComplaintSentence,
+  extractClinicalComplaintFromConversation,
+  extractReturnPhrase,
+  toSentence,
+  normalizeHours,
+  containsAny,
+  extractSentenceFromTriggers,
+  extractClinicalSentenceByTerms,
+  buildHeuristicDiagnosis,
+  buildHeuristicTreatment,
+  buildHeuristicAnamnesis,
+  buildHeuristicReturnRecommendation,
+  applyModeTemplate,
+  scoreFieldConfidence,
+  parseJsonObject,
+  isNotInformedText,
+  joinNonEmpty,
+  summarizeExamFromStructured,
+  groundingScore,
+  looksLikeNoisyConversation,
+  sanitizeSpecificFields,
+  extractSpecificFieldsHeuristic,
+  inferSpecificFieldValueFromContext,
+  extractByKeywords,
+  extractByLabels,
+  firstSentence,
+  // Constantes
+  SPECIFIC_FIELDS_BY_PORTE,
+  SPECIFIC_FIELD_LABELS,
+};
