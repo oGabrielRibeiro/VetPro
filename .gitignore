@@ -2,7 +2,6 @@
 **/uploads/
 **/signatures/
 *.zip
-*.ps1
 
 _*.txt
 
