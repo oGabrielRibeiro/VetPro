@@ -1,5 +1,7 @@
+// Console replaced by logger
 const fs = require('fs');
 const path = require('path');
+const logger = require('../utils/logger');
 const {
   generateRecordDraftFromChat,
 } = require('../services/recordChatAssistService');
@@ -136,7 +138,7 @@ async function evaluateExample(example) {
 async function main() {
   const examples = loadExamples();
   if (!examples.length) {
-    console.log('Nenhum exemplo encontrado para avaliar.');
+    logger.info('Nenhum exemplo encontrado para avaliar.');
     return;
   }
 
@@ -160,15 +162,15 @@ async function main() {
   const chiefNoiseAvg = avg(rows.map((row) => row.chiefNoise));
   const behaviorNoiseAvg = avg(rows.map((row) => row.behaviorNoise));
 
-  console.log('=== Avaliacao Chat Assist ===');
+  logger.info('=== Avaliacao Chat Assist ===');
   console.table(rows);
-  console.log(`Cobertura media core:      ${(coreAvg * 100).toFixed(1)}%`);
-  console.log(`Cobertura media especifica: ${(specificAvg * 100).toFixed(1)}%`);
-  console.log(`Ruido medio queixa:        ${chiefNoiseAvg.toFixed(2)}`);
-  console.log(`Ruido medio comportamento: ${behaviorNoiseAvg.toFixed(2)}`);
+  logger.info(`Cobertura media core:      ${(coreAvg * 100).toFixed(1)}%`);
+  logger.info(`Cobertura media especifica: ${(specificAvg * 100).toFixed(1)}%`);
+  logger.info(`Ruido medio queixa:        ${chiefNoiseAvg.toFixed(2)}`);
+  logger.info(`Ruido medio comportamento: ${behaviorNoiseAvg.toFixed(2)}`);
 }
 
 main().catch((error) => {
-  console.error('Falha ao avaliar chat assist:', error);
+  logger.error('Falha ao avaliar chat assist:', error);
   process.exit(1);
 });

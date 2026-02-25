@@ -1,6 +1,4 @@
 const PDFDocument = require('pdfkit');
-const path = require('path');
-const fs = require('fs');
 
 function normalizePrescriptionText(value = '') {
   return String(value || '')

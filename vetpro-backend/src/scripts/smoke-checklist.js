@@ -1,3 +1,6 @@
+// Console replaced by logger
+const logger = require('../utils/logger');
+
 const BASE_URL = process.env.API_BASE_URL || 'http://localhost:5000/api';
 
 function randomEmail() {
@@ -42,7 +45,7 @@ async function run() {
   const registerEmail = randomEmail();
   const password = '123456';
 
-  console.log(`Base URL: ${BASE_URL}`);
+  logger.info(`Base URL: ${BASE_URL}`);
 
   try {
     const registerPayload = {
@@ -190,15 +193,15 @@ async function run() {
     }
     checks.push('list_consultations');
 
-    console.log('\nSMOKE CHECKLIST OK');
+    logger.info('\nSMOKE CHECKLIST OK');
     checks.forEach((item, idx) => {
-      console.log(`${idx + 1}. ${item}`);
+      logger.info(`${idx + 1}. ${item}`);
     });
   } catch (error) {
-    console.error('\nSMOKE CHECKLIST FALHOU');
-    console.error(error.message);
+    logger.error('\nSMOKE CHECKLIST FALHOU');
+    logger.error(error.message);
     if (error.data) {
-      console.error('Detalhes:', JSON.stringify(error.data, null, 2));
+      logger.error('Detalhes:', JSON.stringify(error.data, null, 2));
     }
     process.exit(1);
   }

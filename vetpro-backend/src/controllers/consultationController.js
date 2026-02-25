@@ -1,3 +1,4 @@
+// Console replaced by logger
 const fs = require('fs');
 const path = require('path');
 const consultationService = require('../services/consultationService');
@@ -19,6 +20,7 @@ const {
   refineRecordField,
 } = require('../services/recordChatAssistService');
 const prisma = require('../lib/prisma');
+const logger = require('../utils/logger');
 
 function resolveConsultationError(error, fallback) {
   const message = String(error?.message || '').toLowerCase();
@@ -79,7 +81,7 @@ async function list(req, res) {
     );
     return res.json(consultations);
   } catch (error) {
-    console.error(error);
+    logger.error(error);
     return res.status(500).json({ error: 'Erro ao listar consultas' });
   }
 }
@@ -155,7 +157,7 @@ async function generatePrescriptionPDF(req, res) {
         },
       });
     } catch (attachError) {
-      console.error('Erro ao anexar receita no prontuario:', attachError);
+      logger.error('Erro ao anexar receita no prontuario:', attachError);
     }
 
     if (shouldDownload) {
@@ -168,7 +170,7 @@ async function generatePrescriptionPDF(req, res) {
       consultationId: consultation.id,
     });
   } catch (error) {
-    console.error(error);
+    logger.error(error);
     return res.status(500).json({ error: 'Erro ao gerar receita' });
   }
 }
@@ -238,7 +240,7 @@ async function create(req, res) {
         writeHeuristicMemory(current);
       }
     } catch (learnError) {
-      console.error(
+      logger.error(
         'Falha ao registrar memoria heuristica:',
         learnError.message,
       );
@@ -246,7 +248,7 @@ async function create(req, res) {
 
     return res.status(201).json(consultation);
   } catch (error) {
-    console.error(error);
+    logger.error(error);
     return res.status(500).json({
       error: resolveConsultationError(
         error,
@@ -265,7 +267,7 @@ async function listByPatient(req, res) {
 
     return res.json(consultations);
   } catch (error) {
-    console.error(error);
+    logger.error(error);
     return res
       .status(500)
       .json({ error: 'Erro ao listar consultas do paciente' });
@@ -281,7 +283,7 @@ async function getById(req, res) {
     );
     return res.json(consultation);
   } catch (error) {
-    console.error(error);
+    logger.error(error);
     return res.status(404).json({
       error: resolveConsultationError(error, 'Consulta nao encontrada.'),
     });
@@ -323,7 +325,7 @@ async function downloadPDF(req, res) {
 
     return pdfService.generateConsultationPDF(consultation, res);
   } catch (error) {
-    console.error(error);
+    logger.error(error);
     return res.status(500).json({ error: 'Erro ao gerar PDF' });
   }
 }
@@ -340,7 +342,7 @@ async function createReturn(req, res) {
 
     return res.status(201).json(consultation);
   } catch (error) {
-    console.error(error);
+    logger.error(error);
     return res.status(500).json({
       error: resolveConsultationError(
         error,
@@ -375,7 +377,7 @@ async function fieldAssist(req, res) {
 
     return res.json(result);
   } catch (error) {
-    console.error(error);
+    logger.error(error);
     return res
       .status(500)
       .json({ error: 'Erro ao analisar conversa de campo' });
@@ -421,7 +423,7 @@ async function heuristicParse(req, res) {
       context,
     });
   } catch (error) {
-    console.error(error);
+    logger.error(error);
     return res
       .status(500)
       .json({ error: 'Erro ao aplicar heuristica clinica.' });
@@ -514,7 +516,7 @@ async function chatAssist(req, res) {
 
     return res.json(result);
   } catch (error) {
-    console.error(error);
+    logger.error(error);
     return res.status(500).json({ error: 'Erro ao gerar rascunho por chat.' });
   }
 }
@@ -561,7 +563,7 @@ async function refineField(req, res) {
 
     return res.json(result);
   } catch (error) {
-    console.error(error);
+    logger.error(error);
     return res.status(500).json({ error: 'Erro ao refinar texto com IA.' });
   }
 }
@@ -581,7 +583,7 @@ async function getChatHistory(req, res) {
     const history = parseChatHistoryFromNotes(consultation.notes);
     return res.json({ consultationId: id, history });
   } catch (error) {
-    console.error(error);
+    logger.error(error);
     return res
       .status(500)
       .json({ error: 'Erro ao carregar historico de chat.' });
@@ -624,7 +626,7 @@ async function appendChatHistory(req, res) {
 
     return res.status(201).json({ consultationId: id, history: merged });
   } catch (error) {
-    console.error(error);
+    logger.error(error);
     return res.status(500).json({ error: 'Erro ao salvar historico de chat.' });
   }
 }

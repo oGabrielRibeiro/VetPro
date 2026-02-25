@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
-const { parseClinicalFieldsFromSegments } = require('./fieldAssistService');
+const { parseClinicalFieldsFromSegments } = require('./fieldAssistFunctions');
+const logger = require('../utils/logger');
 // Removidos imports nao usados neste modulo para satisfazer lint
 
 function normalize(value = '') {
@@ -185,7 +186,9 @@ function safeReadPorteDictionaryFile() {
     porteDictionaryCacheMtime = mtime;
     return dictionary;
   } catch (error) {
-    console.error('Falha ao carregar dicionario de porte:', error.message);
+    logger.error('Falha ao carregar dicionario de porte', {
+      error: error.message,
+    });
     return defaultPorteDictionary();
   }
 }

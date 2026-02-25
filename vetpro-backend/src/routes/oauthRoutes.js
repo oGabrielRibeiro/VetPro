@@ -1,7 +1,10 @@
 const express = require('express');
 const passport = require('passport');
+const jwt = require('jsonwebtoken');
 const oauthService = require('../services/oauthService');
 const authService = require('../services/authService');
+const logger = require('../utils/logger');
+
 const { generateTokens } = authService;
 
 const router = express.Router();
@@ -22,7 +25,7 @@ router.get('/google', (req, res) => {
   if (!authUrl) {
     return res.status(503).json({ error: 'Google OAuth não configurado' });
   }
-  res.json({ url: authUrl });
+  return res.json({ url: authUrl });
 });
 
 // Callback do Google
@@ -31,15 +34,13 @@ router.get(
   passport.authenticate('google', { session: false }),
   async (req, res) => {
     try {
-      const user = req.user;
+      const { user } = req;
 
       // Se é novo usuário, redireciona para completar cadastro
       if (user.isNew) {
-        const tempToken = require('jsonwebtoken').sign(
-          { tempUser: user },
-          process.env.JWT_SECRET,
-          { expiresIn: '15m' },
-        );
+        const tempToken = jwt.sign({ tempUser: user }, process.env.JWT_SECRET, {
+          expiresIn: '15m',
+        });
         return res.redirect(
           `${process.env.FRONTEND_URL}/oauth/complete-register?token=${tempToken}`,
         );
@@ -49,12 +50,14 @@ router.get(
       const tokens = generateTokens(user);
 
       // Redireciona com tokens
-      res.redirect(
+      return res.redirect(
         `${process.env.FRONTEND_URL}/oauth/callback?token=${tokens.accessToken}&refresh=${tokens.refreshToken}`,
       );
     } catch (error) {
-      console.error('OAuth callback error:', error);
-      res.redirect(`${process.env.FRONTEND_URL}/login?error=oauth_failed`);
+      logger.error('OAuth callback error', { error: error.message });
+      return res.redirect(
+        `${process.env.FRONTEND_URL}/login?error=oauth_failed`,
+      );
     }
   },
 );
@@ -65,10 +68,7 @@ router.post('/complete-register', async (req, res) => {
     const { token, clinicName, clinicCnpj, clinicAddress } = req.body;
 
     // Verifica token temporário
-    const decoded = require('jsonwebtoken').verify(
-      token,
-      process.env.JWT_SECRET,
-    );
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
     if (!decoded.tempUser) {
       return res.status(400).json({ error: 'Token inválido' });
@@ -84,7 +84,7 @@ router.post('/complete-register', async (req, res) => {
     // Gera tokens
     const tokens = generateTokens(user);
 
-    res.json({
+    return res.json({
       user: {
         id: user.id,
         name: user.name,
@@ -94,8 +94,8 @@ router.post('/complete-register', async (req, res) => {
       ...tokens,
     });
   } catch (error) {
-    console.error('Complete register error:', error);
-    res.status(500).json({ error: 'Erro ao completar registro' });
+    logger.error('Complete register error', { error: error.message });
+    return res.status(500).json({ error: 'Erro ao completar registro' });
   }
 });
 

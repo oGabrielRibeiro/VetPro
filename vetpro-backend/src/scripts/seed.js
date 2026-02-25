@@ -1,5 +1,7 @@
+// Console replaced by logger
 const bcrypt = require('bcryptjs');
 const prisma = require('../lib/prisma');
+const logger = require('../utils/logger');
 
 async function main() {
   const password = 'admin123'; // mude depois
@@ -18,12 +20,12 @@ async function main() {
     },
   });
 
-  console.log('Admin criado:', user.email, 'senha:', password);
+  logger.info('Admin criado:', user.email, 'senha:', password);
 }
 
 main()
   .catch((e) => {
-    console.error(e);
+    logger.error(e);
     process.exit(1);
   })
   .finally(() => prisma.$disconnect());

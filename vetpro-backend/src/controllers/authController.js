@@ -1,12 +1,11 @@
+// Console replaced by logger
 const bcrypt = require('bcrypt');
 const fs = require('fs');
 const path = require('path');
 const jwt = require('jsonwebtoken');
 const prisma = require('../lib/prisma');
-const {
-  generateTokenPair,
-  refreshAccessToken,
-} = require('../services/authService');
+const logger = require('../utils/logger');
+const { refreshAccessToken } = require('../services/authService');
 
 const { JWT_SECRET } = process.env;
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
@@ -134,7 +133,7 @@ async function register(req, res) {
       },
     });
   } catch (err) {
-    console.error('register error:', err);
+    logger.error('register error:', err);
     return res.status(500).json({
       error: 'Nao foi possivel concluir o cadastro. Tente novamente.',
     });
@@ -189,7 +188,7 @@ async function login(req, res) {
       },
     });
   } catch (err) {
-    console.error('login error:', err);
+    logger.error('login error:', err);
     return res
       .status(500)
       .json({ error: 'Nao foi possivel concluir o login. Tente novamente.' });
@@ -209,7 +208,7 @@ async function me(req, res) {
 
     return res.json(serializeUser(user));
   } catch (err) {
-    console.error('me error:', err);
+    logger.error('me error:', err);
     return res
       .status(500)
       .json({ error: 'Nao foi possivel carregar sua sessao.' });
@@ -294,7 +293,7 @@ async function updateProfile(req, res) {
       phone: phone || user.phone || null,
     });
   } catch (err) {
-    console.error('updateProfile error:', err);
+    logger.error('updateProfile error:', err);
     return res
       .status(500)
       .json({ error: 'Nao foi possivel salvar o perfil. Tente novamente.' });
@@ -361,11 +360,7 @@ async function deleteAccount(req, res) {
           fs.unlinkSync(resolved);
         }
       } catch (err) {
-        console.warn(
-          'Falha ao remover arquivo:',
-          resolved,
-          err?.message || err,
-        );
+        logger.warn('Falha ao remover arquivo:', resolved, err?.message || err);
       }
     }
 
@@ -376,13 +371,13 @@ async function deleteAccount(req, res) {
           fs.unlinkSync(resolvedLogo);
         }
       } catch (err) {
-        console.warn('Falha ao remover logo da clinica:', err?.message || err);
+        logger.warn('Falha ao remover logo da clinica:', err?.message || err);
       }
     }
 
     return res.json({ message: 'Conta excluida com sucesso.' });
   } catch (err) {
-    console.error('deleteAccount error:', err);
+    logger.error('deleteAccount error:', err);
     return res
       .status(500)
       .json({ error: 'Nao foi possivel excluir sua conta. Tente novamente.' });
@@ -404,7 +399,7 @@ async function refreshToken(req, res) {
       ...result,
     });
   } catch (err) {
-    console.error('refreshToken error:', err);
+    logger.error('refreshToken error:', err);
     const message = err?.message || '';
     if (message.includes('expired')) {
       return res

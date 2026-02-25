@@ -1,5 +1,7 @@
+// Console replaced by logger
 const fs = require('fs');
 const path = require('path');
+const logger = require('../utils/logger');
 
 const EXAMPLES_FILE_PATH = path.join(
   __dirname,
@@ -83,7 +85,7 @@ function safeReadExamplesFile() {
     examplesCacheMtime = latestMtime || Date.now();
     return examplesCache;
   } catch (error) {
-    console.error('Falha ao carregar exemplos de IA:', error.message);
+    logger.error('Falha ao carregar exemplos de IA:', error.message);
     return [];
   }
 }

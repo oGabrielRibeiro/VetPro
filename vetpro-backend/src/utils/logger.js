@@ -1,43 +1,48 @@
-/* eslint-disable no-console */
+/**
+ * Logger Estruturado - VetPro
+ * Implementa logging estruturado com Pino para melhor performance e flexibilidade
+ */
+
+const pino = require('pino');
+
 const LOG_LEVELS = {
-  error: 0,
-  warn: 1,
-  info: 2,
-  debug: 3,
+  error: 'error',
+  warn: 'warn',
+  info: 'info',
+  debug: 'debug',
 };
 
 const currentLevel = LOG_LEVELS[process.env.LOG_LEVEL] || LOG_LEVELS.info;
 
-function formatMessage(level, message, meta = {}) {
-  const timestamp = new Date().toISOString();
-  const metaStr = Object.keys(meta).length > 0 ? JSON.stringify(meta) : '';
-  return `[${timestamp}] ${level.toUpperCase()}: ${message} ${metaStr}`;
-}
-
-const logger = {
-  error(message, meta) {
-    if (currentLevel >= LOG_LEVELS.error) {
-      console.error(formatMessage('error', message, meta));
-    }
+const logger = pino({
+  level: currentLevel,
+  transport:
+    process.env.NODE_ENV !== 'production'
+      ? { target: 'pino-pretty', options: { colorize: true } }
+      : undefined,
+  formatters: {
+    level: (label) => {
+      return { level: label };
+    },
   },
-
-  warn(message, meta) {
-    if (currentLevel >= LOG_LEVELS.warn) {
-      console.warn(formatMessage('warn', message, meta));
-    }
+  timestamp: pino.stdTimeFunctions.isoTime,
+  base: { service: 'vetpro-backend' },
+  // Reduzir overhead em produção
+  browser: undefined,
+  // Configurações de serialização
+  serializers: {
+    err: pino.stdSerializers.err,
+    req: (req) => ({
+      method: req.method,
+      url: req.url,
+      path: req.path,
+      parameters: req.params,
+      query: req.query,
+    }),
+    res: (res) => ({
+      statusCode: res.statusCode,
+    }),
   },
-
-  info(message, meta) {
-    if (currentLevel >= LOG_LEVELS.info) {
-      console.log(formatMessage('info', message, meta));
-    }
-  },
-
-  debug(message, meta) {
-    if (currentLevel >= LOG_LEVELS.debug) {
-      console.log(formatMessage('debug', message, meta));
-    }
-  },
-};
+});
 
 module.exports = logger;

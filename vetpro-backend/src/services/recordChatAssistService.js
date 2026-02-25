@@ -1,3 +1,5 @@
+const logger = require('../utils/logger');
+
 // Funções usadas indiretamente via buildHeuristicDraft e generateWithOpenAI
 const {
   runUnifiedClinicalBrain,
@@ -16,18 +18,11 @@ const {
   runDraftSanityCheck,
 } = require('./heuristicService');
 
-const {
-  buildFieldExtractionGuide,
-  buildFieldRefinementPrompt,
-  buildPortePromptRules,
-} = require('./promptService');
+const { buildFieldRefinementPrompt } = require('./promptService');
 
 const {
   buildFieldModeSystemPrompt,
   selectOptimizedExamples,
-  buildEnhancedRefinementPrompt,
-  validateVitals,
-  fillFromHistory,
 } = require('./aiPromptService');
 
 const {
@@ -56,17 +51,6 @@ async function generateWithOpenAI({
     unified.context?.medicoContent || dialogue.vetText || sourceText;
   const porte = classifyPorteFromContext(patient, sourceText, recordProfile);
   const specificFieldKeys = resolveSpecificFieldKeys(recordProfile, porte);
-  const patientContext = patient
-    ? `Paciente: ${patient.name || ''}; especie: ${patient.species || ''}; raca: ${patient.breed || ''}; tutor: ${patient.ownerName || ''}.`
-    : '';
-  const specificKeysPrompt = specificFieldKeys
-    .map((key) => `"${key}"`)
-    .join(', ');
-  const detailLevel = String(
-    recordProfile?.detailLevel || 'standard',
-  ).toLowerCase();
-  const extractionGuide = buildFieldExtractionGuide(porte);
-  const porteRules = buildPortePromptRules(porte, detailLevel);
   const normalizedChat = messages
     .map(
       (m) =>
@@ -82,18 +66,15 @@ async function generateWithOpenAI({
   const fewShotExamples = selectOptimizedExamples({
     mode,
     porte,
-    sourceText,
     maxExamples: maxFewShot,
   });
 
-  const systemPrompt =
-    buildFieldModeSystemPrompt({
-      porte,
-      mode,
-      patient,
-      previousConsultation: null,
-      recordProfile,
-    }) + `\nCONTEXTO: ${tutorContext} | ${vetContext}\nCHAT: ${normalizedChat}`;
+  const systemPrompt = `${buildFieldModeSystemPrompt({
+    porte,
+    mode,
+    patient,
+    previousConsultation: null,
+  })}\nCONTEXTO: ${tutorContext} | ${vetContext}\nCHAT: ${normalizedChat}`;
 
   const completionMessages = [{ role: 'system', content: systemPrompt }];
 
@@ -269,7 +250,7 @@ async function generateRecordDraftFromChat({
     }
   } catch (error) {
     aiErrorMessage = String(error?.message || 'unknown_openai_error');
-    console.error('Falha na geracao de rascunho via OpenAI:', aiErrorMessage);
+    logger.error('Falha na geracao de rascunho via OpenAI:', aiErrorMessage);
   }
 
   const reviewedHeuristic = runDraftSanityCheck({
@@ -366,7 +347,7 @@ async function refineRecordField({
       return { text: ai, provider: 'openai', confidence: 0.82 };
     }
   } catch (error) {
-    console.error('Falha no refinamento via OpenAI:', error.message);
+    logger.error('Falha no refinamento via OpenAI:', error.message);
   }
 
   return {

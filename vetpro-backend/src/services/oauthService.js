@@ -6,6 +6,7 @@
 const passport = require('passport');
 const { Strategy: GoogleStrategy } = require('passport-google-oauth20');
 const prisma = require('../lib/prisma');
+const logger = require('../utils/logger');
 
 class OAuthService {
   constructor() {
@@ -20,8 +21,8 @@ class OAuthService {
    */
   initialize() {
     if (!this.clientID || !this.clientSecret) {
-      console.log(
-        'ℹ️ Google OAuth não configurado (GOOGLE_CLIENT_ID/GOOGLE_CLIENT_SECRET)',
+      logger.info(
+        'Google OAuth não configurado (GOOGLE_CLIENT_ID/GOOGLE_CLIENT_SECRET)',
       );
       return false;
     }
@@ -45,10 +46,13 @@ class OAuthService {
 
       passport.use(strategy);
       this.initialized = true;
-      console.log('✅ Google OAuth configurado');
+      logger.info('Google OAuth configurado com sucesso');
       return true;
     } catch (error) {
-      console.error('❌ Erro ao inicializar Google OAuth:', error);
+      logger.error('Erro ao inicializar Google OAuth', {
+        error: error.message,
+        stack: error.stack,
+      });
       return false;
     }
   }
@@ -59,7 +63,7 @@ class OAuthService {
   async findOrCreateUser(profile) {
     const googleId = profile.id;
     const email = profile.emails?.[0]?.value;
-    const displayName = profile.displayName;
+    const { displayName } = profile;
     const givenName = profile.name?.givenName;
     const familyName = profile.name?.familyName;
     const photo = profile.photos?.[0]?.value;

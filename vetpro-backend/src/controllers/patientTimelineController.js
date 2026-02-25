@@ -1,4 +1,6 @@
+// Console replaced by logger
 const timelineService = require('../services/patientTimelineService');
+const logger = require('../utils/logger');
 
 async function getTimeline(req, res) {
   try {
@@ -11,7 +13,7 @@ async function getTimeline(req, res) {
 
     res.json(timeline);
   } catch (error) {
-    console.error(error);
+    logger.error(error);
     res.status(500).json({ error: 'Erro ao carregar timeline do paciente' });
   }
 }

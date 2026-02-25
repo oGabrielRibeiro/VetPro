@@ -1,5 +1,7 @@
+// Console replaced by logger
 const fs = require('fs');
 const path = require('path');
+const logger = require('../utils/logger');
 
 const ROOT_AI_DIR = path.join(__dirname, '..', 'ai');
 const SOURCE_FILES = [
@@ -25,7 +27,7 @@ function safeReadJson(filePath) {
     const raw = fs.readFileSync(filePath, 'utf8');
     return JSON.parse(raw);
   } catch (error) {
-    console.error(`Falha ao ler ${filePath}:`, error.message);
+    logger.error(`Falha ao ler ${filePath}:`, error.message);
     return null;
   }
 }
@@ -47,7 +49,7 @@ function safeReadJsonl(filePath) {
       })
       .filter(Boolean);
   } catch (error) {
-    console.error(`Falha ao ler JSONL ${filePath}:`, error.message);
+    logger.error(`Falha ao ler JSONL ${filePath}:`, error.message);
     return [];
   }
 }
@@ -315,12 +317,12 @@ function main() {
   };
 
   fs.writeFileSync(OUTPUT_FILE, JSON.stringify(dataset, null, 2), 'utf8');
-  console.log(`Dataset salvo em: ${OUTPUT_FILE}`);
-  console.log(`Total de amostras: ${stats.total}`);
-  console.log(
+  logger.info(`Dataset salvo em: ${OUTPUT_FILE}`);
+  logger.info(`Total de amostras: ${stats.total}`);
+  logger.info(
     `Porte pequeno/grande: ${stats.byPorte.pequeno}/${stats.byPorte.grande}`,
   );
-  console.log(
+  logger.info(
     `Modo nova/retorno: ${stats.byMode.nova}/${stats.byMode.retorno}`,
   );
 }

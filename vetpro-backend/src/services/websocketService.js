@@ -4,6 +4,7 @@
  */
 
 const jwt = require('jsonwebtoken');
+const logger = require('../utils/logger');
 
 class WebSocketService {
   constructor() {
@@ -29,7 +30,7 @@ class WebSocketService {
 
     // Middleware de autenticação
     this.io.use((socket, next) => {
-      const token = socket.handshake.auth.token;
+      const { token } = socket.handshake.auth;
       if (!token) {
         return next(new Error('Authentication required'));
       }
@@ -45,9 +46,11 @@ class WebSocketService {
 
     // Conexão de clientes
     this.io.on('connection', (socket) => {
-      console.log(
-        `🔌 Cliente conectado: ${socket.id} (User: ${socket.user?.id})`,
-      );
+      logger.info('Cliente WebSocket conectado', {
+        socketId: socket.id,
+        userId: socket.user?.id,
+        clinicId: socket.user?.clinicId,
+      });
 
       // Registrar usuário conectado
       if (socket.user?.id) {
@@ -61,13 +64,19 @@ class WebSocketService {
       // Evento: join room
       socket.on('join:clinic', (clinicId) => {
         socket.join(`clinic:${clinicId}`);
-        console.log(`📥 ${socket.id} entrou na clínica: ${clinicId}`);
+        logger.debug('Socket entrou na sala da clínica', {
+          socketId: socket.id,
+          clinicId,
+        });
       });
 
       // Evento: join consultation room
       socket.on('join:consultation', (consultationId) => {
         socket.join(`consultation:${consultationId}`);
-        console.log(`📥 ${socket.id} entrou na consulta: ${consultationId}`);
+        logger.debug('Socket entrou na sala de consulta', {
+          socketId: socket.id,
+          consultationId,
+        });
       });
 
       // Evento: leave consultation
@@ -93,14 +102,18 @@ class WebSocketService {
 
       // Desconexão
       socket.on('disconnect', (reason) => {
-        console.log(`🔌 Cliente desconectado: ${socket.id} (${reason})`);
+        logger.info('Cliente WebSocket desconectado', {
+          socketId: socket.id,
+          userId: socket.user?.id,
+          reason,
+        });
         if (socket.user?.id) {
           this.connectedUsers.delete(socket.user.id);
         }
       });
     });
 
-    console.log('✅ WebSocket Server inicializado');
+    logger.info('WebSocket Server inicializado com sucesso');
   }
 
   /**

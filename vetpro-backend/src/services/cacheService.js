@@ -4,6 +4,7 @@
  */
 
 const Redis = require('ioredis');
+const logger = require('../utils/logger');
 
 class CacheService {
   constructor() {
@@ -27,23 +28,23 @@ class CacheService {
         });
 
         this.redis.on('connect', () => {
-          console.log('Redis conectado');
+          logger.info('Redis conectado');
           this.enabled = true;
         });
 
         this.redis.on('error', (err) => {
-          console.warn('Erro no Redis:', err.message);
+          logger.warn('Erro no Redis', { error: err.message });
           this.enabled = false;
         });
 
         this.redis.connect().catch(() => {
-          console.warn('Redis nao disponivel, usando fallback memoria');
+          logger.warn('Redis nao disponivel, usando fallback memoria');
         });
       } catch (error) {
-        console.warn('Redis nao configurado');
+        logger.warn('Redis nao configurado', { error: error.message });
       }
     } else {
-      console.log('REDIS_URL nao definido, cache desabilitado');
+      logger.info('REDIS_URL nao definido, cache desabilitado');
     }
   }
 
@@ -63,7 +64,7 @@ class CacheService {
       }
       return null;
     } catch (error) {
-      console.warn('Cache get error:', error.message);
+      logger.warn('Cache get error', { key, error: error.message });
       return null;
     }
   }
@@ -78,7 +79,7 @@ class CacheService {
       await this.redis.setex(key, ttl, serialized);
       return true;
     } catch (error) {
-      console.warn('Cache set error:', error.message);
+      logger.warn('Cache set error', { key, error: error.message });
       return false;
     }
   }
@@ -92,7 +93,7 @@ class CacheService {
       await this.redis.del(key);
       return true;
     } catch (error) {
-      console.warn('Cache del error:', error.message);
+      logger.warn('Cache del error', { key, error: error.message });
       return false;
     }
   }
@@ -109,7 +110,10 @@ class CacheService {
       }
       return true;
     } catch (error) {
-      console.warn('Cache delByPattern error:', error.message);
+      logger.warn('Cache delByPattern error', {
+        pattern,
+        error: error.message,
+      });
       return false;
     }
   }
@@ -122,7 +126,7 @@ class CacheService {
     try {
       return await this.redis.incr(key);
     } catch (error) {
-      console.warn('Cache incr error:', error.message);
+      logger.warn('Cache incr error', { key, error: error.message });
       return null;
     }
   }
@@ -136,7 +140,7 @@ class CacheService {
       await this.redis.expire(key, ttl);
       return true;
     } catch (error) {
-      console.warn('Cache expire error:', error.message);
+      logger.warn('Cache expire error', { key, ttl, error: error.message });
       return false;
     }
   }
@@ -149,7 +153,7 @@ class CacheService {
     try {
       return await this.redis.ttl(key);
     } catch (error) {
-      console.warn('Cache ttl error:', error.message);
+      logger.warn('Cache ttl error', { key, error: error.message });
       return -1;
     }
   }
@@ -169,10 +173,10 @@ class CacheService {
   }
 
   async warmup(functions = []) {
-    console.log('Executando warmup de cache...');
+    logger.info('Executando warmup de cache...');
     const promises = functions.map((fn) => fn());
     await Promise.allSettled(promises);
-    console.log('Warmup de cache concluido');
+    logger.info('Warmup de cache concluido');
   }
 
   async flush() {
@@ -184,7 +188,7 @@ class CacheService {
       await this.redis.flushdb();
       return true;
     } catch (error) {
-      console.warn('Cache flush error:', error.message);
+      logger.warn('Cache flush error', { error: error.message });
       return false;
     }
   }

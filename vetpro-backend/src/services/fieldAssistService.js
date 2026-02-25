@@ -1,3 +1,6 @@
+// Re-exporta todas as funções do módulo de implementação
+const fieldAssistFunctions = require('./fieldAssistFunctions');
+
 const {
   analyzeFieldConversation,
   parseClinicalFieldsFromSegments,
@@ -5,7 +8,7 @@ const {
   normalizeTimestampedTranscript,
   writeHeuristicMemory,
   readHeuristicMemory,
-} = require('./heuristicService');
+} = fieldAssistFunctions;
 
 module.exports = {
   analyzeFieldConversation,

@@ -75,7 +75,7 @@ const validate = (schema) => (req, res, next) => {
     }
     const validatedData = schema.parse(req.body);
     req.validatedData = validatedData;
-    next();
+    return next();
   } catch (error) {
     if (error instanceof z.ZodError) {
       const errors = error.errors.map((err) => ({

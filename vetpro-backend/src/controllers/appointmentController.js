@@ -1,7 +1,9 @@
+// Console replaced by logger
 const appointmentService = require('../services/appointmentService');
+const logger = require('../utils/logger');
 
 function handleError(res, error, fallbackMessage) {
-  console.error(error);
+  logger.error(error);
   const status = Number(error?.statusCode || 500);
   if (status >= 400 && status < 500) {
     return res.status(status).json({ error: error.message || fallbackMessage });

@@ -1,4 +1,6 @@
+// Console replaced by logger
 const prisma = require('../lib/prisma');
+const logger = require('../utils/logger');
 
 function buildUrl(req, relative) {
   if (!relative) return null;
@@ -28,7 +30,7 @@ async function updateLogo(req, res) {
       logoUrl: buildUrl(req, clinic.logoUrl),
     });
   } catch (error) {
-    console.error(error);
+    logger.error(error);
     return res.status(500).json({ error: 'Erro ao atualizar logo' });
   }
 }
@@ -47,7 +49,7 @@ async function getClinic(req, res) {
 
     return res.json(clinic);
   } catch (error) {
-    console.error(error);
+    logger.error(error);
     return res.status(500).json({ error: 'Erro ao buscar clínica' });
   }
 }

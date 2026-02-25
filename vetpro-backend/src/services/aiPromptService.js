@@ -1,3 +1,4 @@
+// Console replaced by logger
 /**
  * Serviço de Prompt Otimizado para IA de Prontuários
  * Focado em animais grandes e uso em campo
@@ -5,6 +6,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const logger = require('../utils/logger');
 
 const LARGE_ANIMAL_EXAMPLES_FILE = path.join(
   __dirname,
@@ -31,7 +33,7 @@ function loadLargeAnimalExamples() {
       return largeAnimalExamplesCache;
     }
   } catch (error) {
-    console.error(
+    logger.error(
       'Erro ao carregar exemplos de animais grandes:',
       error.message,
     );
@@ -48,7 +50,6 @@ function buildFieldModeSystemPrompt({
   mode,
   patient,
   previousConsultation,
-  recordProfile,
 }) {
   const isLargeAnimal = porte === 'grande';
   const isReturn = mode === 'retorno';
@@ -249,7 +250,7 @@ TIPO DE ENTRADA: Chat/Diálogo
 /**
  * Seleciona exemplos few-shot otimizados
  */
-function selectOptimizedExamples({ porte, mode, sourceText, maxExamples = 3 }) {
+function selectOptimizedExamples({ porte, mode, maxExamples = 3 }) {
   const largeExamples = loadLargeAnimalExamples();
 
   // Filtrar exemplos por porte e modo
@@ -335,14 +336,14 @@ function validateVitals(vitals) {
   }
 
   if (vitals.heartRate) {
-    const fc = parseInt(vitals.heartRate);
+    const fc = parseInt(vitals.heartRate, 10);
     if (fc < 30 || fc > 120) {
       warnings.push(`Frequência cardíaca ${fc} bpm pode estar incorreta`);
     }
   }
 
   if (vitals.respiratoryRate) {
-    const fr = parseInt(vitals.respiratoryRate);
+    const fr = parseInt(vitals.respiratoryRate, 10);
     if (fr < 8 || fr > 60) {
       warnings.push(`Frequência respiratória ${fr} ipm pode estar incorreta`);
     }

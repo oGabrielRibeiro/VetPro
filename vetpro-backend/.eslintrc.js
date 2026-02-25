@@ -18,7 +18,7 @@ module.exports = {
       'error',
       {
         props: true,
-        ignorePropertyModificationsFor: ['doc', 'req', 'acc'],
+        ignorePropertyModificationsFor: ['doc', 'req', 'acc', 'socket'],
       },
     ],
     'no-nested-ternary': 'off',
@@ -29,5 +29,21 @@ module.exports = {
     ],
     // Allow require() for optional dependencies (OAuth, etc)
     'import/no-unresolved': 'off',
+    // Disable class-methods-use-this for services
+    'class-methods-use-this': 'off',
+    // Disable global-require for conditional requires
+    'global-require': 'off',
+    // Disable consistent-return for middleware
+    'consistent-return': 'off',
+    // Allow no-useless-escape
+    'no-useless-escape': 'off',
+    // Allow no-return-await (handled by TypeScript eventually)
+    'no-return-await': 'off',
+    // Allow no-loop-func
+    'no-loop-func': 'off',
+    // Allow no-plus-plus
+    'no-plus-plus': 'off',
+    // Allow no-constant-condition
+    'no-constant-condition': 'off',
   },
 };

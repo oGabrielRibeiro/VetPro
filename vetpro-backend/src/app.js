@@ -31,8 +31,10 @@ app.use('/api/auth', authLimiter, require('./routes/authRoutes'));
 // OAuth rotas - comentadas por padrão, ativar em .env
 // Para ativar OAuth: OAUTH_ENABLED=true
 if (process.env.OAUTH_ENABLED === 'true') {
+  // eslint-disable-next-line global-require
   const passport = require('passport');
   app.use(passport.initialize());
+  // eslint-disable-next-line global-require
   app.use('/api/oauth', require('./routes/oauthRoutes'));
 }
 

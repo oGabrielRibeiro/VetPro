@@ -1,6 +1,8 @@
+// Console replaced by logger
 const path = require('path');
 const fs = require('fs');
 const fileService = require('../services/consultationFileService');
+const logger = require('../utils/logger');
 
 async function viewFile(req, res) {
   try {
@@ -18,7 +20,7 @@ async function viewFile(req, res) {
     stream.pipe(res);
     return undefined; // explicit return to satisfy consistent-return
   } catch (error) {
-    console.error(error);
+    logger.error(error);
     return res.status(500).json({ error: 'Erro ao visualizar arquivo' });
   }
 }
@@ -35,7 +37,7 @@ async function uploadFile(req, res) {
 
     return res.status(201).json(file);
   } catch (error) {
-    console.error(error);
+    logger.error(error);
     return res
       .status(500)
       .json({ error: 'Nao foi possivel anexar o arquivo. Tente novamente.' });
@@ -50,7 +52,7 @@ async function listFiles(req, res) {
 
     return res.json(files);
   } catch (error) {
-    console.error(error);
+    logger.error(error);
     return res
       .status(500)
       .json({ error: 'Nao foi possivel carregar os anexos desta consulta.' });
@@ -109,7 +111,7 @@ async function compareFiles(req, res) {
       },
     });
   } catch (error) {
-    console.error(error);
+    logger.error(error);
     return res.status(500).json({ error: 'Erro ao comparar arquivos' });
   }
 }
