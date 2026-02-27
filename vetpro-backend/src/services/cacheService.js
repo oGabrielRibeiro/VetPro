@@ -16,6 +16,11 @@ class CacheService {
   }
 
   initialize() {
+    if (process.env.NODE_ENV === 'test') {
+      this.enabled = false;
+      return;
+    }
+
     const redisUrl = process.env.REDIS_URL;
 
     if (redisUrl) {

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import api from "../services/api";
 import FeedbackBanner from "./FeedbackBanner";
 import LoadingDot from "./LoadingDot";
@@ -136,7 +136,15 @@ const FieldModeConsultation = ({
   const recordedAudioBlobRef = useRef(null);
   const pauseRequestedRef = useRef(false);
   const audioFileInputRef = useRef(null);
+  const incrementalRequestRef = useRef(false);
+  const incrementalTimerRef = useRef(null);
+  const incrementalKeyRef = useRef("");
   const [uploadedAudioName, setUploadedAudioName] = useState("");
+  const [isMobile, setIsMobile] = useState(false);
+  const [mobileStep, setMobileStep] = useState("captura");
+  const captureSectionRef = useRef(null);
+  const reviewSectionRef = useRef(null);
+  const saveSectionRef = useRef(null);
 
   const supportsSpeech = useMemo(
     () =>
@@ -152,8 +160,30 @@ const FieldModeConsultation = ({
   );
   const consultationTypeLabel = consultationContext.label;
 
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+    const media = window.matchMedia("(max-width: 767px)");
+    const apply = () => setIsMobile(media.matches);
+    apply();
+    media.addEventListener("change", apply);
+    return () => media.removeEventListener("change", apply);
+  }, []);
+
   const showFeedback = (type, message) => {
     setFeedback({ type, message });
+  };
+
+  const scrollToStep = (step) => {
+    setMobileStep(step);
+    const refMap = {
+      captura: captureSectionRef,
+      revisao: reviewSectionRef,
+      salvar: saveSectionRef,
+    };
+    const target = refMap[step]?.current;
+    if (target && typeof target.scrollIntoView === "function") {
+      target.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
   };
 
   const clearCapturedData = () => {
@@ -168,8 +198,10 @@ const FieldModeConsultation = ({
     setPorteDetectionState({ porte: "pequeno", confident: false, reason: "indefinido" });
     setShowPorteChoiceModal(false);
     transcriptRef.current = "";
+    incrementalKeyRef.current = "";
     recordedAudioBlobRef.current = null;
     setUploadedAudioName("");
+    setMobileStep("captura");
   };
 
   const buildChatInputFromSegments = (currentSegments, fallbackTranscript) => {
@@ -210,6 +242,9 @@ const FieldModeConsultation = ({
   useEffect(() => {
     return () => {
       keepRecordingRef.current = false;
+      if (incrementalTimerRef.current) {
+        clearTimeout(incrementalTimerRef.current);
+      }
       recognition?.stop?.();
       if (mediaRecorderRef.current?.state !== "inactive") {
         mediaRecorderRef.current?.stop?.();
@@ -627,7 +662,8 @@ const FieldModeConsultation = ({
     return "treatment";
   };
 
-  const parseTranscriptLocal = (text, sourceSegments = segments) => {
+  /* eslint-disable react-hooks/exhaustive-deps */
+  const parseTranscriptLocal = useCallback((text, sourceSegments = segments) => {
     const fallbackContent = (text || "").trim();
     const tutorContent = (sourceSegments || [])
       .filter((segment) => segment.speaker === "Tutor")
@@ -720,7 +756,8 @@ const FieldModeConsultation = ({
       treatment,
       medications,
     };
-  };
+  }, [segments]);
+  /* eslint-enable react-hooks/exhaustive-deps */
 
   const extractSpecificFieldsFallback = (sourceText = "", porte = "pequeno", parsed = {}) => {
     const cleaned = String(sourceText || "")
@@ -1074,6 +1111,107 @@ const FieldModeConsultation = ({
     }
   };
 
+  const mergeParsedFields = useCallback((current = {}, incoming = {}) => {
+    const keys = [
+      "chiefComplaint",
+      "anamnesis",
+      "physicalExam",
+      "diagnosis",
+      "treatment",
+      "medications",
+      "procedures",
+      "examDetails",
+      "returnRecommendation",
+    ];
+    const next = { ...(current || {}) };
+    keys.forEach((key) => {
+      const value = String(incoming?.[key] || "").trim();
+      if (!value) return;
+      const existing = String(next?.[key] || "").trim();
+      if (!existing || existing === "-" || existing.length < 18) {
+        next[key] = value;
+      }
+    });
+    return next;
+  }, []);
+
+  const runIncrementalHeuristic = useCallback(async (candidateSegments, candidateTranscript) => {
+    if (incrementalRequestRef.current) return;
+    const safeSegments = Array.isArray(candidateSegments) ? candidateSegments : [];
+    if (safeSegments.length < 2) return;
+
+    const transcriptText = String(candidateTranscript || "").trim();
+    const key = `${safeSegments.length}:${transcriptText.slice(0, 120)}`;
+    if (incrementalKeyRef.current === key) return;
+    incrementalKeyRef.current = key;
+    incrementalRequestRef.current = true;
+
+    try {
+      const response = await api.post("/consultations/heuristic-parse", {
+        segments: safeSegments,
+        transcript: transcriptText,
+      });
+      const backendParsed = response?.data?.parsed || {};
+      const localParsed = parseTranscriptLocal(transcriptText, safeSegments) || {};
+      const merged = mergeParsedFields(backendParsed, localParsed);
+
+      const hasContent = Object.values(merged).some((value) =>
+        String(value || "").trim(),
+      );
+      if (hasContent) {
+        setParsedData((current) => mergeParsedFields(current, merged));
+      }
+    } catch {
+      const parsedLocal = parseTranscriptLocal(transcriptText, safeSegments);
+      const hasContent = Object.values(parsedLocal || {}).some((value) =>
+        String(value || "").trim(),
+      );
+      if (hasContent) {
+        setParsedData((current) => mergeParsedFields(current, parsedLocal));
+      }
+    } finally {
+      incrementalRequestRef.current = false;
+    }
+  }, [mergeParsedFields, parseTranscriptLocal]);
+
+  useEffect(() => {
+    if (!segments.length || analyzing) return;
+    const joinedTranscript = segments.map((item) => item.text).join(" ").trim();
+    if (!joinedTranscript) return;
+
+    const parsedLocal = parseTranscriptLocal(joinedTranscript, segments);
+    const hasContent = Object.values(parsedLocal || {}).some((value) =>
+      String(value || "").trim(),
+    );
+    if (hasContent) {
+      setParsedData((current) => current || parsedLocal);
+      if (isMobile && !isRecording) {
+        setMobileStep("revisao");
+      }
+    }
+  }, [segments, analyzing, isMobile, isRecording, parseTranscriptLocal]);
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!isRecording) return undefined;
+    const transcriptNow = transcriptRef.current || "";
+    if (!segments.length && !transcriptNow.trim()) return undefined;
+
+    if (incrementalTimerRef.current) {
+      clearTimeout(incrementalTimerRef.current);
+    }
+
+    incrementalTimerRef.current = setTimeout(() => {
+      runIncrementalHeuristic(segmentsRef.current, transcriptRef.current);
+    }, 1200);
+
+    return () => {
+      if (incrementalTimerRef.current) {
+        clearTimeout(incrementalTimerRef.current);
+      }
+    };
+  }, [segments, isRecording, runIncrementalHeuristic]);
+
   const analyzeCurrentConversation = async () => {
     await runFieldAssist(segments);
   };
@@ -1123,6 +1261,9 @@ const FieldModeConsultation = ({
 
     showFeedback("success", "Audio carregado. Processando com IA de campo...");
     await runFieldAssist([]);
+    if (isMobile) {
+      setMobileStep("revisao");
+    }
 
     if (audioFileInputRef.current) {
       audioFileInputRef.current.value = "";
@@ -1158,6 +1299,9 @@ const FieldModeConsultation = ({
     const startTime = Date.now();
 
     if (!isPaused) {
+      if (isMobile) {
+        setMobileStep("captura");
+      }
       setStartedAt(startTime);
       setElapsedSeconds(0);
       setSegments([]);
@@ -1274,6 +1418,7 @@ const FieldModeConsultation = ({
     setElapsedSeconds(0);
     setStartedAt(null);
     transcriptRef.current = "";
+    incrementalKeyRef.current = "";
     recordedAudioBlobRef.current = null;
     setUploadedAudioName("");
     liveInterimRef.current = "";
@@ -1286,6 +1431,9 @@ const FieldModeConsultation = ({
     await analyzeCurrentConversation();
     setShowPausedActions(false);
     showFeedback("success", "Conversa mantida para preenchimento.");
+    if (isMobile) {
+      scrollToStep("revisao");
+    }
   };
 
   const choosePorteManually = async (porte) => {
@@ -1575,6 +1723,9 @@ const FieldModeConsultation = ({
       }
       await stopAudioCapture({ releaseStream: true });
       onBack?.();
+      if (isMobile) {
+        setMobileStep("captura");
+      }
     } catch (error) {
       console.error("Erro ao salvar consulta de campo:", error);
       showFeedback(
@@ -1617,7 +1768,7 @@ const FieldModeConsultation = ({
   }
 
   return (
-    <div className="max-w-3xl mx-auto space-y-4 pb-36 sm:pb-28">
+    <div className="max-w-3xl mx-auto space-y-4 pb-52 sm:pb-28">
       <div className="rounded-2xl border border-cyan-200 dark:border-cyan-800 bg-gradient-to-r from-cyan-50 to-emerald-50 dark:from-cyan-900 dark:to-emerald-900 p-4 sm:p-5 shadow-sm">
         <div className="flex items-start justify-between gap-3">
           <div>
@@ -1643,13 +1794,44 @@ const FieldModeConsultation = ({
         </div>
       </div>
 
+      {isMobile && (
+        <div className="rounded-xl border border-gray-200 bg-white p-2 shadow-sm">
+          <p className="px-1 pb-2 text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+            Fluxo rapido de campo
+          </p>
+          <div className="grid grid-cols-3 gap-2">
+            {[
+              ["captura", "1. Captura"],
+              ["revisao", "2. Revisao"],
+              ["salvar", "3. Salvar"],
+            ].map(([step, label]) => (
+              <button
+                key={step}
+                type="button"
+                onClick={() => scrollToStep(step)}
+                className={`rounded-lg border px-2 py-2 text-xs font-semibold ${
+                  mobileStep === step
+                    ? "border-cyan-600 bg-cyan-600 text-white"
+                    : "border-gray-300 bg-white text-gray-700"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       <FeedbackBanner
         type={feedback?.type || "error"}
         message={feedback?.message}
         onClose={() => setFeedback(null)}
       />
 
-      <div className="rounded-2xl border border-gray-200 bg-white p-4 sm:p-6 space-y-4">
+      <div
+        ref={captureSectionRef}
+        className="rounded-2xl border border-gray-200 bg-white p-4 sm:p-6 space-y-4"
+      >
         <div>
           <label className="mb-1 block text-xs font-semibold text-gray-600 uppercase tracking-wide">
             Tipo de consulta
@@ -1949,7 +2131,52 @@ const FieldModeConsultation = ({
         )}
       </div>
 
-      <div className="rounded-xl border border-gray-200 bg-white p-4 sm:p-6 space-y-4">
+      <div
+        ref={reviewSectionRef}
+        className="rounded-xl border border-emerald-200 bg-white p-4 space-y-3"
+      >
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="text-sm font-semibold text-gray-600 uppercase tracking-wide">
+            Revisao rapida do prontuario
+          </h2>
+          <button
+            type="button"
+            onClick={analyzeCurrentConversation}
+            disabled={analyzing || !segments.length}
+            className="rounded-md border border-emerald-300 bg-emerald-50 px-2 py-1 text-[11px] font-semibold text-emerald-800 disabled:opacity-50"
+          >
+            {analyzing ? "Analisando..." : "Atualizar"}
+          </button>
+        </div>
+        {!parsedData ? (
+          <p className="text-sm text-gray-500">
+            Inicie a captura e pause para revisar os campos preenchidos automaticamente.
+          </p>
+        ) : (
+          <div className="grid grid-cols-1 gap-2 text-sm">
+            <p><strong>Queixa:</strong> {parsedData.chiefComplaint || "-"}</p>
+            <p><strong>Anamnese:</strong> {parsedData.anamnesis || "-"}</p>
+            <p><strong>Exame fisico:</strong> {parsedData.physicalExam || "-"}</p>
+            <p><strong>Diagnostico:</strong> {parsedData.diagnosis || "-"}</p>
+            <p><strong>Conduta:</strong> {parsedData.treatment || "-"}</p>
+            <p><strong>Medicacao:</strong> {parsedData.medications || "-"}</p>
+          </div>
+        )}
+        {isMobile && (
+          <button
+            type="button"
+            onClick={() => scrollToStep("salvar")}
+            className="w-full rounded-lg bg-emerald-600 px-3 py-2 text-sm font-bold text-white"
+          >
+            Continuar para salvar
+          </button>
+        )}
+      </div>
+
+      <div
+        ref={saveSectionRef}
+        className="rounded-xl border border-gray-200 bg-white p-4 sm:p-6 space-y-4"
+      >
         <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
           Parametros vitais (edicao manual)
         </h2>
@@ -1995,7 +2222,7 @@ const FieldModeConsultation = ({
         <div className="h-3" />
       </div>
 
-      <FloatingFormActions maxWidthClass="max-w-3xl">
+      <FloatingFormActions maxWidthClass="max-w-3xl" mobileSticky>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
           <button
             type="button"
@@ -2070,8 +2297,3 @@ const FieldModeConsultation = ({
 };
 
 export default FieldModeConsultation;
-
-
-
-
-

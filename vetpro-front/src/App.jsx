@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useCallback, lazy, Suspense, useMemo, useRef } from "react";
+import React, { useState, useEffect, useCallback, lazy, Suspense } from "react";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import Login from "./pages/Login";
 import Sidebar from "./components/Sidebar";
@@ -67,30 +67,7 @@ const MainApp = () => {
   const [fieldMode, setFieldMode] = useState(
     () => localStorage.getItem("vetpro_field_mode") === "true",
   );
-  const [dataError, setDataError] = useState("");
-  const saveTimeoutRef = useRef(null);
-  const MAX_LOCALSTORAGE_ITEMS = 100;
-
-  // Debounced localStorage save function
-  const debouncedSave = useCallback((key, data) => {
-    if (saveTimeoutRef.current) {
-      clearTimeout(saveTimeoutRef.current);
-    }
-    saveTimeoutRef.current = setTimeout(() => {
-      try {
-        if (Array.isArray(data) && data.length > MAX_LOCALSTORAGE_ITEMS) {
-          const limitedData = data.slice(0, MAX_LOCALSTORAGE_ITEMS);
-          localStorage.setItem(key, JSON.stringify(limitedData));
-          console.log(`[localStorage] Limited ${key} to ${MAX_LOCALSTORAGE_ITEMS} items`);
-        } else if (data) {
-          localStorage.setItem(key, JSON.stringify(data));
-        }
-      } catch (error) {
-        console.error(`[localStorage] Error saving ${key}:`, error);
-      }
-    }, 1000);
-  }, []);
-  const [actionFeedback, setActionFeedback] = useState(null);
+  const [dataError, setDataError] = useState("");  const [actionFeedback, setActionFeedback] = useState(null);
 
   const [currentConsultation, setCurrentConsultation] = useState(null);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
@@ -143,97 +120,6 @@ const MainApp = () => {
     ),
   });
 
-  const cleanPersistentValue = (value) => {
-    const text = String(value || "").trim();
-    if (!text) return "";
-    const normalized = text
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .toLowerCase();
-    if (normalized === "nao informado" || normalized === "não informado") {
-      return "";
-    }
-    return text;
-  };
-
-  const buildPersistentProfileFromPatientForm = (form, existingProfile = {}) => {
-    const listFromCsv = (value) =>
-      String(value || "")
-        .split(",")
-        .map((item) => item.trim())
-        .filter(Boolean);
-
-    const propertyAndManagementParts = [
-      cleanPersistentValue(form.pp_responsavel_local?.value),
-      cleanPersistentValue(form.pp_contato_propriedade?.value)
-        ? `Contato: ${cleanPersistentValue(form.pp_contato_propriedade?.value)}`
-        : "",
-      cleanPersistentValue(form.pp_fazenda?.value)
-        ? `Fazenda: ${cleanPersistentValue(form.pp_fazenda?.value)}`
-        : "",
-      cleanPersistentValue(form.pp_endereco_propriedade?.value)
-        ? `Endereco: ${cleanPersistentValue(form.pp_endereco_propriedade?.value)}`
-        : "",
-      cleanPersistentValue(form.pp_tipo_criacao?.value)
-        ? `Tipo criacao: ${cleanPersistentValue(form.pp_tipo_criacao?.value)}`
-        : "",
-      cleanPersistentValue(form.pp_tipo_alimentacao?.value)
-        ? `Alimentacao: ${cleanPersistentValue(form.pp_tipo_alimentacao?.value)}`
-        : "",
-      cleanPersistentValue(form.pp_sal_mineral?.value)
-        ? `Sal mineral: ${cleanPersistentValue(form.pp_sal_mineral?.value)}`
-        : "",
-    ].filter(Boolean);
-
-    // Persistimos apenas dados realmente estaveis entre consultas.
-    // Apenas dados estaveis da ficha base (propriedade e manejo).
-    const contactantes = cleanPersistentValue(form.pp_contactantes?.value);
-    const largeFieldsRaw = {
-      farmName: cleanPersistentValue(form.pp_fazenda?.value),
-      productionSystem: cleanPersistentValue(form.pp_tipo_criacao?.value),
-      animalFunction: cleanPersistentValue(form.pp_animal_function?.value),
-      contactAnimals: contactantes,
-      propertyAndManagement: propertyAndManagementParts.join("; "),
-    };
-
-    const smallFields = {
-      contactWithAnimals: contactantes,
-    };
-    const largeFields = Object.entries(largeFieldsRaw).reduce((acc, [key, value]) => {
-      if (!value) return acc;
-      acc[key] = value;
-      return acc;
-    }, {});
-
-    const contactantesList = listFromCsv(contactantes);
-    if (contactantesList.length) {
-      largeFields.contactAnimals = contactantesList.join(", ");
-    }
-
-    const nextProfile = {
-      ...(existingProfile && typeof existingProfile === "object" ? existingProfile : {}),
-      updatedAt: new Date().toISOString(),
-      pequeno: {
-        fields: {
-          ...((existingProfile?.pequeno?.fields && typeof existingProfile.pequeno.fields === "object")
-            ? existingProfile.pequeno.fields
-            : {}),
-          ...smallFields,
-        },
-      },
-      grande: {
-        fields: {
-          ...((existingProfile?.grande?.fields && typeof existingProfile.grande.fields === "object")
-            ? existingProfile.grande.fields
-            : {}),
-          ...largeFields,
-        },
-      },
-    };
-
-    return nextProfile;
-  };
- 
   const showActionError = useCallback((message) => {
     setActionFeedback({ type: "error", message });
   }, []);
@@ -274,11 +160,28 @@ const MainApp = () => {
     }
   }, [isAuthenticated]);
 
+  const fetchAppointments = useCallback(async () => {
+    if (!isAuthenticated) return;
+
+    try {
+      const response = await api.get("/appointments");
+      const payload = response.data?.data || response.data || [];
+      setAppointments(Array.isArray(payload) ? payload : []);
+      setDataError("");
+    } catch (err) {
+      console.error("Erro ao buscar agendamentos:", err);
+      setDataError(
+        toUserFriendlyError(err, "Não foi possível carregar os agendamentos."),
+      );
+    }
+  }, [isAuthenticated]);
+
   useEffect(() => {
     if (!isAuthenticated) return;
     fetchPatients();
     fetchConsultations();
-  }, [isAuthenticated, fetchConsultations, fetchPatients]);
+    fetchAppointments();
+  }, [isAuthenticated, fetchAppointments, fetchConsultations, fetchPatients]);
 
   // Detectar mobile
   useEffect(() => {
@@ -333,62 +236,6 @@ const MainApp = () => {
     };
   }, []);
 
-  // Carregar dados do localStorage com tratamento de erros
-  useEffect(() => {
-    try {
-      const savedPatients = localStorage.getItem("vetpro_patients");
-      const savedConsultations = localStorage.getItem("vetpro_consultations");
-      const savedAppointments = localStorage.getItem("vetpro_appointments");
-
-      if (savedPatients) setPatients(JSON.parse(savedPatients));
-      if (savedConsultations) setConsultations(JSON.parse(savedConsultations));
-      if (savedAppointments) setAppointments(JSON.parse(savedAppointments));
-    } catch (error) {
-      console.error("Erro ao carregar dados:", error);
-      // Resetar dados em caso de erro
-      localStorage.removeItem("vetpro_patients");
-      localStorage.removeItem("vetpro_consultations");
-      localStorage.removeItem("vetpro_appointments");
-    }
-  }, []);
-
-  // Salvar dados no localStorage com tratamento de erros
-  useEffect(() => {
-    try {
-      if (patients.length > 0) {
-        localStorage.setItem("vetpro_patients", JSON.stringify(patients));
-      }
-    } catch (error) {
-      console.error("Erro ao salvar pacientes:", error);
-    }
-  }, [patients]);
-
-  useEffect(() => {
-    try {
-      if (consultations.length > 0) {
-        localStorage.setItem(
-          "vetpro_consultations",
-          JSON.stringify(consultations),
-        );
-      }
-    } catch (error) {
-      console.error("Erro ao salvar consultas:", error);
-    }
-  }, [consultations]);
-
-  useEffect(() => {
-    try {
-      if (appointments.length > 0) {
-        localStorage.setItem(
-          "vetpro_appointments",
-          JSON.stringify(appointments),
-        );
-      }
-    } catch (error) {
-      console.error("Erro ao salvar agendamentos:", error);
-    }
-  }, [appointments]);
-
   useEffect(() => {
     localStorage.setItem("vetpro_field_mode", fieldMode ? "true" : "false");
   }, [fieldMode]);
@@ -426,26 +273,24 @@ const MainApp = () => {
 
       if (returnPlan?.recommended) {
         const hasDate = Boolean(returnPlan.date && !returnPlan.open);
-        setAppointments((prev) => [
-          ...prev,
-          {
-            id: Date.now(),
-            patientId: payload.patientId,
-            type: "retorno",
-            date: hasDate ? returnPlan.date : "",
-            time: hasDate ? "09:00" : "",
-            reason: hasDate
-              ? "Retorno recomendado em consulta"
-              : "Possivel retorno (data em aberto)",
-            status: hasDate ? "agendado" : "possivel-retorno",
-            linkedConsultationId: savedConsultation.id,
-            createdAt: new Date().toISOString(),
-          },
-        ]);
+        await api.post("/appointments", {
+          patientId: payload.patientId,
+          type: "retorno",
+          date: hasDate
+            ? returnPlan.date
+            : new Date().toISOString().split("T")[0],
+          time: hasDate ? "09:00" : "00:00",
+          reason: hasDate
+            ? "Retorno recomendado em consulta"
+            : "Possivel retorno (data em aberto)",
+          status: hasDate ? "agendado" : "possivel-retorno",
+          linkedConsultationId: savedConsultation.id,
+        });
       }
 
       await fetchConsultations();
       await fetchPatients();
+      await fetchAppointments();
       return savedConsultation;
     } catch (error) {
       console.error("Erro ao salvar consulta:", error);
@@ -489,30 +334,35 @@ const MainApp = () => {
     }
   };
 
-  const handleAddAppointment = (appointmentData) => {
+  const handleAddAppointment = async (appointmentData) => {
     try {
-      const newAppointment = {
-        ...appointmentData,
-        id: Date.now(),
-        createdAt: new Date().toISOString(),
-      };
-      setAppointments((prev) => [...prev, newAppointment]);
+      if (appointmentData?.id) {
+        await api.put(`/appointments/${appointmentData.id}`, appointmentData);
+      } else {
+        await api.post("/appointments", appointmentData);
+      }
+      await fetchAppointments();
       setCurrentView("appointments");
       return true;
     } catch (error) {
       console.error("Erro ao adicionar agendamento:", error);
-      showActionError("Não foi possível adicionar o agendamento.");
+      showActionError(
+        toUserFriendlyError(error, "Não foi possível salvar o agendamento."),
+      );
       return false;
     }
   };
 
-  const handleDeleteAppointment = (id) => {
+  const handleDeleteAppointment = async (id) => {
     try {
-      setAppointments((prev) => prev.filter((a) => a.id !== id));
+      await api.delete(`/appointments/${id}`);
+      await fetchAppointments();
       return true;
     } catch (error) {
       console.error("Erro ao excluir agendamento:", error);
-      showActionError("Não foi possível excluir o agendamento.");
+      showActionError(
+        toUserFriendlyError(error, "Não foi possível excluir o agendamento."),
+      );
       return false;
     }
   };
@@ -598,7 +448,7 @@ const MainApp = () => {
 
     setCurrentConsultationPatient(patient);
     setReturnSourceConsultation(consultation);
-    setCurrentView(fieldMode ? "new-consultation-field" : "new-consultation-quick");
+    setCurrentView(fieldMode || isMobile ? "new-consultation-field" : "new-consultation-quick");
   };
 
   const handleGeneratePrescription = (consultation) => {
@@ -674,7 +524,7 @@ const MainApp = () => {
 
     setFieldModeDraftInitialData(null);
     setReturnSourceConsultation(null);
-    setCurrentView(fieldMode ? "new-consultation-field" : "new-consultation-quick");
+    setCurrentView(fieldMode || isMobile ? "new-consultation-field" : "new-consultation-quick");
   };
 
   const confirmPatientForConsultation = () => {
@@ -686,7 +536,7 @@ const MainApp = () => {
     setFieldModeDraftInitialData(null);
     setReturnSourceConsultation(null);
     setShowPatientPicker(false);
-    setCurrentView(fieldMode ? "new-consultation-field" : "new-consultation-quick");
+    setCurrentView(fieldMode || isMobile ? "new-consultation-field" : "new-consultation-quick");
   };
 
   // Renderizar a view atual
@@ -856,7 +706,7 @@ const MainApp = () => {
 
             <div className="bg-white dark:bg-dark-800 rounded-xl border border-gray-200 dark:border-dark-700 shadow-sm p-4 sm:p-6">
               <form
-                onSubmit={(e) => {
+                onSubmit={async (e) => {
                   e.preventDefault();
                   const form = e.target;
                   const appointmentData = {
@@ -880,11 +730,94 @@ const MainApp = () => {
                     return;
                   }
 
-                  handleAddAppointment(appointmentData);
-                  setEditingAppointment(null);
+                  const saved = await handleAddAppointment(appointmentData);
+                  if (saved) {
+                    setEditingAppointment(null);
+                  }
                 }}
                 className="space-y-4 sm:space-y-6"
               >
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Paciente
+                    </label>
+                    <select
+                      name="patientId"
+                      required
+                      defaultValue={editingAppointment?.patientId || ""}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-dark-600 bg-white dark:bg-dark-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
+                    >
+                      <option value="">Selecione...</option>
+                      {patients.map((patient) => (
+                        <option key={patient.id} value={patient.id}>
+                          {patient.name} - {patient.ownerName}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Data
+                    </label>
+                    <input
+                      name="date"
+                      type="date"
+                      required
+                      defaultValue={
+                        editingAppointment?.date
+                          ? String(editingAppointment.date).split("T")[0]
+                          : ""
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-dark-600 bg-white dark:bg-dark-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Hora
+                    </label>
+                    <input
+                      name="time"
+                      type="time"
+                      required
+                      defaultValue={editingAppointment?.time || ""}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-dark-600 bg-white dark:bg-dark-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
+                    />
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Motivo
+                    </label>
+                    <input
+                      name="reason"
+                      type="text"
+                      required
+                      defaultValue={editingAppointment?.reason || ""}
+                      placeholder="Ex: retorno, revisao, vacinacao"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-dark-600 bg-white dark:bg-dark-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Tipo
+                    </label>
+                    <select
+                      name="type"
+                      defaultValue={editingAppointment?.type || "consulta"}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-dark-600 bg-white dark:bg-dark-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
+                    >
+                      <option value="consulta">Consulta</option>
+                      <option value="retorno">Retorno</option>
+                      <option value="exame">Exame</option>
+                      <option value="vacinacao">Vacinacao</option>
+                    </select>
+                  </div>
+                </div>
+
                 <div className="flex flex-col sm:flex-row sm:justify-between gap-2 pt-3 border-t border-gray-200 dark:border-dark-700">
                   <button
                     type="button"
@@ -1274,6 +1207,7 @@ const MainApp = () => {
               setDataError("");
               fetchPatients();
               fetchConsultations();
+              fetchAppointments();
             }}
           />
         )}
@@ -1391,3 +1325,4 @@ function renderProfileBubble(profileUser) {
       </span>
     );
 }
+

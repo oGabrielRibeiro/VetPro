@@ -4,6 +4,7 @@ const FloatingFormActions = ({
   children,
   maxWidthClass = "max-w-3xl",
   bottomOffsetClass = "bottom-14 sm:bottom-4",
+  mobileSticky = false,
 }) => {
   const anchorRef = useRef(null);
   const [attachedToEnd, setAttachedToEnd] = useState(false);
@@ -40,6 +41,18 @@ const FloatingFormActions = ({
   }, [isMobile]);
 
   if (isMobile) {
+    if (mobileSticky) {
+      return (
+        <div className="fixed inset-x-0 bottom-0 z-40 px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+          <div
+            className={`mx-auto ${maxWidthClass} rounded-t-xl border border-slate-200 bg-white px-2 py-2 shadow-[0_-8px_20px_rgba(15,23,42,0.12)]`}
+          >
+            {children}
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="mt-3 px-1">
         <div

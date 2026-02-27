@@ -2,10 +2,12 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
+const authMiddleware = require('./middlewares/authMiddleware');
 const patientRoutes = require('./routes/patientRoutes');
 const consultationRoutes = require('./routes/consultationRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
 const clinicRoutes = require('./routes/clinicRoutes');
+const appointmentRoutes = require('./routes/appointmentRoutes');
 const {
   generalLimiter,
   authLimiter,
@@ -16,7 +18,20 @@ require('dotenv').config();
 const app = express();
 
 // Middlewares globais
-app.use(cors());
+const corsOrigins = String(process.env.FRONTEND_URL || '')
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
+app.use(
+  cors({
+    origin:
+      corsOrigins.length > 0
+        ? corsOrigins
+        : ['http://localhost:3000', 'http://127.0.0.1:3000'],
+    credentials: true,
+  }),
+);
 app.disable('x-powered-by');
 // aceitar uploads base64/JSON grandes (fotos, logos, assinaturas)
 app.use(express.json({ limit: '20mb' }));
@@ -44,14 +59,15 @@ app.use('/api/patients', patientRoutes);
 app.use('/api/consultations', consultationRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/clinic', clinicRoutes);
+app.use('/api/appointments', appointmentRoutes);
 
 // Rota de cache (para debugging/admin)
-app.get('/api/cache/stats', async (req, res) => {
+app.get('/api/cache/stats', authMiddleware, async (req, res) => {
   const stats = await cacheService.stats();
   res.json(stats);
 });
 
-app.post('/api/cache/flush', async (req, res) => {
+app.post('/api/cache/flush', authMiddleware, async (req, res) => {
   const result = await cacheService.flush();
   res.json({ success: result });
 });

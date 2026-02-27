@@ -38,7 +38,6 @@ function detectSpeakerFromText(phrase, fallbackSpeaker = 'Tutor') {
   const normalized = normalizeText(phrase || '');
   if (!normalized) return fallbackSpeaker;
 
-  // Sinais de que é o Tutor (dono do animal)
   const tutorSignals = [
     'doutor',
     'doutora',
@@ -68,9 +67,24 @@ function detectSpeakerFromText(phrase, fallbackSpeaker = 'Tutor') {
     'o pet',
     'aqui em casa',
     'em casa',
+    'ele nao',
+    'ela nao',
+    'estou',
+    'to ',
+    'minha',
+    'meu',
+    'comecou',
+    'piorou',
+    'melhorou',
+    'quando',
+    'desde',
+    'faz',
+    'ontem',
+    'hoje',
+    'de noite',
+    'de manha',
   ];
 
-  // Sinais de que é o Veterinário
   const vetSignals = [
     'no exame',
     'ao exame',
@@ -96,6 +110,20 @@ function detectSpeakerFromText(phrase, fallbackSpeaker = 'Tutor') {
     'encaminhar',
     'coletar',
     'orientação',
+    'orientacao',
+    'vamos fazer',
+    'vamos iniciar',
+    'iniciar',
+    'prescrevo',
+    'prescrever',
+    'avaliacao',
+    'suspeito',
+    'hipotese',
+    'prognostico',
+    'vamos solicitar',
+    'solicito',
+    'ultrassom',
+    'hemograma',
   ];
 
   let tutorScore = 0;
@@ -108,11 +136,13 @@ function detectSpeakerFromText(phrase, fallbackSpeaker = 'Tutor') {
     if (normalized.includes(signal)) vetScore += 2;
   }
 
-  // Se menciona "dr" ou "doutor" seguido de pergunta, é tutor falando com vet
   if (/^(dr|dra|doutor|doutora)\b/.test(normalized)) {
-    // Geralmente tutor diz "dr, o cachorro..."
     tutorScore += 1;
   }
+  if (/\?$/.test(String(phrase || '').trim())) tutorScore += 1;
+  if (/\b(fc|fr|trc|mucosa|ausculta|palpacao)\b/.test(normalized)) vetScore += 2;
+  if (/\b(prescricao|receita|mg\/kg|sid|bid|tid)\b/.test(normalized))
+    vetScore += 2;
 
   if (tutorScore > vetScore) return 'Tutor';
   if (vetScore > tutorScore) return 'Medico';
@@ -224,6 +254,71 @@ function basicFieldExtraction(text = '') {
   return result;
 }
 
+function splitClinicalPhrases(text = '') {
+  return String(text || '')
+    .replace(/\r/g, '\n')
+    .split(/[.!?;\n]+/g)
+    .map((line) => line.trim())
+    .filter(Boolean);
+}
+
+function uniqueJoin(items = [], max = 5) {
+  const seen = new Set();
+  const result = [];
+  for (const item of items) {
+    const value = String(item || '').trim();
+    if (!value) continue;
+    const key = normalizeText(value);
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    result.push(value);
+    if (result.length >= max) break;
+  }
+  return result.join('. ');
+}
+
+function scoreFieldCandidate(phrase = '', field = '', speaker = 'Tutor') {
+  const normalized = normalizeText(phrase);
+  if (!normalized) return 0;
+
+  const cues = {
+    chiefComplaint: ['queixa', 'motivo', 'trouxe', 'principal', 'reclam'],
+    anamnesis: ['desde', 'historico', 'evolucao', 'comecou', 'piorou', 'melhorou'],
+    physicalExam: ['exame', 'palpacao', 'ausculta', 'mucosa', 'temperatura', 'fc', 'fr'],
+    diagnosis: ['diagnostico', 'suspeita', 'hipotese', 'compativel'],
+    treatment: ['tratamento', 'conduta', 'oriento', 'recomendo', 'iniciar'],
+    medications: ['prescrevo', 'prescricao', 'medicacao', 'receita', 'mg/kg', 'sid', 'bid', 'tid'],
+    returnRecommendation: ['retorno', 'reavaliar', 'voltar', 'revisao'],
+    examDetails: ['hemograma', 'ultrassom', 'radiografia', 'exame complementar', 'solicito exame'],
+    procedures: ['coleta', 'curativo', 'procedimento', 'drenagem', 'sutura'],
+  };
+
+  let score = 0;
+  for (const cue of cues[field] || []) {
+    if (normalized.includes(cue)) score += 2;
+  }
+
+  if (speaker === 'Tutor') {
+    if (field === 'chiefComplaint' || field === 'anamnesis') score += 1;
+    if (field === 'physicalExam' || field === 'diagnosis' || field === 'treatment')
+      score -= 1;
+  }
+  if (speaker === 'Medico') {
+    if (
+      field === 'physicalExam' ||
+      field === 'diagnosis' ||
+      field === 'treatment' ||
+      field === 'medications' ||
+      field === 'examDetails' ||
+      field === 'procedures'
+    ) {
+      score += 1;
+    }
+  }
+
+  return score;
+}
+
 /**
  * Parses clinical fields from conversation segments
  * @param {Array} segments - Array de segmentos da conversa
@@ -236,78 +331,127 @@ function parseClinicalFieldsFromSegments(
   sourceText = '',
   options = {},
 ) {
-  const { skipUnifiedBrain = false } = options;
-
   try {
+    void options;
     const allText =
       (Array.isArray(sourceText) ? sourceText.join(' ') : sourceText) || '';
+    const baseSegments = Array.isArray(segments) ? segments : [];
+    const parsedSegments = baseSegments.length
+      ? baseSegments
+      : buildSimpleSegments(allText);
 
-    const combinedText =
-      segments && segments.length > 0
-        ? `${allText} ${segments.map((s) => s.text).join(' ')}`
-        : allText;
+    const normalizedSegments = parsedSegments
+      .map((seg) => ({
+        stamp: seg?.stamp || '00:00',
+        speaker: detectSpeakerFromText(seg?.text || '', seg?.speaker || 'Tutor'),
+        text: String(seg?.text || '').trim(),
+      }))
+      .filter((seg) => seg.text);
 
-    logger.info('parseClinicalFieldsFromSegments - debug', {
-      segmentsCount: segments ? segments.length : 0,
-      sourceTextLength: sourceText ? sourceText.length : 0,
-      combinedTextLength: combinedText.length,
-      combinedTextPreview: combinedText.substring(0, 200),
-      skipUnifiedBrain,
-    });
+    const buckets = {
+      chiefComplaint: [],
+      anamnesis: [],
+      physicalExam: [],
+      diagnosis: [],
+      treatment: [],
+      medications: [],
+      procedures: [],
+      examDetails: [],
+      returnRecommendation: [],
+    };
 
-    // Tenta importar do heuristicService para usar as funções existentes
-    let runUnifiedClinicalBrain;
+    const speakerStats = { Tutor: 0, Medico: 0 };
 
-    // eslint-disable-next-line global-require
-    let heuristic;
-    try {
-      heuristic = require('./heuristicService');
-      runUnifiedClinicalBrain = heuristic.runUnifiedClinicalBrain;
-      logger.info('heuristicService carregado com sucesso');
-    } catch (e) {
-      logger.warn(
-        'heuristicService nao disponivel para parseClinicalFieldsFromSegments',
-        { error: e.message },
-      );
-      runUnifiedClinicalBrain = null;
+    for (const seg of normalizedSegments) {
+      const speaker = seg.speaker === 'Medico' ? 'Medico' : 'Tutor';
+      speakerStats[speaker] += 1;
+      const phrases = splitClinicalPhrases(seg.text);
+      for (const phrase of phrases) {
+        const scored = Object.keys(buckets)
+          .map((field) => ({
+            field,
+            score: scoreFieldCandidate(phrase, field, speaker),
+          }))
+          .sort((a, b) => b.score - a.score);
+
+        const best = scored[0];
+        if (best && best.score >= 2) {
+          buckets[best.field].push(phrase);
+        } else if (speaker === 'Tutor') {
+          if (buckets.chiefComplaint.length < 2) buckets.chiefComplaint.push(phrase);
+          else buckets.anamnesis.push(phrase);
+        } else {
+          if (buckets.physicalExam.length < 2) buckets.physicalExam.push(phrase);
+          else buckets.treatment.push(phrase);
+        }
+      }
     }
 
-    const parsed = {};
-    const context = {};
-    const pipeline = {};
+    const tutorText = normalizedSegments
+      .filter((seg) => seg.speaker === 'Tutor')
+      .map((seg) => seg.text)
+      .join(' ');
+    const medicoText = normalizedSegments
+      .filter((seg) => seg.speaker === 'Medico')
+      .map((seg) => seg.text)
+      .join(' ');
+    const fallbackText = `${tutorText} ${medicoText} ${allText}`.trim();
 
-    // ONLY call runUnifiedClinicalBrain if NOT already called (to avoid infinite loop)
-    if (
-      !skipUnifiedBrain &&
-      runUnifiedClinicalBrain &&
-      typeof runUnifiedClinicalBrain === 'function'
-    ) {
-      const messages = [{ role: 'user', content: combinedText }];
-      logger.info('Chamando runUnifiedClinicalBrain com', {
-        messageCount: messages.length,
-      });
+    const fallback = basicFieldExtraction(fallbackText);
 
-      const result = runUnifiedClinicalBrain(messages);
+    const parsed = {
+      chiefComplaint:
+        uniqueJoin(buckets.chiefComplaint, 3) ||
+        fallback.chiefComplaint ||
+        splitClinicalPhrases(tutorText)[0] ||
+        '',
+      anamnesis: uniqueJoin(buckets.anamnesis, 5) || fallback.anamnesis || '',
+      physicalExam:
+        uniqueJoin(buckets.physicalExam, 5) || fallback.physicalExam || '',
+      diagnosis: uniqueJoin(buckets.diagnosis, 4) || fallback.diagnosis || '',
+      treatment: uniqueJoin(buckets.treatment, 5) || fallback.treatment || '',
+      medications: uniqueJoin(buckets.medications, 5) || '',
+      procedures: uniqueJoin(buckets.procedures, 4) || '',
+      examDetails: uniqueJoin(buckets.examDetails, 4) || '',
+      returnRecommendation: uniqueJoin(buckets.returnRecommendation, 3) || '',
+    };
 
-      logger.info('runUnifiedClinicalBrain retornou', {
-        hasParsed: !!result?.parsed,
-        parsedKeys: result?.parsed ? Object.keys(result.parsed) : [],
-        parsedPreview: JSON.stringify(result?.parsed || {}).substring(0, 200),
-      });
+    const speakerTotal = speakerStats.Tutor + speakerStats.Medico || 1;
+    const speakerDiff = Math.abs(speakerStats.Tutor - speakerStats.Medico);
+    const roleReliability = Number(
+      Math.min(1, (speakerDiff + Math.min(speakerStats.Tutor, speakerStats.Medico)) / speakerTotal).toFixed(2),
+    );
 
-      parsed.parsed = result.parsed || {};
-      context.context = result.context || {};
-      pipeline.pipeline = result.pipeline || {};
-    } else {
-      // Fallback: extração básica de campos clínicos
-      logger.info('Usando fallback basicFieldExtraction', {
-        reason: skipUnifiedBrain
-          ? 'skipUnifiedBrain=true'
-          : 'runUnifiedBrain nao disponivel',
-      });
-      const basicResult = basicFieldExtraction(combinedText);
-      Object.assign(parsed, basicResult);
-    }
+    const context = {
+      tutorContent: tutorText || '',
+      medicoContent: medicoText || '',
+      roleReliability: {
+        score: roleReliability,
+        reliable: roleReliability >= 0.45,
+      },
+    };
+
+    const missingCore = [
+      'chiefComplaint',
+      'anamnesis',
+      'physicalExam',
+      'diagnosis',
+      'treatment',
+    ].filter((key) => !String(parsed[key] || '').trim());
+
+    const pipeline = {
+      semanticRules: {
+        alerts: missingCore.length
+          ? [
+              {
+                id: 'missing_core_fields',
+                severity: 'media',
+                message: `Campos clinicos com baixa evidencia: ${missingCore.join(', ')}`,
+              },
+            ]
+          : [],
+      },
+    };
 
     return { parsed, context, pipeline };
   } catch (err) {

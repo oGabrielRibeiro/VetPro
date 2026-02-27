@@ -14,7 +14,10 @@ const Appointments = ({
   const [filterPatient, setFilterPatient] = useState("");
 
   const filteredAppointments = appointments.filter((appointment) => {
-    const matchesDate = !filterDate || appointment.date === filterDate;
+    const normalizedDate = appointment?.date
+      ? String(appointment.date).split("T")[0]
+      : "";
+    const matchesDate = !filterDate || normalizedDate === filterDate;
     const matchesPatient =
       !filterPatient || String(appointment.patientId) === String(filterPatient);
     return matchesDate && matchesPatient;

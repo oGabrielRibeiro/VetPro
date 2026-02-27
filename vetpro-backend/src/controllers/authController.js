@@ -8,7 +8,7 @@ const logger = require('../utils/logger');
 const { refreshAccessToken } = require('../services/authService');
 
 const { JWT_SECRET } = process.env;
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '15m';
 
 function isValidEmail(email = '') {
   return /^\S+@\S+\.\S+$/.test(String(email).trim());

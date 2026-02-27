@@ -1,16 +1,22 @@
 const jwt = require('jsonwebtoken');
 const prisma = require('../lib/prisma');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'vetpro-secret-key';
-const JWT_REFRESH_SECRET =
-  process.env.JWT_REFRESH_SECRET || 'vetpro-refresh-secret-key';
-const ACCESS_TOKEN_EXPIRY = '15m'; // 15 minutos
-const REFRESH_TOKEN_EXPIRY = '7d'; // 7 dias
+const JWT_SECRET = process.env.JWT_SECRET;
+const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET;
+const ACCESS_TOKEN_EXPIRY = process.env.JWT_EXPIRES_IN || '15m'; // 15 minutos
+const REFRESH_TOKEN_EXPIRY = process.env.JWT_REFRESH_EXPIRES_IN || '7d'; // 7 dias
+
+function assertSecrets() {
+  if (!JWT_SECRET || !JWT_REFRESH_SECRET) {
+    throw new Error('JWT_SECRET e JWT_REFRESH_SECRET devem estar definidos.');
+  }
+}
 
 /**
  * Gera um access token JWT
  */
 function generateAccessToken(user) {
+  assertSecrets();
   return jwt.sign(
     {
       userId: user.id,
@@ -26,6 +32,7 @@ function generateAccessToken(user) {
  * Gera um refresh token JWT
  */
 function generateRefreshToken(user) {
+  assertSecrets();
   return jwt.sign(
     {
       userId: user.id,
@@ -49,6 +56,7 @@ function generateTokenPair(user) {
  * Verifica se um token é válido (access ou refresh)
  */
 function verifyToken(token, isRefreshToken = false) {
+  assertSecrets();
   const secret = isRefreshToken ? JWT_REFRESH_SECRET : JWT_SECRET;
   return jwt.verify(token, secret);
 }

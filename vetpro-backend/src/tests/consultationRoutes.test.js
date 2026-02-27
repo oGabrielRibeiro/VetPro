@@ -85,6 +85,66 @@ describe('API - Consultas', () => {
       expect([200, 404]).toContain(response.status);
     });
   });
+
+  describe('POST /api/consultations/heuristic-parse', () => {
+    it('deve aceitar segments em array e retornar parse heurístico', async () => {
+      const response = await request(app)
+        .post('/api/consultations/heuristic-parse')
+        .send({
+          segments: [
+            {
+              stamp: '00:01',
+              speaker: 'Tutor',
+              text: 'Doutor, ele nao quer comer desde ontem.',
+            },
+            {
+              stamp: '00:10',
+              speaker: 'Medico',
+              text: 'No exame fisico, temperatura 39.4 e dor abdominal.',
+            },
+            {
+              stamp: '00:21',
+              speaker: 'Medico',
+              text: 'Diagnostico de gastrite e tratamento com hidratacao.',
+            },
+          ],
+          transcript: '',
+        })
+        .expect('Content-Type', /json/);
+
+      expect(response.status).toBe(200);
+      expect(response.body).toHaveProperty('provider', 'heuristic');
+      expect(response.body).toHaveProperty('parsed');
+      expect(String(response.body.parsed?.chiefComplaint || '')).toBeTruthy();
+      expect(String(response.body.parsed?.diagnosis || '')).toMatch(
+        /gastrite|diagnostico/i,
+      );
+    });
+
+    it('deve aceitar segments em string JSON', async () => {
+      const payloadSegments = JSON.stringify([
+        {
+          stamp: '00:01',
+          speaker: 'Tutor',
+          text: 'Ele esta tossindo.',
+        },
+      ]);
+
+      const response = await request(app)
+        .post('/api/consultations/heuristic-parse')
+        .send({
+          segments: payloadSegments,
+          transcript: 'Ele esta tossindo desde ontem.',
+        })
+        .expect('Content-Type', /json/);
+
+      expect(response.status).toBe(200);
+      expect(response.body).toHaveProperty('parsed');
+      expect(String(response.body.parsed?.chiefComplaint || '')).toMatch(
+        /tossindo|ontem/i,
+      );
+    });
+  });
 });
 
 describe('API - Pacientes', () => {

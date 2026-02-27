@@ -37,7 +37,10 @@ class WebSocketService {
 
       try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        socket.user = decoded;
+        socket.user = {
+          ...decoded,
+          id: decoded.userId || decoded.id || null,
+        };
         next();
       } catch (error) {
         next(new Error('Invalid token'));

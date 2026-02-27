@@ -401,10 +401,14 @@ async function heuristicParse(req, res) {
     const transcript = String(req.body?.transcript || '').trim();
 
     let segments = [];
-    try {
-      segments = JSON.parse(segmentsRaw);
-    } catch {
-      segments = [];
+    if (Array.isArray(segmentsRaw)) {
+      segments = segmentsRaw;
+    } else {
+      try {
+        segments = JSON.parse(segmentsRaw);
+      } catch {
+        segments = [];
+      }
     }
 
     const normalizedSegments = Array.isArray(segments)
