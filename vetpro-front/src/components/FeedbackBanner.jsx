@@ -1,11 +1,19 @@
 const toneClasses = {
-  success: "border-emerald-200 bg-emerald-50 text-emerald-800",
-  info: "border-cyan-200 bg-cyan-50 text-cyan-800",
-  warning: "border-amber-200 bg-amber-50 text-amber-800",
-  error: "border-amber-200 bg-amber-50 text-amber-800",
+  success:
+    "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-200",
+  info: "border-cyan-200 bg-cyan-50 text-cyan-800 dark:border-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-200",
+  warning:
+    "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-800 dark:bg-amber-900/30 dark:text-amber-200",
+  error:
+    "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-800 dark:bg-amber-900/30 dark:text-amber-200",
 };
 
-const FeedbackBanner = ({ message, type = "error", onClose, className = "" }) => {
+const FeedbackBanner = ({
+  message,
+  type = "error",
+  onClose,
+  className = "",
+}) => {
   if (!message) return null;
 
   return (
@@ -19,7 +27,7 @@ const FeedbackBanner = ({ message, type = "error", onClose, className = "" }) =>
         <button
           type="button"
           onClick={onClose}
-          className="rounded-md border border-current/30 bg-white px-2 py-1 text-xs font-semibold"
+          className="rounded-md border border-current/30 bg-white dark:bg-dark-700 px-2 py-1 text-xs font-semibold"
         >
           Fechar
         </button>

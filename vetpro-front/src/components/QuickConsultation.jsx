@@ -60,7 +60,10 @@ const LARGE_ANIMAL_FIELDS = [
   { key: "historicalDiseases", label: "Historico sanitario" },
   { key: "propertyAndManagement", label: "Propriedade e manejo" },
   { key: "contactAnimals", label: "Contactantes" },
-  { key: "animalIdentificationDetails", label: "Animal atendido - identificacao detalhada" },
+  {
+    key: "animalIdentificationDetails",
+    label: "Animal atendido - identificacao detalhada",
+  },
   { key: "neonateAndReproduction", label: "Neonato / reproducao" },
   { key: "previousTreatmentHistory", label: "Tratamento anterior" },
   { key: "physicalExamDetailed", label: "Exame fisico detalhado" },
@@ -175,7 +178,15 @@ function classifyAnimalPorte(patient) {
     "fazenda",
     "rebanho",
   ];
-  const smallSignals = ["canino", "felino", "cao", "gato", "coelho", "hamster", "pet"];
+  const smallSignals = [
+    "canino",
+    "felino",
+    "cao",
+    "gato",
+    "coelho",
+    "hamster",
+    "pet",
+  ];
 
   if (largeSignals.some((token) => source.includes(token))) return "grande";
   if (smallSignals.some((token) => source.includes(token))) return "pequeno";
@@ -196,11 +207,23 @@ function inferPorteFromText(text = "") {
     "rebanho",
     "fazenda",
     "lote",
-    "piquete"
+    "piquete",
   ];
-  const smallSignals = ["canino", "cachorro", "cao", "felino", "gato", "pet", "apartamento"];
-  const largeHits = largeSignals.filter((token) => source.includes(token)).length;
-  const smallHits = smallSignals.filter((token) => source.includes(token)).length;
+  const smallSignals = [
+    "canino",
+    "cachorro",
+    "cao",
+    "felino",
+    "gato",
+    "pet",
+    "apartamento",
+  ];
+  const largeHits = largeSignals.filter((token) =>
+    source.includes(token),
+  ).length;
+  const smallHits = smallSignals.filter((token) =>
+    source.includes(token),
+  ).length;
   if (largeHits > smallHits && largeHits >= 1) return "grande";
   if (smallHits > largeHits && smallHits >= 1) return "pequeno";
   return null;
@@ -221,13 +244,10 @@ function sanitizeSpecificFields(source = {}) {
   }, {});
 }
 
-const QuickConsultation = ({
-  patient,
-  onSave,
-  onBack,
-  initialData = null,
-}) => {
-  const [weight, setWeight] = useState(initialData?.weight || patient?.weight || "");
+const QuickConsultation = ({ patient, onSave, onBack, initialData = null }) => {
+  const [weight, setWeight] = useState(
+    initialData?.weight || patient?.weight || "",
+  );
   const [temperature, setTemperature] = useState("");
   const [heartRate, setHeartRate] = useState("");
   const [respiratoryRate, setRespiratoryRate] = useState("");
@@ -252,8 +272,12 @@ const QuickConsultation = ({
   const [returnDate, setReturnDate] = useState("");
   const [openReturnWithoutDate, setOpenReturnWithoutDate] = useState(false);
   const [returnRecommendation, setReturnRecommendation] = useState("");
-  const [smallAnimalData, setSmallAnimalData] = useState(DEFAULT_SMALL_ANIMAL_DATA);
-  const [largeAnimalData, setLargeAnimalData] = useState(DEFAULT_LARGE_ANIMAL_DATA);
+  const [smallAnimalData, setSmallAnimalData] = useState(
+    DEFAULT_SMALL_ANIMAL_DATA,
+  );
+  const [largeAnimalData, setLargeAnimalData] = useState(
+    DEFAULT_LARGE_ANIMAL_DATA,
+  );
   const [saving, setSaving] = useState(false);
   const [showMobileMoreActions, setShowMobileMoreActions] = useState(false);
 
@@ -271,7 +295,10 @@ const QuickConsultation = ({
   const [aiRefineField, setAiRefineField] = useState("diagnosis");
   const [aiRefining, setAiRefining] = useState(false);
   const [aiConfidenceByField, setAiConfidenceByField] = useState({});
-  const [aiMissingFields, setAiMissingFields] = useState({ core: [], specific: [] });
+  const [aiMissingFields, setAiMissingFields] = useState({
+    core: [],
+    specific: [],
+  });
   const [porteOverride, setPorteOverride] = useState(null);
   const [selectedPorte, setSelectedPorte] = useState(null);
 
@@ -293,11 +320,14 @@ const QuickConsultation = ({
     return `vetpro_draft_quick_${patient.id}_${initialData?.id || "new"}`;
   }, [patient?.id, initialData?.id]);
   const patientPorte = useMemo(() => classifyAnimalPorte(patient), [patient]);
-  const detectedPorte = porteOverride || (patientPorte === "indefinido" ? null : patientPorte);
+  const detectedPorte =
+    porteOverride || (patientPorte === "indefinido" ? null : patientPorte);
   const animalPorte = selectedPorte || detectedPorte || "pequeno";
   const isLargeAnimal = animalPorte === "grande";
   const isSmallAnimal = !isLargeAnimal;
-  const specificFields = isLargeAnimal ? LARGE_ANIMAL_FIELDS : SMALL_ANIMAL_FIELDS;
+  const specificFields = isLargeAnimal
+    ? LARGE_ANIMAL_FIELDS
+    : SMALL_ANIMAL_FIELDS;
   const specificData = isLargeAnimal ? largeAnimalData : smallAnimalData;
   const specificCompletion = useMemo(() => {
     const total = specificFields.length || 1;
@@ -379,7 +409,9 @@ const QuickConsultation = ({
 
   const buildTimestampedTranscript = () => {
     if (!transcriptSegments.length) return "";
-    return transcriptSegments.map((item) => `[${item.stamp}] ${item.text}`).join("\n");
+    return transcriptSegments
+      .map((item) => `[${item.stamp}] ${item.text}`)
+      .join("\n");
   };
 
   const clinicalSignalTerms = [
@@ -424,10 +456,31 @@ const QuickConsultation = ({
       let tutorScore = 0;
       let vetScore = 0;
 
-      ["notei", "percebi", "ele", "ela", "anda", "parece", "apetite", "vomito", "diarreia", "preguic"].forEach((token) => {
+      [
+        "notei",
+        "percebi",
+        "ele",
+        "ela",
+        "anda",
+        "parece",
+        "apetite",
+        "vomito",
+        "diarreia",
+        "preguic",
+      ].forEach((token) => {
         if (normalized.includes(token)) tutorScore += 2;
       });
-      ["entendi", "vamos", "no exame", "diagnostico", "conduta", "tratamento", "prescrev", "retorno", "reavaliar"].forEach((token) => {
+      [
+        "entendi",
+        "vamos",
+        "no exame",
+        "diagnostico",
+        "conduta",
+        "tratamento",
+        "prescrev",
+        "retorno",
+        "reavaliar",
+      ].forEach((token) => {
         if (normalized.includes(token)) vetScore += 2;
       });
 
@@ -440,8 +493,16 @@ const QuickConsultation = ({
     });
 
     return {
-      tutorText: turns.filter((t) => t.role === "Tutor").map((t) => t.text).join(" ").trim(),
-      vetText: turns.filter((t) => t.role === "Medico").map((t) => t.text).join(" ").trim(),
+      tutorText: turns
+        .filter((t) => t.role === "Tutor")
+        .map((t) => t.text)
+        .join(" ")
+        .trim(),
+      vetText: turns
+        .filter((t) => t.role === "Medico")
+        .map((t) => t.text)
+        .join(" ")
+        .trim(),
       turns,
     };
   };
@@ -449,7 +510,15 @@ const QuickConsultation = ({
   const isSocialSentence = (sentence = "") => {
     const normalized = normalizeText(sentence);
     if (!normalized) return true;
-    const socialTerms = ["ola", "oi", "bom dia", "boa tarde", "boa noite", "como vai", "tudo bem"];
+    const socialTerms = [
+      "ola",
+      "oi",
+      "bom dia",
+      "boa tarde",
+      "boa noite",
+      "como vai",
+      "tudo bem",
+    ];
     if (socialTerms.some((token) => normalized === token)) return true;
     if (/^(dr|dra|doutor|doutora)\b/.test(normalized)) return true;
     return false;
@@ -463,16 +532,27 @@ const QuickConsultation = ({
       .map((sentence) => {
         const normalized = normalizeText(sentence);
         let score = 0;
-        if (clinicalSignalTerms.some((token) => normalized.includes(token))) score += 3;
-        if (/\b(notei|relata|anda|parece|apresenta|mudanca|aumentou|diminuiu)\b/.test(normalized)) score += 2;
+        if (clinicalSignalTerms.some((token) => normalized.includes(token)))
+          score += 3;
+        if (
+          /\b(notei|relata|anda|parece|apresenta|mudanca|aumentou|diminuiu)\b/.test(
+            normalized,
+          )
+        )
+          score += 2;
         if (isSocialSentence(sentence)) score -= 4;
-        if (/\b(vamos|prevenir|check-?up)\b/.test(normalized) && score < 3) score -= 2;
+        if (/\b(vamos|prevenir|check-?up)\b/.test(normalized) && score < 3)
+          score -= 2;
         return { sentence, score };
       })
       .sort((a, b) => b.score - a.score);
 
     if (scored[0]?.score > 0) return scored[0].sentence;
-    return sentences.find((sentence) => !isSocialSentence(sentence)) || sentences[0] || "";
+    return (
+      sentences.find((sentence) => !isSocialSentence(sentence)) ||
+      sentences[0] ||
+      ""
+    );
   };
 
   const extractByKeywords = (sourceText, keywords) => {
@@ -523,11 +603,17 @@ const QuickConsultation = ({
     const dialogue = splitDialogueByRoleLocal(content);
     const tutorContext = dialogue.tutorText || content;
     const vetContext = dialogue.vetText || content;
-    const complaintFallback = extractClinicalComplaintSentence(tutorContext || content);
+    const complaintFallback = extractClinicalComplaintSentence(
+      tutorContext || content,
+    );
 
     return {
       chiefComplaint:
-        extractByKeywords(tutorContext, ["queixa", "motivo da consulta", "motivo"]) ||
+        extractByKeywords(tutorContext, [
+          "queixa",
+          "motivo da consulta",
+          "motivo",
+        ]) ||
         complaintFallback ||
         content.slice(0, 220),
       anamnesis: extractByKeywords(tutorContext, ["anamnese", "historico"]),
@@ -543,8 +629,13 @@ const QuickConsultation = ({
     };
   };
 
-  const extractSpecificFallbackFromText = (text = "", targetIsLargeAnimal = false) => {
-    const rawMultiLine = String(text || "").replace(/\r/g, "").trim();
+  const extractSpecificFallbackFromText = (
+    text = "",
+    targetIsLargeAnimal = false,
+  ) => {
+    const rawMultiLine = String(text || "")
+      .replace(/\r/g, "")
+      .trim();
     if (!rawMultiLine) return {};
     const raw = rawMultiLine.replace(/\n+/g, "\n").trim();
     const flat = raw.replace(/\n/g, " ").replace(/\s+/g, " ").trim();
@@ -552,7 +643,9 @@ const QuickConsultation = ({
     const sentences = splitConversationSentences(flat);
     const extractSectionByLabels = (labels = []) => {
       if (!labels.length) return "";
-      const pattern = labels.map((label) => label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
+      const pattern = labels
+        .map((label) => label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+        .join("|");
       const regex = new RegExp(
         `(?:^|\\n)\\s*(?:${pattern})\\s*:\\s*([\\s\\S]*?)(?=\\n\\s*[A-Za-zÀ-ÿ][^:\\n]{2,50}:|$)`,
         "i",
@@ -574,16 +667,24 @@ const QuickConsultation = ({
       const match = flat.match(regex);
       return match?.[1] ? String(match[1]).trim() : "";
     };
-    const compact = (value) => String(value || "").replace(/\s+/g, " ").trim();
+    const compact = (value) =>
+      String(value || "")
+        .replace(/\s+/g, " ")
+        .trim();
     const limit = (value, max = 180) => compact(value).slice(0, max);
     const fields = {};
 
     if (targetIsLargeAnimal) {
-      const propertyAndManagement = extractSectionByLabels(["Propriedade e Manejo", "Propriedade/Manejo"]);
-      if (propertyAndManagement) fields.propertyAndManagement = limit(propertyAndManagement);
+      const propertyAndManagement = extractSectionByLabels([
+        "Propriedade e Manejo",
+        "Propriedade/Manejo",
+      ]);
+      if (propertyAndManagement)
+        fields.propertyAndManagement = limit(propertyAndManagement);
 
       const animalIdentification = extractSectionByLabels(["Animal atendido"]);
-      if (animalIdentification) fields.animalIdentificationDetails = limit(animalIdentification);
+      if (animalIdentification)
+        fields.animalIdentificationDetails = limit(animalIdentification);
       const animalNameFromSection = animalIdentification.split(",")[0]?.trim();
       if (animalNameFromSection && animalNameFromSection.length >= 2) {
         fields.animalId = limit(animalNameFromSection, 80);
@@ -592,48 +693,78 @@ const QuickConsultation = ({
       const contactAnimals = extractSectionByLabels(["Contactantes"]);
       if (contactAnimals) fields.contactAnimals = limit(contactAnimals);
 
-      const previousTreatment = extractSectionByLabels(["Tratamento anterior/Sanidade", "Tratamento anterior", "Sanidade"]);
-      if (previousTreatment) fields.previousTreatmentHistory = limit(previousTreatment);
+      const previousTreatment = extractSectionByLabels([
+        "Tratamento anterior/Sanidade",
+        "Tratamento anterior",
+        "Sanidade",
+      ]);
+      if (previousTreatment)
+        fields.previousTreatmentHistory = limit(previousTreatment);
 
-      const historicalDiseases = extractSectionByLabels(["Historico do lote", "Histórico do lote"]);
-      if (historicalDiseases) fields.historicalDiseases = limit(historicalDiseases);
+      const historicalDiseases = extractSectionByLabels([
+        "Historico do lote",
+        "Histórico do lote",
+      ]);
+      if (historicalDiseases)
+        fields.historicalDiseases = limit(historicalDiseases);
 
-      const physicalExam = extractSectionByLabels(["Exame Fisico", "Exame Físico"]);
+      const physicalExam = extractSectionByLabels([
+        "Exame Fisico",
+        "Exame Físico",
+      ]);
       if (physicalExam) fields.physicalExamDetailed = limit(physicalExam);
 
-      const hoofStatus = extractSectionByLabels(["Casco e locomocao", "Casco e locomoção"]);
+      const hoofStatus = extractSectionByLabels([
+        "Casco e locomocao",
+        "Casco e locomoção",
+      ]);
       if (hoofStatus) fields.hoofStatus = limit(hoofStatus);
 
-      const rumenMotility = extractSectionByLabels(["Motilidade", "Motilidade ruminal"]);
+      const rumenMotility = extractSectionByLabels([
+        "Motilidade",
+        "Motilidade ruminal",
+      ]);
       if (rumenMotility) fields.rumenMotility = limit(rumenMotility);
 
       const fecesAndUrine = extractSectionByLabels(["Fezes e urina"]);
       if (fecesAndUrine) fields.fecesAndUrine = limit(fecesAndUrine);
 
       const requestedExamPanel = extractSectionByLabels(["Conduta"]);
-      if (requestedExamPanel) fields.requestedExamPanel = limit(requestedExamPanel);
+      if (requestedExamPanel)
+        fields.requestedExamPanel = limit(requestedExamPanel);
 
       const farmName = pick(/\b((?:Haras|Fazenda|S[ií]tio)\s+[^.,;\n]+)/i);
       if (farmName) fields.farmName = limit(farmName);
 
-      if (/\bsemi[-\s]?extensiv/i.test(flat)) fields.productionSystem = "Semi-extensivo";
+      if (/\bsemi[-\s]?extensiv/i.test(flat))
+        fields.productionSystem = "Semi-extensivo";
       else if (/\bconfinad/i.test(flat)) fields.productionSystem = "Confinado";
       else if (/\bextensiv/i.test(flat)) fields.productionSystem = "Extensivo";
       else if (/\bintensiv/i.test(flat)) fields.productionSystem = "Intensivo";
 
-      if (/\besporte|prova|laco|la[cç]o/i.test(flat)) fields.animalFunction = "Esporte";
-      else if (/\bleite|lacta[cç][aã]o/i.test(flat)) fields.animalFunction = "Leite";
+      if (/\besporte|prova|laco|la[cç]o/i.test(flat))
+        fields.animalFunction = "Esporte";
+      else if (/\bleite|lacta[cç][aã]o/i.test(flat))
+        fields.animalFunction = "Leite";
       else if (/\bcorte|engorda/i.test(flat)) fields.animalFunction = "Corte";
-      else if (/\breprodu[cç][aã]o/i.test(flat)) fields.animalFunction = "Reproducao";
+      else if (/\breprodu[cç][aã]o/i.test(flat))
+        fields.animalFunction = "Reproducao";
 
-      const species = pick(/\b(Equino|Bovino|Ovino|Caprino|Suino|Asinino|Muar|Bufalo)\b/i);
-      const breed = pick(/\b(Quarto de Milha|Mangalarga(?: Marchador)?|Crioulo|Nelore|Holandes|Jersey|Angus|Girolando|Simental)\b/i);
+      const species = pick(
+        /\b(Equino|Bovino|Ovino|Caprino|Suino|Asinino|Muar|Bufalo)\b/i,
+      );
+      const breed = pick(
+        /\b(Quarto de Milha|Mangalarga(?: Marchador)?|Crioulo|Nelore|Holandes|Jersey|Angus|Girolando|Simental)\b/i,
+      );
       const sex = pick(/\b(macho|femea)\b/i);
       const age = pick(/\b(\d{1,2})\s*anos?\b/i);
       const namedByAge = pick(/\b\d{1,2}\s*anos?,\s*([A-Za-zÀ-ÿ][\wÀ-ÿ-]*)/i);
-      const namedByLabel = pick(/\b(?:nome|animal|paciente)\s*[:-]?\s*([A-Za-zÀ-ÿ][\wÀ-ÿ-]*)/i);
+      const namedByLabel = pick(
+        /\b(?:nome|animal|paciente)\s*[:-]?\s*([A-Za-zÀ-ÿ][\wÀ-ÿ-]*)/i,
+      );
       const animalName = animalNameFromSection || namedByAge || namedByLabel;
-      if (animalName && !fields.animalId) fields.animalId = limit(animalName, 80);
+      if (animalName && !fields.animalId)
+        fields.animalId = limit(animalName, 80);
       const identificationParts = [
         animalName ? `Nome: ${animalName}` : "",
         species || "",
@@ -642,47 +773,118 @@ const QuickConsultation = ({
         age ? `${age} anos` : "",
       ].filter(Boolean);
       if (identificationParts.length) {
-        fields.animalIdentificationDetails = limit(identificationParts.join(", "));
+        fields.animalIdentificationDetails = limit(
+          identificationParts.join(", "),
+        );
       }
 
-      const herdVaccination = pickSentence(["vacina", "vacinas", "raiva", "tetano", "gripe", "encefalo"]);
+      const herdVaccination = pickSentence([
+        "vacina",
+        "vacinas",
+        "raiva",
+        "tetano",
+        "gripe",
+        "encefalo",
+      ]);
       if (herdVaccination) fields.herdVaccination = limit(herdVaccination);
 
       const herdDeworming = pickSentence(["vermifug", "ivermect"]);
       if (herdDeworming) fields.herdDeworming = limit(herdDeworming);
 
-      const forage = pickSentence(["volumoso", "silagem", "feno", "pasto", "coast-cross", "coast cross"]);
+      const forage = pickSentence([
+        "volumoso",
+        "silagem",
+        "feno",
+        "pasto",
+        "coast-cross",
+        "coast cross",
+      ]);
       if (forage) fields.forage = limit(forage);
 
-      const concentrate = pickSentence(["concentrado", "racao", "ração", "proteina", "proteína"]);
+      const concentrate = pickSentence([
+        "concentrado",
+        "racao",
+        "ração",
+        "proteina",
+        "proteína",
+      ]);
       if (concentrate) fields.concentrate = limit(concentrate);
 
-      const waterIntake = pickSentence(["ingestao de agua", "ingestão de água", "consumo de agua", "consumo de água", "agua diminu", "água diminu"]);
+      const waterIntake = pickSentence([
+        "ingestao de agua",
+        "ingestão de água",
+        "consumo de agua",
+        "consumo de água",
+        "agua diminu",
+        "água diminu",
+      ]);
       if (waterIntake) fields.waterIntake = limit(waterIntake);
 
-      const mineral = pickSentence(["sal mineral", "suplementacao mineral", "suplementação mineral"]);
+      const mineral = pickSentence([
+        "sal mineral",
+        "suplementacao mineral",
+        "suplementação mineral",
+      ]);
       if (mineral) fields.mineralSupplementation = limit(mineral);
 
       const hoof = pickSentence(["casco", "claudic", "locomoc", "flanco"]);
       if (hoof) fields.hoofStatus = limit(hoof);
 
-      const rumen = pickSentence(["motilidade", "ruminal", "rumen", "hipomotil", "timpanismo"]);
+      const rumen = pickSentence([
+        "motilidade",
+        "ruminal",
+        "rumen",
+        "hipomotil",
+        "timpanismo",
+      ]);
       if (rumen) fields.rumenMotility = limit(rumen);
 
       const fecesUrine = pickSentence(["fezes", "urina"]);
       if (fecesUrine) fields.fecesAndUrine = limit(fecesUrine);
 
-      const historical = pickSentence(["historico", "histórico", "mormo", "aie", "surto", "ocorrencia", "ocorrência"]);
+      const historical = pickSentence([
+        "historico",
+        "histórico",
+        "mormo",
+        "aie",
+        "surto",
+        "ocorrencia",
+        "ocorrência",
+      ]);
       if (historical) fields.historicalDiseases = limit(historical);
 
       const physicalExamDetailed =
         pick(/(?:exame fisico|exame físico)\s*[:-]?\s*([^.\n]+)/i) ||
-        pickSentence(["febre", "mucosa", "tpc", "fc ", "fr ", "hipomotilidade"]);
-      if (physicalExamDetailed) fields.physicalExamDetailed = limit(physicalExamDetailed);
+        pickSentence([
+          "febre",
+          "mucosa",
+          "tpc",
+          "fc ",
+          "fr ",
+          "hipomotilidade",
+        ]);
+      if (physicalExamDetailed)
+        fields.physicalExamDetailed = limit(physicalExamDetailed);
 
-      const requestedExams = pickSentence(["hemograma", "bioquim", "aie", "mormo", "ultrassom", "raio x", "rx", "exames"]);
+      const requestedExams = pickSentence([
+        "hemograma",
+        "bioquim",
+        "aie",
+        "mormo",
+        "ultrassom",
+        "raio x",
+        "rx",
+        "exames",
+      ]);
       if (requestedExams) fields.requestedExamPanel = limit(requestedExams);
-      const previousTreatmentBySentence = pickSentence(["prescrevi", "dipirona", "flunixin", "tratamento anterior", "vermifugacao", "vermifugação"]);
+      const previousTreatmentBySentence = pickSentence([
+        "prescrevi",
+        "dipirona",
+        "flunixin",
+        "tratamento anterior",
+        "vermifugacao",
+        "vermifugação",
+      ]);
       if (previousTreatmentBySentence && !fields.previousTreatmentHistory) {
         fields.previousTreatmentHistory = limit(previousTreatmentBySentence);
       }
@@ -690,40 +892,114 @@ const QuickConsultation = ({
       if (/\batrasad/i.test(flat)) fields.vaccinationStatus = "Atrasada";
       else if (/\bem dia\b/i.test(flat)) fields.vaccinationStatus = "Em dia";
 
-      const vaccination = pickSentence(["vacina", "v8", "v10", "antirrab", "raiva", "giardia"]);
+      const vaccination = pickSentence([
+        "vacina",
+        "v8",
+        "v10",
+        "antirrab",
+        "raiva",
+        "giardia",
+      ]);
       if (vaccination) fields.vaccinationProtocol = limit(vaccination);
 
-      const deworming = pickSentence(["vermifug", "vermifuga", "vermifugacao", "ivermect"]);
+      const deworming = pickSentence([
+        "vermifug",
+        "vermifuga",
+        "vermifugacao",
+        "ivermect",
+      ]);
       if (deworming) fields.dewormingStatus = limit(deworming);
 
-      const ecto = pickSentence(["pulga", "carrapato", "ectoparasita", "pipeta", "coleira"]);
+      const ecto = pickSentence([
+        "pulga",
+        "carrapato",
+        "ectoparasita",
+        "pipeta",
+        "coleira",
+      ]);
       if (ecto) fields.ectoparasiteControl = limit(ecto);
 
-      const diet = pickSentence(["racao", "ração", "dieta", "alimentacao", "alimentação", "petisco"]);
+      const diet = pickSentence([
+        "racao",
+        "ração",
+        "dieta",
+        "alimentacao",
+        "alimentação",
+        "petisco",
+      ]);
       if (diet) fields.diet = limit(diet);
 
-      const water = pickSentence(["ingestao de agua", "ingestão de água", "bebe agua", "bebe água", "agua", "água"]);
+      const water = pickSentence([
+        "ingestao de agua",
+        "ingestão de água",
+        "bebe agua",
+        "bebe água",
+        "agua",
+        "água",
+      ]);
       if (water) fields.waterIntakeSmall = limit(water);
 
-      const housing = pickSentence(["apartamento", "casa", "quintal", "ambiente", "acesso externo"]);
+      const housing = pickSentence([
+        "apartamento",
+        "casa",
+        "quintal",
+        "ambiente",
+        "acesso externo",
+      ]);
       if (housing) fields.housing = limit(housing);
 
-      const lifestyle = pickSentence(["sedentario", "sedentário", "ativo", "passeio", "atividade"]);
+      const lifestyle = pickSentence([
+        "sedentario",
+        "sedentário",
+        "ativo",
+        "passeio",
+        "atividade",
+      ]);
       if (lifestyle) fields.lifestyle = limit(lifestyle);
 
-      const contact = pickSentence(["contato com outros", "convive com", "outros animais", "canil"]);
+      const contact = pickSentence([
+        "contato com outros",
+        "convive com",
+        "outros animais",
+        "canil",
+      ]);
       if (contact) fields.contactWithAnimals = limit(contact);
 
-      const behavior = pickSentence(["comportamento", "preguicos", "preguiços", "apatia", "agitado", "letarg"]);
+      const behavior = pickSentence([
+        "comportamento",
+        "preguicos",
+        "preguiços",
+        "apatia",
+        "agitado",
+        "letarg",
+      ]);
       if (behavior) fields.behavior = limit(behavior);
 
-      const allergy = pickSentence(["alerg", "prurido", "coceira", "dermatite"]);
+      const allergy = pickSentence([
+        "alerg",
+        "prurido",
+        "coceira",
+        "dermatite",
+      ]);
       if (allergy) fields.allergyHistory = limit(allergy);
 
-      const chronic = pickSentence(["cronica", "crônica", "endocrino", "cardio", "renal", "diabetes"]);
+      const chronic = pickSentence([
+        "cronica",
+        "crônica",
+        "endocrino",
+        "cardio",
+        "renal",
+        "diabetes",
+      ]);
       if (chronic) fields.chronicDiseases = limit(chronic);
 
-      const supplements = pickSentence(["omega", "condro", "probiot", "suplement", "vitamina"]);
+      const supplements = pickSentence([
+        "omega",
+        "condro",
+        "probiot",
+        "suplement",
+        "vitamina",
+      ]);
       if (supplements) fields.currentSupplements = limit(supplements);
     }
 
@@ -735,9 +1011,16 @@ const QuickConsultation = ({
   };
 
   const extractVitalSignsFromText = (text = "") => {
-    const raw = String(text || "").replace(/\r/g, " ").replace(/\s+/g, " ");
+    const raw = String(text || "")
+      .replace(/\r/g, " ")
+      .replace(/\s+/g, " ");
     if (!raw.trim()) {
-      return { weight: "", temperature: "", heartRate: "", respiratoryRate: "" };
+      return {
+        weight: "",
+        temperature: "",
+        heartRate: "",
+        respiratoryRate: "",
+      };
     }
 
     const pickNum = (regex) => {
@@ -746,19 +1029,27 @@ const QuickConsultation = ({
     };
 
     const extractWeightValue = () => {
-      const explicitWeight = pickNum(/\b(?:peso|weight)\s*[:=]?\s*(\d{1,4}(?:[.,]\d{1,2})?)\s*kg\b/i);
+      const explicitWeight = pickNum(
+        /\b(?:peso|weight)\s*[:=]?\s*(\d{1,4}(?:[.,]\d{1,2})?)\s*kg\b/i,
+      );
       if (explicitWeight) return explicitWeight;
 
-      const candidates = [...raw.matchAll(/\b(\d{1,4}(?:[.,]\d{1,2})?)\s*kg\b/gi)];
+      const candidates = [
+        ...raw.matchAll(/\b(\d{1,4}(?:[.,]\d{1,2})?)\s*kg\b/gi),
+      ];
       for (const item of candidates) {
         const value = String(item?.[1] || "").replace(",", ".");
         if (!value) continue;
         const start = item.index || 0;
         const end = start + String(item[0] || "").length;
-        const context = raw.slice(Math.max(0, start - 24), Math.min(raw.length, end + 24)).toLowerCase();
+        const context = raw
+          .slice(Math.max(0, start - 24), Math.min(raw.length, end + 24))
+          .toLowerCase();
 
         const isFeedContext =
-          /kg\s*\/\s*dia|kg\/dia|\/dia|por dia|racao|ração|concentrad|proteina|proteína|ingerida/i.test(context);
+          /kg\s*\/\s*dia|kg\/dia|\/dia|por dia|racao|ração|concentrad|proteina|proteína|ingerida/i.test(
+            context,
+          );
         if (isFeedContext) continue;
         return value;
       }
@@ -768,32 +1059,39 @@ const QuickConsultation = ({
     const weightValue = extractWeightValue();
 
     const temperatureValue =
-      pickNum(/\b(?:temperatura|temp|t)\s*[:=]?\s*(\d{2}(?:[.,]\d)?)\s*(?:c|°c)\b/i) ||
-      pickNum(/\b(\d{2}(?:[.,]\d)?)\s*(?:°c|c)\b/i);
+      pickNum(
+        /\b(?:temperatura|temp|t)\s*[:=]?\s*(\d{2}(?:[.,]\d)?)\s*(?:c|°c)\b/i,
+      ) || pickNum(/\b(\d{2}(?:[.,]\d)?)\s*(?:°c|c)\b/i);
 
     const heartRateValue =
-      pickNum(/\b(?:fc|frequencia cardiaca|freq(?:uencia)? cardiaca)\s*[:=]?\s*(\d{2,3})\s*(?:bpm)?\b/i) ||
-      pickNum(/\b(\d{2,3})\s*bpm\b/i);
+      pickNum(
+        /\b(?:fc|frequencia cardiaca|freq(?:uencia)? cardiaca)\s*[:=]?\s*(\d{2,3})\s*(?:bpm)?\b/i,
+      ) || pickNum(/\b(\d{2,3})\s*bpm\b/i);
 
     const respiratoryRateValue =
-      pickNum(/\b(?:fr|frequencia respiratoria|freq(?:uencia)? respiratoria)\s*[:=]?\s*(\d{1,3})\s*(?:mrm|min|irpm)?\b/i) ||
-      pickNum(/\b(\d{1,3})\s*(?:mrm|irpm|mr\/min)\b/i);
+      pickNum(
+        /\b(?:fr|frequencia respiratoria|freq(?:uencia)? respiratoria)\s*[:=]?\s*(\d{1,3})\s*(?:mrm|min|irpm)?\b/i,
+      ) || pickNum(/\b(\d{1,3})\s*(?:mrm|irpm|mr\/min)\b/i);
 
     return {
       weight: weightValue,
       temperature: temperatureValue,
       heartRate: heartRateValue,
-      respiratoryRate: respiratoryRateValue
+      respiratoryRate: respiratoryRateValue,
     };
   };
 
   const buildEmergencyDraftFromText = (text = "") => {
     const parsed = parseTranscriptToSections(text) || {};
     const clean = String(text || "").trim();
-    const fallbackComplaint = extractClinicalComplaintSentence(clean) || clean.slice(0, 220);
+    const fallbackComplaint =
+      extractClinicalComplaintSentence(clean) || clean.slice(0, 220);
     return {
       chiefComplaint: String(parsed.chiefComplaint || fallbackComplaint).trim(),
-      anamnesis: String(parsed.anamnesis || (fallbackComplaint ? `Tutor relata ${fallbackComplaint}.` : "")).trim(),
+      anamnesis: String(
+        parsed.anamnesis ||
+          (fallbackComplaint ? `Tutor relata ${fallbackComplaint}.` : ""),
+      ).trim(),
       physicalExam: String(parsed.physicalExam || "").trim(),
       diagnosis: String(parsed.diagnosis || "").trim(),
       treatment: String(parsed.treatment || "").trim(),
@@ -801,7 +1099,7 @@ const QuickConsultation = ({
       procedures: "",
       examDetails: "",
       notes: "",
-      returnRecommendation: ""
+      returnRecommendation: "",
     };
   };
 
@@ -819,10 +1117,15 @@ const QuickConsultation = ({
       "notes",
       "returnRecommendation",
     ];
-    const hasCoreValue = coreFields.some((key) => String(draft[key] || "").trim());
-    const specific = draft.specificFields && typeof draft.specificFields === "object"
-      ? Object.values(draft.specificFields).some((value) => String(value || "").trim())
-      : false;
+    const hasCoreValue = coreFields.some((key) =>
+      String(draft[key] || "").trim(),
+    );
+    const specific =
+      draft.specificFields && typeof draft.specificFields === "object"
+        ? Object.values(draft.specificFields).some((value) =>
+            String(value || "").trim(),
+          )
+        : false;
     return !hasCoreValue && !specific;
   };
 
@@ -835,7 +1138,8 @@ const QuickConsultation = ({
           ? "pequeno"
           : null;
     const initialSpecificFields =
-      initialData?.specificFields && typeof initialData.specificFields === "object"
+      initialData?.specificFields &&
+      typeof initialData.specificFields === "object"
         ? sanitizeSpecificFields(initialData.specificFields)
         : {};
 
@@ -853,13 +1157,33 @@ const QuickConsultation = ({
     const initialMedications = String(initialData?.medications || "").trim();
     const initialExamDetails = String(initialData?.examDetails || "").trim();
 
-    setProcedurePerformed(initialProcedures && !/nao realizado/i.test(initialProcedures) ? "sim" : "nao");
-    setProcedureDetails(initialProcedures && !/nao realizado/i.test(initialProcedures) ? initialProcedures : "");
-    setMedicationPrescribed(initialMedications && !/nao prescrita/i.test(initialMedications) ? "sim" : "nao");
-    setMedicationDetails(initialMedications && !/nao prescrita/i.test(initialMedications) ? initialMedications : "");
+    setProcedurePerformed(
+      initialProcedures && !/nao realizado/i.test(initialProcedures)
+        ? "sim"
+        : "nao",
+    );
+    setProcedureDetails(
+      initialProcedures && !/nao realizado/i.test(initialProcedures)
+        ? initialProcedures
+        : "",
+    );
+    setMedicationPrescribed(
+      initialMedications && !/nao prescrita/i.test(initialMedications)
+        ? "sim"
+        : "nao",
+    );
+    setMedicationDetails(
+      initialMedications && !/nao prescrita/i.test(initialMedications)
+        ? initialMedications
+        : "",
+    );
     setExamRequested(initialExamDetails ? "sim" : "nao");
     setExamDetails(initialExamDetails);
-    setNotes(initialData?.notes ? sanitizeConsultationNotesForDisplay(initialData.notes) : "");
+    setNotes(
+      initialData?.notes
+        ? sanitizeConsultationNotesForDisplay(initialData.notes)
+        : "",
+    );
     setReturnRecommended(Boolean(initialData?.returnRecommendation));
     setReturnDate("");
     setOpenReturnWithoutDate(false);
@@ -908,7 +1232,13 @@ const QuickConsultation = ({
         }
       });
     }
-  }, [patient?.id, initialData, patientSmallProfile, patientLargeProfile, patient?.weight]);
+  }, [
+    patient?.id,
+    initialData,
+    patientSmallProfile,
+    patientLargeProfile,
+    patient?.weight,
+  ]);
 
   useEffect(() => {
     return () => {
@@ -1052,11 +1382,17 @@ const QuickConsultation = ({
       setPorteOverride(draftPorte);
     }
     const targetIsLargeAnimal =
-      draftPorte === "grande" ? true : draftPorte === "pequeno" ? false : isLargeAnimal;
+      draftPorte === "grande"
+        ? true
+        : draftPorte === "pequeno"
+          ? false
+          : isLargeAnimal;
 
-    if (overwrite || !chiefComplaint) setChiefComplaint(String(draft.chiefComplaint || ""));
+    if (overwrite || !chiefComplaint)
+      setChiefComplaint(String(draft.chiefComplaint || ""));
     if (overwrite || !anamnesis) setAnamnesis(String(draft.anamnesis || ""));
-    if (overwrite || !physicalExam) setPhysicalExam(String(draft.physicalExam || ""));
+    if (overwrite || !physicalExam)
+      setPhysicalExam(String(draft.physicalExam || ""));
     if (overwrite || !diagnosis) setDiagnosis(String(draft.diagnosis || ""));
     if (overwrite || !treatment) setTreatment(String(draft.treatment || ""));
 
@@ -1065,15 +1401,19 @@ const QuickConsultation = ({
       draft.physicalExam,
       draft.notes,
       draft.anamnesis,
-      draft.chiefComplaint
+      draft.chiefComplaint,
     ]
       .filter(Boolean)
       .join(" ");
     const extractedVitals = extractVitalSignsFromText(candidateVitalText);
-    if ((overwrite || !weight) && extractedVitals.weight) setWeight(extractedVitals.weight);
-    if ((overwrite || !temperature) && extractedVitals.temperature) setTemperature(extractedVitals.temperature);
-    if ((overwrite || !heartRate) && extractedVitals.heartRate) setHeartRate(extractedVitals.heartRate);
-    if ((overwrite || !respiratoryRate) && extractedVitals.respiratoryRate) setRespiratoryRate(extractedVitals.respiratoryRate);
+    if ((overwrite || !weight) && extractedVitals.weight)
+      setWeight(extractedVitals.weight);
+    if ((overwrite || !temperature) && extractedVitals.temperature)
+      setTemperature(extractedVitals.temperature);
+    if ((overwrite || !heartRate) && extractedVitals.heartRate)
+      setHeartRate(extractedVitals.heartRate);
+    if ((overwrite || !respiratoryRate) && extractedVitals.respiratoryRate)
+      setRespiratoryRate(extractedVitals.respiratoryRate);
 
     const extractionBaseText = [
       sourceText,
@@ -1084,7 +1424,7 @@ const QuickConsultation = ({
       draft.treatment,
       draft.examDetails,
       draft.medications,
-      draft.procedures
+      draft.procedures,
     ]
       .filter(Boolean)
       .join(" ");
@@ -1110,7 +1450,11 @@ const QuickConsultation = ({
             if (!(key in next)) return;
             const text = String(value || "").trim();
             if (!text || isNotInformedValue(text)) return;
-            if (overwrite || !String(next[key] || "").trim() || isNotInformedValue(next[key])) {
+            if (
+              overwrite ||
+              !String(next[key] || "").trim() ||
+              isNotInformedValue(next[key])
+            ) {
               next[key] = text;
             }
           });
@@ -1123,7 +1467,11 @@ const QuickConsultation = ({
             if (!(key in next)) return;
             const text = String(value || "").trim();
             if (!text || isNotInformedValue(text)) return;
-            if (overwrite || !String(next[key] || "").trim() || isNotInformedValue(next[key])) {
+            if (
+              overwrite ||
+              !String(next[key] || "").trim() ||
+              isNotInformedValue(next[key])
+            ) {
               next[key] = text;
             }
           });
@@ -1139,14 +1487,17 @@ const QuickConsultation = ({
     const treatmentSignal = String(draft.treatment || "").trim();
     const medsSignal = `${meds} ${treatmentSignal}`.toLowerCase();
     const inferredMedication =
-      /(\bmg\b|\bml\b|dose|via|dipirona|amoxicilina|prednis|antibiot|analges|anti-?inflam)/i.test(medsSignal);
+      /(\bmg\b|\bml\b|dose|via|dipirona|amoxicilina|prednis|antibiot|analges|anti-?inflam)/i.test(
+        medsSignal,
+      );
 
     if (meds) {
       setMedicationPrescribed("sim");
       if (overwrite || !medicationDetails) setMedicationDetails(meds);
     } else if (inferredMedication) {
       setMedicationPrescribed("sim");
-      if (overwrite || !medicationDetails) setMedicationDetails(treatmentSignal);
+      if (overwrite || !medicationDetails)
+        setMedicationDetails(treatmentSignal);
     }
 
     const procedures = String(draft.procedures || "").trim();
@@ -1161,7 +1512,9 @@ const QuickConsultation = ({
       if (overwrite || !examDetails) setExamDetails(exams);
     }
 
-    const aiNotes = sanitizeConsultationNotesForDisplay(String(draft.notes || "")).trim();
+    const aiNotes = sanitizeConsultationNotesForDisplay(
+      String(draft.notes || ""),
+    ).trim();
     if (aiNotes) {
       setNotes((prev) =>
         [prev, `Sugestao IA:\n${aiNotes}`].filter(Boolean).join("\n\n"),
@@ -1179,10 +1532,16 @@ const QuickConsultation = ({
     }
   };
 
-  const generateDraftFromChat = async (overwrite = false, detailLevel = "standard") => {
+  const generateDraftFromChat = async (
+    overwrite = false,
+    detailLevel = "standard",
+  ) => {
     const text = aiChatText.trim();
     if (!text) {
-      showFeedback("error", "Escreva uma instrucao para gerar o rascunho com IA.");
+      showFeedback(
+        "error",
+        "Escreva uma instrucao para gerar o rascunho com IA.",
+      );
       return;
     }
 
@@ -1205,14 +1564,16 @@ const QuickConsultation = ({
         recordProfile: {
           porte: requestedPorte,
           specificFieldKeys: requestSpecificFields.map((item) => item.key),
-          detailLevel
-        }
+          detailLevel,
+        },
       });
 
       const draft = response?.data?.draft || null;
       const provider = response?.data?.provider || "heuristic";
       setAiConfidenceByField(response?.data?.confidenceByField || {});
-      setAiMissingFields(response?.data?.missingFields || { core: [], specific: [] });
+      setAiMissingFields(
+        response?.data?.missingFields || { core: [], specific: [] },
+      );
       if (!draft || isDraftEffectivelyEmpty(draft)) {
         const emergencyDraft = buildEmergencyDraftFromText(text);
         applyAiDraft(emergencyDraft, overwrite, text);
@@ -1228,8 +1589,8 @@ const QuickConsultation = ({
           {
             role: "assistant",
             content: `Rascunho gerado (${provider}).`,
-            createdAt: new Date().toISOString()
-          }
+            createdAt: new Date().toISOString(),
+          },
         ]);
         showFeedback(
           "success",
@@ -1250,7 +1611,10 @@ const QuickConsultation = ({
       } else {
         showFeedback(
           "error",
-          toUserFriendlyError(error, "Nao foi possivel gerar sugestao por chat."),
+          toUserFriendlyError(
+            error,
+            "Nao foi possivel gerar sugestao por chat.",
+          ),
         );
       }
     } finally {
@@ -1272,7 +1636,7 @@ const QuickConsultation = ({
       returnRecommendation,
     ].some((value) => String(value || "").trim());
     const hasSpecificContent = Object.values(specificData || {}).some((value) =>
-      String(value || "").trim()
+      String(value || "").trim(),
     );
 
     // Se já houver conteúdo, preserva o que está preenchido; se estiver vazio, permite preencher tudo.
@@ -1343,7 +1707,7 @@ const QuickConsultation = ({
         patientId: patient?.id || null,
         mode: isReturnConsultationType(consultationType) ? "retorno" : "nova",
         field: aiRefineField,
-        text: currentValue
+        text: currentValue,
       });
 
       const refined = String(response?.data?.text || "").trim();
@@ -1359,13 +1723,16 @@ const QuickConsultation = ({
         {
           role: "assistant",
           content: `Refinamento do campo ${aiRefineField} (${provider}).`,
-          createdAt: new Date().toISOString()
-        }
+          createdAt: new Date().toISOString(),
+        },
       ]);
       showFeedback("success", "Campo refinado com IA.");
     } catch (error) {
       console.error("Erro ao refinar campo:", error);
-      showFeedback("error", toUserFriendlyError(error, "Nao foi possivel refinar o campo."));
+      showFeedback(
+        "error",
+        toUserFriendlyError(error, "Nao foi possivel refinar o campo."),
+      );
     } finally {
       setAiRefining(false);
     }
@@ -1389,7 +1756,10 @@ const QuickConsultation = ({
       ? "Ficha detalhada - grande porte"
       : "Ficha complementar - pequeno porte";
     const specificSummary = filledSpecificItems.length
-      ? [summaryTitle, ...filledSpecificItems.map((item) => `${item.label}: ${item.value}`)].join("\n")
+      ? [
+          summaryTitle,
+          ...filledSpecificItems.map((item) => `${item.label}: ${item.value}`),
+        ].join("\n")
       : "";
     const structuredPorteBlock = filledSpecificItems.length
       ? `${PORTE_NOTES_MARK_START}\n${JSON.stringify({
@@ -1413,64 +1783,69 @@ const QuickConsultation = ({
     }, {});
 
     return {
-    patientId: patient.id,
-    consultationType,
-    ...(initialData?.previousConsultationId
-      ? { previousConsultationId: initialData.previousConsultationId }
-      : {}),
-    weight,
-    temperature,
-    heartRate,
-    respiratoryRate,
-    chiefComplaint,
-    anamnesis,
-    physicalExam,
-    diagnosis,
-    treatment,
-    procedures:
-      procedurePerformed === "sim"
-        ? procedureDetails || "Procedimento realizado sem descricao"
-        : "Nao realizado",
-    medications:
-      medicationPrescribed === "sim"
-        ? medicationDetails || "Medicacao prescrita sem descricao"
-        : "Nao prescrita",
-    notes: [
-      notes,
-      `Exame solicitado: ${examRequested === "sim" ? "Sim" : "Nao"}`,
-      examRequested === "sim" && examDetails ? `Detalhes do exame: ${examDetails}` : "",
-      specificSummary,
-      transcriptBlock,
-      structuredPorteBlock,
-    ]
-      .filter(Boolean)
-      .join("\n\n"),
-    returnRecommendation,
-    persistentProfileUpdate: Object.keys(persistentFields).length
-      ? {
-          porte: animalPorte,
-          fields: persistentFields,
-        }
-      : null,
-    returnPlan: returnRecommended
-      ? {
-          recommended: true,
-          date: openReturnWithoutDate ? null : returnDate || null,
-          open: openReturnWithoutDate || !returnDate,
-        }
-      : {
-          recommended: false,
-          date: null,
-          open: false,
-        },
+      patientId: patient.id,
+      consultationType,
+      ...(initialData?.previousConsultationId
+        ? { previousConsultationId: initialData.previousConsultationId }
+        : {}),
+      weight,
+      temperature,
+      heartRate,
+      respiratoryRate,
+      chiefComplaint,
+      anamnesis,
+      physicalExam,
+      diagnosis,
+      treatment,
+      procedures:
+        procedurePerformed === "sim"
+          ? procedureDetails || "Procedimento realizado sem descricao"
+          : "Nao realizado",
+      medications:
+        medicationPrescribed === "sim"
+          ? medicationDetails || "Medicacao prescrita sem descricao"
+          : "Nao prescrita",
+      notes: [
+        notes,
+        `Exame solicitado: ${examRequested === "sim" ? "Sim" : "Nao"}`,
+        examRequested === "sim" && examDetails
+          ? `Detalhes do exame: ${examDetails}`
+          : "",
+        specificSummary,
+        transcriptBlock,
+        structuredPorteBlock,
+      ]
+        .filter(Boolean)
+        .join("\n\n"),
+      returnRecommendation,
+      persistentProfileUpdate: Object.keys(persistentFields).length
+        ? {
+            porte: animalPorte,
+            fields: persistentFields,
+          }
+        : null,
+      returnPlan: returnRecommended
+        ? {
+            recommended: true,
+            date: openReturnWithoutDate ? null : returnDate || null,
+            open: openReturnWithoutDate || !returnDate,
+          }
+        : {
+            recommended: false,
+            date: null,
+            open: false,
+          },
     };
   };
 
   const renderSmallAnimalSection = () => (
     <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 sm:p-5 space-y-3">
-      <h2 className="text-sm font-bold text-blue-900">Prontuario de pequeno porte</h2>
+      <h2 className="text-sm font-bold text-blue-900">
+        Prontuario de pequeno porte
+      </h2>
       <p className="text-xs text-blue-800">
-        Campos detalhados para animais de companhia, rotina domiciliar e preventivos.
+        Campos detalhados para animais de companhia, rotina domiciliar e
+        preventivos.
       </p>
       <details open className="rounded-lg border border-blue-200 bg-white p-3">
         <summary className="cursor-pointer text-sm font-semibold text-blue-900">
@@ -1478,10 +1853,14 @@ const QuickConsultation = ({
         </summary>
         <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Vacinacao</label>
+            <label className="mb-1 block text-sm font-medium text-gray-700">
+              Vacinacao
+            </label>
             <select
               value={smallAnimalData.vaccinationStatus}
-              onChange={(e) => updateSmallAnimalField("vaccinationStatus", e.target.value)}
+              onChange={(e) =>
+                updateSmallAnimalField("vaccinationStatus", e.target.value)
+              }
               className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm"
             >
               <option value="">Selecione</option>
@@ -1491,71 +1870,99 @@ const QuickConsultation = ({
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Protocolo vacinal</label>
+            <label className="mb-1 block text-sm font-medium text-gray-700">
+              Protocolo vacinal
+            </label>
             <input
               type="text"
               value={smallAnimalData.vaccinationProtocol}
-              onChange={(e) => updateSmallAnimalField("vaccinationProtocol", e.target.value)}
+              onChange={(e) =>
+                updateSmallAnimalField("vaccinationProtocol", e.target.value)
+              }
               className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm"
               placeholder="V8/V10, antirrabica, giardia, etc."
             />
           </div>
           <div className="sm:col-span-2">
-            <label className="mb-1 block text-sm font-medium text-gray-700">Ultimas vacinas aplicadas</label>
+            <label className="mb-1 block text-sm font-medium text-gray-700">
+              Ultimas vacinas aplicadas
+            </label>
             <input
               type="text"
               value={smallAnimalData.lastVaccines}
-              onChange={(e) => updateSmallAnimalField("lastVaccines", e.target.value)}
+              onChange={(e) =>
+                updateSmallAnimalField("lastVaccines", e.target.value)
+              }
               className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm"
               placeholder="Vacina e data aproximada"
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Vermifugacao</label>
+            <label className="mb-1 block text-sm font-medium text-gray-700">
+              Vermifugacao
+            </label>
             <input
               type="text"
               value={smallAnimalData.dewormingStatus}
-              onChange={(e) => updateSmallAnimalField("dewormingStatus", e.target.value)}
+              onChange={(e) =>
+                updateSmallAnimalField("dewormingStatus", e.target.value)
+              }
               className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm"
               placeholder="Produto e data"
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Controle de ectoparasitas</label>
+            <label className="mb-1 block text-sm font-medium text-gray-700">
+              Controle de ectoparasitas
+            </label>
             <input
               type="text"
               value={smallAnimalData.ectoparasiteControl}
-              onChange={(e) => updateSmallAnimalField("ectoparasiteControl", e.target.value)}
+              onChange={(e) =>
+                updateSmallAnimalField("ectoparasiteControl", e.target.value)
+              }
               className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm"
               placeholder="Pulgas/carrapatos (produto e frequencia)"
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Doencas cronicas</label>
+            <label className="mb-1 block text-sm font-medium text-gray-700">
+              Doencas cronicas
+            </label>
             <input
               type="text"
               value={smallAnimalData.chronicDiseases}
-              onChange={(e) => updateSmallAnimalField("chronicDiseases", e.target.value)}
+              onChange={(e) =>
+                updateSmallAnimalField("chronicDiseases", e.target.value)
+              }
               className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm"
               placeholder="Dermatite, endocrinopatia, cardiopatia..."
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Historico alergico</label>
+            <label className="mb-1 block text-sm font-medium text-gray-700">
+              Historico alergico
+            </label>
             <input
               type="text"
               value={smallAnimalData.allergyHistory}
-              onChange={(e) => updateSmallAnimalField("allergyHistory", e.target.value)}
+              onChange={(e) =>
+                updateSmallAnimalField("allergyHistory", e.target.value)
+              }
               className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm"
               placeholder="Reacao alimentar, medicamentosa, ambiental"
             />
           </div>
           <div className="sm:col-span-2">
-            <label className="mb-1 block text-sm font-medium text-gray-700">Preventivos em uso</label>
+            <label className="mb-1 block text-sm font-medium text-gray-700">
+              Preventivos em uso
+            </label>
             <input
               type="text"
               value={smallAnimalData.preventiveCare}
-              onChange={(e) => updateSmallAnimalField("preventiveCare", e.target.value)}
+              onChange={(e) =>
+                updateSmallAnimalField("preventiveCare", e.target.value)
+              }
               className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm"
               placeholder="Protetor articular, dental, cardiaco, renal, etc."
             />
@@ -1569,7 +1976,9 @@ const QuickConsultation = ({
         </summary>
         <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Dieta</label>
+            <label className="mb-1 block text-sm font-medium text-gray-700">
+              Dieta
+            </label>
             <input
               type="text"
               value={smallAnimalData.diet}
@@ -1579,30 +1988,42 @@ const QuickConsultation = ({
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Racao / marca</label>
+            <label className="mb-1 block text-sm font-medium text-gray-700">
+              Racao / marca
+            </label>
             <input
               type="text"
               value={smallAnimalData.rationBrand}
-              onChange={(e) => updateSmallAnimalField("rationBrand", e.target.value)}
+              onChange={(e) =>
+                updateSmallAnimalField("rationBrand", e.target.value)
+              }
               className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm"
               placeholder="Marca e linha da dieta"
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Frequencia alimentar</label>
+            <label className="mb-1 block text-sm font-medium text-gray-700">
+              Frequencia alimentar
+            </label>
             <input
               type="text"
               value={smallAnimalData.feedingFrequency}
-              onChange={(e) => updateSmallAnimalField("feedingFrequency", e.target.value)}
+              onChange={(e) =>
+                updateSmallAnimalField("feedingFrequency", e.target.value)
+              }
               className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm"
               placeholder="Numero de refeicoes por dia"
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Ingestao de agua</label>
+            <label className="mb-1 block text-sm font-medium text-gray-700">
+              Ingestao de agua
+            </label>
             <select
               value={smallAnimalData.waterIntakeSmall}
-              onChange={(e) => updateSmallAnimalField("waterIntakeSmall", e.target.value)}
+              onChange={(e) =>
+                updateSmallAnimalField("waterIntakeSmall", e.target.value)
+              }
               className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm"
             >
               <option value="">Selecione</option>
@@ -1612,59 +2033,86 @@ const QuickConsultation = ({
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Ambiente</label>
+            <label className="mb-1 block text-sm font-medium text-gray-700">
+              Ambiente
+            </label>
             <input
               type="text"
               value={smallAnimalData.housing}
-              onChange={(e) => updateSmallAnimalField("housing", e.target.value)}
+              onChange={(e) =>
+                updateSmallAnimalField("housing", e.target.value)
+              }
               className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm"
               placeholder="Apartamento, casa, quintal, acesso externo"
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Estilo de vida</label>
+            <label className="mb-1 block text-sm font-medium text-gray-700">
+              Estilo de vida
+            </label>
             <input
               type="text"
               value={smallAnimalData.lifestyle}
-              onChange={(e) => updateSmallAnimalField("lifestyle", e.target.value)}
+              onChange={(e) =>
+                updateSmallAnimalField("lifestyle", e.target.value)
+              }
               className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm"
               placeholder="Sedentario, ativo, enriquecimento ambiental"
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Contato com outros animais</label>
+            <label className="mb-1 block text-sm font-medium text-gray-700">
+              Contato com outros animais
+            </label>
             <input
               type="text"
               value={smallAnimalData.contactWithAnimals}
-              onChange={(e) => updateSmallAnimalField("contactWithAnimals", e.target.value)}
+              onChange={(e) =>
+                updateSmallAnimalField("contactWithAnimals", e.target.value)
+              }
               className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm"
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Estado reprodutivo</label>
+            <label className="mb-1 block text-sm font-medium text-gray-700">
+              Estado reprodutivo
+            </label>
             <input
               type="text"
               value={smallAnimalData.reproductiveStatusSmall}
-              onChange={(e) => updateSmallAnimalField("reproductiveStatusSmall", e.target.value)}
+              onChange={(e) =>
+                updateSmallAnimalField(
+                  "reproductiveStatusSmall",
+                  e.target.value,
+                )
+              }
               className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm"
               placeholder="Castrado(a), inteiro(a), cio, gestacao"
             />
           </div>
           <div className="sm:col-span-2">
-            <label className="mb-1 block text-sm font-medium text-gray-700">Comportamento</label>
+            <label className="mb-1 block text-sm font-medium text-gray-700">
+              Comportamento
+            </label>
             <textarea
               value={smallAnimalData.behavior}
-              onChange={(e) => updateSmallAnimalField("behavior", e.target.value)}
+              onChange={(e) =>
+                updateSmallAnimalField("behavior", e.target.value)
+              }
               className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm min-h-[82px]"
               placeholder="Alteracao de comportamento, ansiedade, agressividade, vocalizacao, apatia"
             />
           </div>
           <div className="sm:col-span-2">
-            <label className="mb-1 block text-sm font-medium text-gray-700">Suplementos em uso</label>
+            <label className="mb-1 block text-sm font-medium text-gray-700">
+              Suplementos em uso
+            </label>
             <input
               type="text"
               value={smallAnimalData.currentSupplements}
-              onChange={(e) => updateSmallAnimalField("currentSupplements", e.target.value)}
+              onChange={(e) =>
+                updateSmallAnimalField("currentSupplements", e.target.value)
+              }
               className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm"
               placeholder="Omega 3, condroprotetor, probiotico, vitaminas"
             />
@@ -1676,7 +2124,9 @@ const QuickConsultation = ({
 
   const renderLargeAnimalSection = () => (
     <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 sm:p-5 space-y-4">
-      <h2 className="text-sm font-bold text-amber-900">Prontuario de grande porte (detalhado)</h2>
+      <h2 className="text-sm font-bold text-amber-900">
+        Prontuario de grande porte (detalhado)
+      </h2>
       <p className="text-xs text-amber-800">
         Modelo detalhado para rotina de campo, rebanho e medicina de producao.
       </p>
@@ -1685,294 +2135,413 @@ const QuickConsultation = ({
           Ficha completa de grande porte
         </summary>
         <div className="mt-3 space-y-4">
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div>
-          <label className="mb-1 block text-sm font-medium text-gray-700">Propriedade</label>
-          <input
-            type="text"
-            value={largeAnimalData.farmName}
-            onChange={(e) => updateLargeAnimalField("farmName", e.target.value)}
-            className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm"
-            placeholder="Nome da fazenda/sitio"
-          />
-        </div>
-        <div>
-          <label className="mb-1 block text-sm font-medium text-gray-700">Sistema de producao</label>
-          <select
-            value={largeAnimalData.productionSystem}
-            onChange={(e) => updateLargeAnimalField("productionSystem", e.target.value)}
-            className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm"
-          >
-            <option value="">Selecione</option>
-            <option value="Leite">Leite</option>
-            <option value="Corte">Corte</option>
-            <option value="Misto">Misto</option>
-            <option value="Esporte/Trabalho">Esporte/Trabalho</option>
-          </select>
-        </div>
-        <div>
-          <label className="mb-1 block text-sm font-medium text-gray-700">Finalidade zootecnica</label>
-          <input
-            type="text"
-            value={largeAnimalData.animalFunction}
-            onChange={(e) => updateLargeAnimalField("animalFunction", e.target.value)}
-            className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm"
-            placeholder="Lactacao, reproducao, engorda, tracao"
-          />
-        </div>
-        <div>
-          <label className="mb-1 block text-sm font-medium text-gray-700">Lote / grupo</label>
-          <input
-            type="text"
-            value={largeAnimalData.batch}
-            onChange={(e) => updateLargeAnimalField("batch", e.target.value)}
-            className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm"
-          />
-        </div>
-        <div>
-          <label className="mb-1 block text-sm font-medium text-gray-700">Identificacao do animal</label>
-          <input
-            type="text"
-            value={largeAnimalData.animalId}
-            onChange={(e) => updateLargeAnimalField("animalId", e.target.value)}
-            className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm"
-            placeholder="Brinco, chip, tatuagem"
-          />
-        </div>
-        <div>
-          <label className="mb-1 block text-sm font-medium text-gray-700">Escore corporal (1-5)</label>
-          <input
-            type="text"
-            value={largeAnimalData.bodyConditionScore}
-            onChange={(e) => updateLargeAnimalField("bodyConditionScore", e.target.value)}
-            className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm"
-          />
-        </div>
-      </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="mb-1 block text-sm font-medium text-gray-700">
+                Propriedade
+              </label>
+              <input
+                type="text"
+                value={largeAnimalData.farmName}
+                onChange={(e) =>
+                  updateLargeAnimalField("farmName", e.target.value)
+                }
+                className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm"
+                placeholder="Nome da fazenda/sitio"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-gray-700">
+                Sistema de producao
+              </label>
+              <select
+                value={largeAnimalData.productionSystem}
+                onChange={(e) =>
+                  updateLargeAnimalField("productionSystem", e.target.value)
+                }
+                className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm"
+              >
+                <option value="">Selecione</option>
+                <option value="Leite">Leite</option>
+                <option value="Corte">Corte</option>
+                <option value="Misto">Misto</option>
+                <option value="Esporte/Trabalho">Esporte/Trabalho</option>
+              </select>
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-gray-700">
+                Finalidade zootecnica
+              </label>
+              <input
+                type="text"
+                value={largeAnimalData.animalFunction}
+                onChange={(e) =>
+                  updateLargeAnimalField("animalFunction", e.target.value)
+                }
+                className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm"
+                placeholder="Lactacao, reproducao, engorda, tracao"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-gray-700">
+                Lote / grupo
+              </label>
+              <input
+                type="text"
+                value={largeAnimalData.batch}
+                onChange={(e) =>
+                  updateLargeAnimalField("batch", e.target.value)
+                }
+                className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-gray-700">
+                Identificacao do animal
+              </label>
+              <input
+                type="text"
+                value={largeAnimalData.animalId}
+                onChange={(e) =>
+                  updateLargeAnimalField("animalId", e.target.value)
+                }
+                className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm"
+                placeholder="Brinco, chip, tatuagem"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-gray-700">
+                Escore corporal (1-5)
+              </label>
+              <input
+                type="text"
+                value={largeAnimalData.bodyConditionScore}
+                onChange={(e) =>
+                  updateLargeAnimalField("bodyConditionScore", e.target.value)
+                }
+                className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm"
+              />
+            </div>
+          </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <div>
-          <label className="mb-1 block text-sm font-medium text-gray-700">Estado reprodutivo</label>
-          <input
-            type="text"
-            value={largeAnimalData.reproductiveStatus}
-            onChange={(e) => updateLargeAnimalField("reproductiveStatus", e.target.value)}
-            className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm"
-            placeholder="Vazia, prenhe, pos-parto"
-          />
-        </div>
-        <div>
-          <label className="mb-1 block text-sm font-medium text-gray-700">Dias em lactacao</label>
-          <input
-            type="text"
-            value={largeAnimalData.daysInMilk}
-            onChange={(e) => updateLargeAnimalField("daysInMilk", e.target.value)}
-            className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm"
-          />
-        </div>
-        <div>
-          <label className="mb-1 block text-sm font-medium text-gray-700">Numero de partos</label>
-          <input
-            type="text"
-            value={largeAnimalData.parity}
-            onChange={(e) => updateLargeAnimalField("parity", e.target.value)}
-            className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm"
-          />
-        </div>
-      </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label className="mb-1 block text-sm font-medium text-gray-700">
+                Estado reprodutivo
+              </label>
+              <input
+                type="text"
+                value={largeAnimalData.reproductiveStatus}
+                onChange={(e) =>
+                  updateLargeAnimalField("reproductiveStatus", e.target.value)
+                }
+                className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm"
+                placeholder="Vazia, prenhe, pos-parto"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-gray-700">
+                Dias em lactacao
+              </label>
+              <input
+                type="text"
+                value={largeAnimalData.daysInMilk}
+                onChange={(e) =>
+                  updateLargeAnimalField("daysInMilk", e.target.value)
+                }
+                className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-gray-700">
+                Numero de partos
+              </label>
+              <input
+                type="text"
+                value={largeAnimalData.parity}
+                onChange={(e) =>
+                  updateLargeAnimalField("parity", e.target.value)
+                }
+                className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm"
+              />
+            </div>
+          </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div>
-          <label className="mb-1 block text-sm font-medium text-gray-700">Vacinacao do rebanho</label>
-          <input
-            type="text"
-            value={largeAnimalData.herdVaccination}
-            onChange={(e) => updateLargeAnimalField("herdVaccination", e.target.value)}
-            className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm"
-          />
-        </div>
-        <div>
-          <label className="mb-1 block text-sm font-medium text-gray-700">Vermifugacao do rebanho</label>
-          <input
-            type="text"
-            value={largeAnimalData.herdDeworming}
-            onChange={(e) => updateLargeAnimalField("herdDeworming", e.target.value)}
-            className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm"
-          />
-        </div>
-      </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="mb-1 block text-sm font-medium text-gray-700">
+                Vacinacao do rebanho
+              </label>
+              <input
+                type="text"
+                value={largeAnimalData.herdVaccination}
+                onChange={(e) =>
+                  updateLargeAnimalField("herdVaccination", e.target.value)
+                }
+                className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-gray-700">
+                Vermifugacao do rebanho
+              </label>
+              <input
+                type="text"
+                value={largeAnimalData.herdDeworming}
+                onChange={(e) =>
+                  updateLargeAnimalField("herdDeworming", e.target.value)
+                }
+                className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm"
+              />
+            </div>
+          </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div>
-          <label className="mb-1 block text-sm font-medium text-gray-700">Volumoso</label>
-          <input
-            type="text"
-            value={largeAnimalData.forage}
-            onChange={(e) => updateLargeAnimalField("forage", e.target.value)}
-            className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm"
-            placeholder="Silagem, feno, pasto"
-          />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="mb-1 block text-sm font-medium text-gray-700">
+                Volumoso
+              </label>
+              <input
+                type="text"
+                value={largeAnimalData.forage}
+                onChange={(e) =>
+                  updateLargeAnimalField("forage", e.target.value)
+                }
+                className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm"
+                placeholder="Silagem, feno, pasto"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-gray-700">
+                Concentrado
+              </label>
+              <input
+                type="text"
+                value={largeAnimalData.concentrate}
+                onChange={(e) =>
+                  updateLargeAnimalField("concentrate", e.target.value)
+                }
+                className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm"
+                placeholder="Kg/dia e composicao"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-gray-700">
+                Consumo de agua
+              </label>
+              <input
+                type="text"
+                value={largeAnimalData.waterIntake}
+                onChange={(e) =>
+                  updateLargeAnimalField("waterIntake", e.target.value)
+                }
+                className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-gray-700">
+                Suplementacao mineral
+              </label>
+              <input
+                type="text"
+                value={largeAnimalData.mineralSupplementation}
+                onChange={(e) =>
+                  updateLargeAnimalField(
+                    "mineralSupplementation",
+                    e.target.value,
+                  )
+                }
+                className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="mb-1 block text-sm font-medium text-gray-700">
+                Casco e locomocao
+              </label>
+              <input
+                type="text"
+                value={largeAnimalData.hoofStatus}
+                onChange={(e) =>
+                  updateLargeAnimalField("hoofStatus", e.target.value)
+                }
+                className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm"
+                placeholder="Claudicacao, casqueamento, aprumos"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-gray-700">
+                Motilidade ruminal
+              </label>
+              <input
+                type="text"
+                value={largeAnimalData.rumenMotility}
+                onChange={(e) =>
+                  updateLargeAnimalField("rumenMotility", e.target.value)
+                }
+                className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm"
+                placeholder="Contracoes/2 min, timpanismo"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-gray-700">
+                Fezes e urina
+              </label>
+              <input
+                type="text"
+                value={largeAnimalData.fecesAndUrine}
+                onChange={(e) =>
+                  updateLargeAnimalField("fecesAndUrine", e.target.value)
+                }
+                className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm"
+                placeholder="Consistencia, cor, volume"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-gray-700">
+                Producao de leite
+              </label>
+              <input
+                type="text"
+                value={largeAnimalData.milkProduction}
+                onChange={(e) =>
+                  updateLargeAnimalField("milkProduction", e.target.value)
+                }
+                className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm"
+                placeholder="Litros/dia, queda de producao"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700">
+              Historico sanitario e ocorrencias do lote
+            </label>
+            <textarea
+              value={largeAnimalData.historicalDiseases}
+              onChange={(e) =>
+                updateLargeAnimalField("historicalDiseases", e.target.value)
+              }
+              className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm min-h-[88px]"
+              placeholder="Mastite, metrite, pneumonia, surtos recentes, tratamentos anteriores"
+            />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700">
+              Propriedade e manejo (modelo da ficha)
+            </label>
+            <textarea
+              value={largeAnimalData.propertyAndManagement}
+              onChange={(e) =>
+                updateLargeAnimalField("propertyAndManagement", e.target.value)
+              }
+              className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm min-h-[100px]"
+              placeholder="Responsavel local, proprietario, contato, endereco, tipo de criacao (leite/corte/ambos/confinado/semi-extensivo/extensivo), tipo de alimentacao e sal mineral."
+            />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700">
+              Contactantes
+            </label>
+            <input
+              type="text"
+              value={largeAnimalData.contactAnimals}
+              onChange={(e) =>
+                updateLargeAnimalField("contactAnimals", e.target.value)
+              }
+              className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm"
+              placeholder="Bovinos, equinos, ovinos, caprinos, caninos, outros"
+            />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700">
+              Animal atendido - identificacao detalhada
+            </label>
+            <textarea
+              value={largeAnimalData.animalIdentificationDetails}
+              onChange={(e) =>
+                updateLargeAnimalField(
+                  "animalIdentificationDetails",
+                  e.target.value,
+                )
+              }
+              className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm min-h-[90px]"
+              placeholder="Sexo, idade (m, neonato, bezerro, garrote, adulto), pelagem, tatuagem/brinco/registro genealogico."
+            />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700">
+              Neonato / reproducao
+            </label>
+            <textarea
+              value={largeAnimalData.neonateAndReproduction}
+              onChange={(e) =>
+                updateLargeAnimalField("neonateAndReproduction", e.target.value)
+              }
+              className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm min-h-[90px]"
+              placeholder="Monta natural/inseminacao, parto normal/distocico/cesarea, colostragem, cura de umbigo, brix, prenhez e dados reprodutivos."
+            />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700">
+              Tratamento anterior
+            </label>
+            <textarea
+              value={largeAnimalData.previousTreatmentHistory}
+              onChange={(e) =>
+                updateLargeAnimalField(
+                  "previousTreatmentHistory",
+                  e.target.value,
+                )
+              }
+              className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm min-h-[90px]"
+              placeholder="Vacinas (tipo e datas), antiparasitario interno/externo, apetite e ingestao de agua."
+            />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700">
+              Exame fisico detalhado
+            </label>
+            <textarea
+              value={largeAnimalData.physicalExamDetailed}
+              onChange={(e) =>
+                updateLargeAnimalField("physicalExamDetailed", e.target.value)
+              }
+              className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm min-h-[120px]"
+              placeholder="Estado geral, ECC, postura, FC, FR, TC, FMRu, pH, linfonodos, mucosas, TPC, pele/pelos, parametros normais e avaliacao de achados."
+            />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700">
+              Exames complementares solicitados
+            </label>
+            <textarea
+              value={largeAnimalData.requestedExamPanel}
+              onChange={(e) =>
+                updateLargeAnimalField("requestedExamPanel", e.target.value)
+              }
+              className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm min-h-[88px]"
+              placeholder="Exames laboratoriais, exames de imagem, outros, necropsia e justificativas."
+            />
+          </div>
         </div>
-        <div>
-          <label className="mb-1 block text-sm font-medium text-gray-700">Concentrado</label>
-          <input
-            type="text"
-            value={largeAnimalData.concentrate}
-            onChange={(e) => updateLargeAnimalField("concentrate", e.target.value)}
-            className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm"
-            placeholder="Kg/dia e composicao"
-          />
-        </div>
-        <div>
-          <label className="mb-1 block text-sm font-medium text-gray-700">Consumo de agua</label>
-          <input
-            type="text"
-            value={largeAnimalData.waterIntake}
-            onChange={(e) => updateLargeAnimalField("waterIntake", e.target.value)}
-            className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm"
-          />
-        </div>
-        <div>
-          <label className="mb-1 block text-sm font-medium text-gray-700">Suplementacao mineral</label>
-          <input
-            type="text"
-            value={largeAnimalData.mineralSupplementation}
-            onChange={(e) => updateLargeAnimalField("mineralSupplementation", e.target.value)}
-            className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm"
-          />
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div>
-          <label className="mb-1 block text-sm font-medium text-gray-700">Casco e locomocao</label>
-          <input
-            type="text"
-            value={largeAnimalData.hoofStatus}
-            onChange={(e) => updateLargeAnimalField("hoofStatus", e.target.value)}
-            className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm"
-            placeholder="Claudicacao, casqueamento, aprumos"
-          />
-        </div>
-        <div>
-          <label className="mb-1 block text-sm font-medium text-gray-700">Motilidade ruminal</label>
-          <input
-            type="text"
-            value={largeAnimalData.rumenMotility}
-            onChange={(e) => updateLargeAnimalField("rumenMotility", e.target.value)}
-            className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm"
-            placeholder="Contracoes/2 min, timpanismo"
-          />
-        </div>
-        <div>
-          <label className="mb-1 block text-sm font-medium text-gray-700">Fezes e urina</label>
-          <input
-            type="text"
-            value={largeAnimalData.fecesAndUrine}
-            onChange={(e) => updateLargeAnimalField("fecesAndUrine", e.target.value)}
-            className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm"
-            placeholder="Consistencia, cor, volume"
-          />
-        </div>
-        <div>
-          <label className="mb-1 block text-sm font-medium text-gray-700">Producao de leite</label>
-          <input
-            type="text"
-            value={largeAnimalData.milkProduction}
-            onChange={(e) => updateLargeAnimalField("milkProduction", e.target.value)}
-            className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm"
-            placeholder="Litros/dia, queda de producao"
-          />
-        </div>
-      </div>
-
-      <div>
-        <label className="mb-1 block text-sm font-medium text-gray-700">Historico sanitario e ocorrencias do lote</label>
-        <textarea
-          value={largeAnimalData.historicalDiseases}
-          onChange={(e) => updateLargeAnimalField("historicalDiseases", e.target.value)}
-          className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm min-h-[88px]"
-          placeholder="Mastite, metrite, pneumonia, surtos recentes, tratamentos anteriores"
-        />
-      </div>
-
-      <div>
-        <label className="mb-1 block text-sm font-medium text-gray-700">Propriedade e manejo (modelo da ficha)</label>
-        <textarea
-          value={largeAnimalData.propertyAndManagement}
-          onChange={(e) => updateLargeAnimalField("propertyAndManagement", e.target.value)}
-          className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm min-h-[100px]"
-          placeholder="Responsavel local, proprietario, contato, endereco, tipo de criacao (leite/corte/ambos/confinado/semi-extensivo/extensivo), tipo de alimentacao e sal mineral."
-        />
-      </div>
-
-      <div>
-        <label className="mb-1 block text-sm font-medium text-gray-700">Contactantes</label>
-        <input
-          type="text"
-          value={largeAnimalData.contactAnimals}
-          onChange={(e) => updateLargeAnimalField("contactAnimals", e.target.value)}
-          className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm"
-          placeholder="Bovinos, equinos, ovinos, caprinos, caninos, outros"
-        />
-      </div>
-
-      <div>
-        <label className="mb-1 block text-sm font-medium text-gray-700">Animal atendido - identificacao detalhada</label>
-        <textarea
-          value={largeAnimalData.animalIdentificationDetails}
-          onChange={(e) => updateLargeAnimalField("animalIdentificationDetails", e.target.value)}
-          className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm min-h-[90px]"
-          placeholder="Sexo, idade (m, neonato, bezerro, garrote, adulto), pelagem, tatuagem/brinco/registro genealogico."
-        />
-      </div>
-
-      <div>
-        <label className="mb-1 block text-sm font-medium text-gray-700">Neonato / reproducao</label>
-        <textarea
-          value={largeAnimalData.neonateAndReproduction}
-          onChange={(e) => updateLargeAnimalField("neonateAndReproduction", e.target.value)}
-          className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm min-h-[90px]"
-          placeholder="Monta natural/inseminacao, parto normal/distocico/cesarea, colostragem, cura de umbigo, brix, prenhez e dados reprodutivos."
-        />
-      </div>
-
-      <div>
-        <label className="mb-1 block text-sm font-medium text-gray-700">Tratamento anterior</label>
-        <textarea
-          value={largeAnimalData.previousTreatmentHistory}
-          onChange={(e) => updateLargeAnimalField("previousTreatmentHistory", e.target.value)}
-          className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm min-h-[90px]"
-          placeholder="Vacinas (tipo e datas), antiparasitario interno/externo, apetite e ingestao de agua."
-        />
-      </div>
-
-      <div>
-        <label className="mb-1 block text-sm font-medium text-gray-700">Exame fisico detalhado</label>
-        <textarea
-          value={largeAnimalData.physicalExamDetailed}
-          onChange={(e) => updateLargeAnimalField("physicalExamDetailed", e.target.value)}
-          className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm min-h-[120px]"
-          placeholder="Estado geral, ECC, postura, FC, FR, TC, FMRu, pH, linfonodos, mucosas, TPC, pele/pelos, parametros normais e avaliacao de achados."
-        />
-      </div>
-
-      <div>
-        <label className="mb-1 block text-sm font-medium text-gray-700">Exames complementares solicitados</label>
-        <textarea
-          value={largeAnimalData.requestedExamPanel}
-          onChange={(e) => updateLargeAnimalField("requestedExamPanel", e.target.value)}
-          className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm min-h-[88px]"
-          placeholder="Exames laboratoriais, exames de imagem, outros, necropsia e justificativas."
-        />
-      </div>
-      </div>
       </details>
     </div>
   );
 
   const clearAllFields = () => {
-    const confirmed = window.confirm("Deseja limpar todos os campos deste prontuario?");
+    const confirmed = window.confirm(
+      "Deseja limpar todos os campos deste prontuario?",
+    );
     if (!confirmed) return;
 
     setWeight("");
@@ -2019,7 +2588,10 @@ const QuickConsultation = ({
 
   const saveConsultationWithPrescription = async (download) => {
     if (!patient?.id) {
-      showFeedback("error", "Selecione um paciente antes de salvar a consulta.");
+      showFeedback(
+        "error",
+        "Selecione um paciente antes de salvar a consulta.",
+      );
       onBack?.();
       return;
     }
@@ -2032,7 +2604,7 @@ const QuickConsultation = ({
       if (aiMessages.length > 0) {
         try {
           await api.post(`/consultations/${savedId}/chat-history`, {
-            messages: aiMessages
+            messages: aiMessages,
           });
         } catch (chatError) {
           console.error("Erro ao salvar historico de chat:", chatError);
@@ -2101,7 +2673,9 @@ const QuickConsultation = ({
     return (
       <div className="max-w-3xl mx-auto rounded-xl border border-gray-200 bg-white p-6">
         <h1 className="text-xl font-bold text-gray-800">Nova Consulta</h1>
-        <p className="mt-2 text-sm text-gray-600">Nenhum paciente selecionado.</p>
+        <p className="mt-2 text-sm text-gray-600">
+          Nenhum paciente selecionado.
+        </p>
       </div>
     );
   }
@@ -2117,7 +2691,9 @@ const QuickConsultation = ({
       </button>
 
       <div className="rounded-2xl border border-emerald-200 dark:border-emerald-800 bg-gradient-to-r from-emerald-50 to-cyan-50 dark:from-emerald-900 dark:to-cyan-900 p-4 sm:p-5">
-        <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">Consulta Clinica Completa</h1>
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
+          Consulta Clinica Completa
+        </h1>
         <p className="text-sm text-gray-700 dark:text-gray-200 mt-1">
           Paciente: <strong>{patient.name}</strong> - Tutor: {patient.ownerName}
         </p>
@@ -2190,129 +2766,142 @@ const QuickConsultation = ({
         onClose={() => setFeedback(null)}
       />
 
-      <div id="assistant-section" className="rounded-xl border border-violet-200 bg-violet-50 p-4 space-y-3">
-          <h2 className="text-sm font-bold text-violet-900">Assistente IA por chat</h2>
-          <p className="text-xs text-violet-800">
-            Descreva em linguagem livre o caso e a IA monta um rascunho estruturado.
-          </p>
-          <textarea
-            value={aiChatText}
-            onChange={(e) => setAiChatText(e.target.value)}
-            rows={3}
-            placeholder="Ex: retorno de ave com febre, sem apetite, no exame apresentou..."
-            className="w-full rounded-lg border border-violet-300 px-3 py-3 text-sm"
-          />
-          <div className="grid grid-cols-1 gap-2">
+      <div
+        id="assistant-section"
+        className="rounded-xl border border-violet-200 dark:border-violet-800 bg-violet-50 dark:bg-violet-900/20 p-4 space-y-3"
+      >
+        <h2 className="text-sm font-bold text-violet-900 dark:text-violet-200">
+          Assistente IA por chat
+        </h2>
+        <p className="text-xs text-violet-800 dark:text-violet-300">
+          Descreva em linguagem livre o caso e a IA monta um rascunho
+          estruturado.
+        </p>
+        <textarea
+          value={aiChatText}
+          onChange={(e) => setAiChatText(e.target.value)}
+          rows={3}
+          placeholder="Ex: retorno de ave com febre, sem apetite, no exame apresentou..."
+          className="w-full rounded-lg border border-violet-300 dark:border-violet-700 bg-white dark:bg-dark-800 px-3 py-3 text-sm text-gray-900 dark:text-white"
+        />
+        <div className="grid grid-cols-1 gap-2">
+          <button
+            type="button"
+            onClick={handleAutoFillWithAI}
+            disabled={aiGenerating}
+            className="min-h-[46px] rounded-lg bg-emerald-600 px-3 py-2 text-sm font-bold text-white disabled:opacity-70 inline-flex items-center justify-center gap-2"
+          >
+            {aiGenerating && <LoadingDot />}
+            {aiGenerating ? "Processando..." : "Preencher com IA (automatico)"}
+          </button>
+        </div>
+        <details className="rounded-lg border border-violet-200 bg-white p-2">
+          <summary className="cursor-pointer text-xs font-semibold text-violet-900">
+            Opcoes avancadas de IA
+          </summary>
+          <div className="mt-2 grid grid-cols-1 sm:grid-cols-3 gap-2">
             <button
               type="button"
-              onClick={handleAutoFillWithAI}
+              onClick={() => generateDraftFromChat(false, "standard")}
               disabled={aiGenerating}
-              className="min-h-[46px] rounded-lg bg-emerald-600 px-3 py-2 text-sm font-bold text-white disabled:opacity-70 inline-flex items-center justify-center gap-2"
+              className="min-h-[40px] rounded-lg bg-violet-600 px-3 py-2 text-sm font-bold text-white disabled:opacity-70 inline-flex items-center justify-center gap-2"
             >
               {aiGenerating && <LoadingDot />}
-              {aiGenerating ? "Processando..." : "Preencher com IA (automatico)"}
+              {aiGenerating ? "Gerando..." : "Preencher vazios"}
+            </button>
+            <button
+              type="button"
+              onClick={() => generateDraftFromChat(true, "standard")}
+              disabled={aiGenerating}
+              className="min-h-[40px] rounded-lg border border-violet-300 bg-white px-3 py-2 text-sm font-bold text-violet-800 disabled:opacity-70 inline-flex items-center justify-center gap-2"
+            >
+              {aiGenerating && <LoadingDot className="text-violet-700" />}
+              {aiGenerating ? "Aplicando..." : "Substituir campos"}
+            </button>
+            <select
+              value={aiRefineField}
+              onChange={(e) => setAiRefineField(e.target.value)}
+              className="rounded-lg border border-violet-300 bg-white px-3 py-2 text-sm"
+            >
+              <option value="chiefComplaint">Queixa principal</option>
+              <option value="anamnesis">Anamnese</option>
+              <option value="physicalExam">Exame fisico</option>
+              <option value="diagnosis">Diagnostico</option>
+              <option value="treatment">Tratamento</option>
+              <option value="medications">Medicacao</option>
+              <option value="notes">Observacoes</option>
+            </select>
+            <button
+              type="button"
+              onClick={refineSelectedField}
+              disabled={aiRefining}
+              className="min-h-[40px] rounded-lg border border-violet-300 bg-white px-3 py-2 text-sm font-bold text-violet-800 disabled:opacity-70 sm:col-span-3 inline-flex items-center justify-center gap-2"
+            >
+              {aiRefining && <LoadingDot className="text-violet-700" />}
+              {aiRefining ? "Refinando..." : "Refinar campo selecionado"}
             </button>
           </div>
-          <details className="rounded-lg border border-violet-200 bg-white p-2">
-            <summary className="cursor-pointer text-xs font-semibold text-violet-900">
-              Opcoes avancadas de IA
-            </summary>
-            <div className="mt-2 grid grid-cols-1 sm:grid-cols-3 gap-2">
-              <button
-                type="button"
-                onClick={() => generateDraftFromChat(false, "standard")}
-                disabled={aiGenerating}
-                className="min-h-[40px] rounded-lg bg-violet-600 px-3 py-2 text-sm font-bold text-white disabled:opacity-70 inline-flex items-center justify-center gap-2"
+        </details>
+        {aiMessages.length > 0 && (
+          <div className="max-h-36 overflow-y-auto rounded-lg border border-violet-200 bg-white p-2 text-xs space-y-1">
+            {aiMessages.slice(-10).map((msg, idx) => (
+              <p
+                key={`${msg.createdAt || idx}-${idx}`}
+                className="text-gray-700"
               >
-                {aiGenerating && <LoadingDot />}
-                {aiGenerating ? "Gerando..." : "Preencher vazios"}
-              </button>
-              <button
-                type="button"
-                onClick={() => generateDraftFromChat(true, "standard")}
-                disabled={aiGenerating}
-                className="min-h-[40px] rounded-lg border border-violet-300 bg-white px-3 py-2 text-sm font-bold text-violet-800 disabled:opacity-70 inline-flex items-center justify-center gap-2"
-              >
-                {aiGenerating && <LoadingDot className="text-violet-700" />}
-                {aiGenerating ? "Aplicando..." : "Substituir campos"}
-              </button>
-              <select
-                value={aiRefineField}
-                onChange={(e) => setAiRefineField(e.target.value)}
-                className="rounded-lg border border-violet-300 bg-white px-3 py-2 text-sm"
-              >
-                <option value="chiefComplaint">Queixa principal</option>
-                <option value="anamnesis">Anamnese</option>
-                <option value="physicalExam">Exame fisico</option>
-                <option value="diagnosis">Diagnostico</option>
-                <option value="treatment">Tratamento</option>
-                <option value="medications">Medicacao</option>
-                <option value="notes">Observacoes</option>
-              </select>
-              <button
-                type="button"
-                onClick={refineSelectedField}
-                disabled={aiRefining}
-                className="min-h-[40px] rounded-lg border border-violet-300 bg-white px-3 py-2 text-sm font-bold text-violet-800 disabled:opacity-70 sm:col-span-3 inline-flex items-center justify-center gap-2"
-              >
-                {aiRefining && <LoadingDot className="text-violet-700" />}
-                {aiRefining ? "Refinando..." : "Refinar campo selecionado"}
-              </button>
-            </div>
-          </details>
-          {aiMessages.length > 0 && (
-            <div className="max-h-36 overflow-y-auto rounded-lg border border-violet-200 bg-white p-2 text-xs space-y-1">
-              {aiMessages.slice(-10).map((msg, idx) => (
-                <p key={`${msg.createdAt || idx}-${idx}`} className="text-gray-700">
-                  <strong>{msg.role === "assistant" ? "IA" : "Medico"}:</strong> {msg.content}
-                </p>
+                <strong>{msg.role === "assistant" ? "IA" : "Medico"}:</strong>{" "}
+                {msg.content}
+              </p>
+            ))}
+          </div>
+        )}
+        {Object.keys(aiConfidenceByField || {}).length > 0 && (
+          <div className="rounded-lg border border-violet-200 bg-white p-2">
+            <p className="text-[11px] font-semibold text-violet-900 mb-1">
+              Confianca por campo
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {Object.entries(aiConfidenceByField).map(([field, value]) => (
+                <span
+                  key={field}
+                  className="rounded-full bg-violet-100 px-2 py-0.5 text-[11px] font-medium text-violet-800"
+                >
+                  {field}: {Math.round(Number(value || 0) * 100)}%
+                </span>
               ))}
             </div>
-          )}
-          {Object.keys(aiConfidenceByField || {}).length > 0 && (
-            <div className="rounded-lg border border-violet-200 bg-white p-2">
-              <p className="text-[11px] font-semibold text-violet-900 mb-1">Confianca por campo</p>
-              <div className="flex flex-wrap gap-1.5">
-                {Object.entries(aiConfidenceByField).map(([field, value]) => (
-                  <span
-                    key={field}
-                    className="rounded-full bg-violet-100 px-2 py-0.5 text-[11px] font-medium text-violet-800"
-                  >
-                    {field}: {Math.round(Number(value || 0) * 100)}%
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-          {(aiMissingFields.core.length > 0 || aiMissingFields.specific.length > 0) && (
-            <div className="rounded-lg border border-amber-200 bg-amber-50 p-2 text-xs text-amber-900">
-              <p className="font-semibold">
-                Pendencias detectadas pela IA
+          </div>
+        )}
+        {(aiMissingFields.core.length > 0 ||
+          aiMissingFields.specific.length > 0) && (
+          <div className="rounded-lg border border-amber-200 bg-amber-50 p-2 text-xs text-amber-900">
+            <p className="font-semibold">Pendencias detectadas pela IA</p>
+            {aiMissingFields.core.length > 0 && (
+              <p className="mt-1">Clinico: {aiMissingFields.core.join(", ")}</p>
+            )}
+            {aiMissingFields.specific.length > 0 && (
+              <p className="mt-1">
+                Ficha de porte: {aiMissingFields.specific.length} campo(s) sem
+                evidencia no texto.
               </p>
-              {aiMissingFields.core.length > 0 && (
-                <p className="mt-1">
-                  Clinico: {aiMissingFields.core.join(", ")}
-                </p>
-              )}
-              {aiMissingFields.specific.length > 0 && (
-                <p className="mt-1">
-                  Ficha de porte: {aiMissingFields.specific.length} campo(s) sem evidencia no texto.
-                </p>
-              )}
-              {aiMissingFields.specific.length > 0 && (
-                <button
-                  type="button"
-                  onClick={() => scrollToSection("porte-section")}
-                  className="mt-2 rounded-md border border-amber-300 bg-white px-2 py-1 text-[11px] font-semibold text-amber-800"
-                >
-                  Ir para ficha de porte
-                </button>
-              )}
-            </div>
-          )}
-        </div>
+            )}
+            {aiMissingFields.specific.length > 0 && (
+              <button
+                type="button"
+                onClick={() => scrollToSection("porte-section")}
+                className="mt-2 rounded-md border border-amber-300 bg-white px-2 py-1 text-[11px] font-semibold text-amber-800"
+              >
+                Ir para ficha de porte
+              </button>
+            )}
+          </div>
+        )}
+      </div>
 
-      <div id="porte-section" className="rounded-xl border border-gray-200 bg-white p-4 sm:p-6 space-y-4">
+      <div
+        id="porte-section"
+        className="rounded-xl border border-gray-200 bg-white p-4 sm:p-6 space-y-4"
+      >
         <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
           Classificacao do prontuario por porte
         </h2>
@@ -2374,16 +2963,21 @@ const QuickConsultation = ({
               </button>
             )}
           </div>
-          {selectedPorte && detectedPorte && selectedPorte !== detectedPorte && (
-            <p className="text-xs font-medium text-amber-700">
-              Porte selecionado manualmente. A IA usara este porte para preencher a ficha.
-            </p>
-          )}
+          {selectedPorte &&
+            detectedPorte &&
+            selectedPorte !== detectedPorte && (
+              <p className="text-xs font-medium text-amber-700">
+                Porte selecionado manualmente. A IA usara este porte para
+                preencher a ficha.
+              </p>
+            )}
         </div>
         <div>
           <div className="mb-1 flex items-center justify-between text-xs text-gray-600">
             <span>Preenchimento da ficha de porte</span>
-            <strong>{specificCompletion.filled}/{specificCompletion.total}</strong>
+            <strong>
+              {specificCompletion.filled}/{specificCompletion.total}
+            </strong>
           </div>
           <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200">
             <div
@@ -2392,14 +2986,23 @@ const QuickConsultation = ({
             />
           </div>
         </div>
-        {isSmallAnimal ? renderSmallAnimalSection() : renderLargeAnimalSection()}
+        {isSmallAnimal
+          ? renderSmallAnimalSection()
+          : renderLargeAnimalSection()}
       </div>
 
-      <div id="clinical-section" className="rounded-xl border border-gray-200 bg-white p-4 sm:p-6 space-y-4">
-        <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Parametros vitais</h2>
+      <div
+        id="clinical-section"
+        className="rounded-xl border border-gray-200 bg-white p-4 sm:p-6 space-y-4"
+      >
+        <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
+          Parametros vitais
+        </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Peso (kg)</label>
+            <label className="mb-1 block text-sm font-medium text-gray-700">
+              Peso (kg)
+            </label>
             <input
               type="number"
               value={weight}
@@ -2408,7 +3011,9 @@ const QuickConsultation = ({
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Temperatura (C)</label>
+            <label className="mb-1 block text-sm font-medium text-gray-700">
+              Temperatura (C)
+            </label>
             <input
               type="number"
               value={temperature}
@@ -2417,7 +3022,9 @@ const QuickConsultation = ({
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Frequencia cardiaca</label>
+            <label className="mb-1 block text-sm font-medium text-gray-700">
+              Frequencia cardiaca
+            </label>
             <input
               type="number"
               value={heartRate}
@@ -2426,7 +3033,9 @@ const QuickConsultation = ({
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Frequencia respiratoria</label>
+            <label className="mb-1 block text-sm font-medium text-gray-700">
+              Frequencia respiratoria
+            </label>
             <input
               type="number"
               value={respiratoryRate}
@@ -2482,13 +3091,27 @@ const QuickConsultation = ({
         />
 
         <div className="rounded-xl border border-gray-200 p-3">
-          <p className="text-sm font-semibold text-gray-700">Procedimento realizado?</p>
+          <p className="text-sm font-semibold text-gray-700">
+            Procedimento realizado?
+          </p>
           <div className="mt-2 flex flex-wrap gap-2">
             <label className="inline-flex items-center gap-2 rounded-full border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700">
-              <input type="radio" name="procedurePerformed" checked={procedurePerformed === "sim"} onChange={() => setProcedurePerformed("sim")} /> Sim
+              <input
+                type="radio"
+                name="procedurePerformed"
+                checked={procedurePerformed === "sim"}
+                onChange={() => setProcedurePerformed("sim")}
+              />{" "}
+              Sim
             </label>
             <label className="inline-flex items-center gap-2 rounded-full border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700">
-              <input type="radio" name="procedurePerformed" checked={procedurePerformed === "nao"} onChange={() => setProcedurePerformed("nao")} /> Nao
+              <input
+                type="radio"
+                name="procedurePerformed"
+                checked={procedurePerformed === "nao"}
+                onChange={() => setProcedurePerformed("nao")}
+              />{" "}
+              Nao
             </label>
           </div>
           {procedurePerformed === "sim" && (
@@ -2506,13 +3129,27 @@ const QuickConsultation = ({
         </div>
 
         <div className="rounded-xl border border-gray-200 p-3">
-          <p className="text-sm font-semibold text-gray-700">Medicacao prescrita?</p>
+          <p className="text-sm font-semibold text-gray-700">
+            Medicacao prescrita?
+          </p>
           <div className="mt-2 flex flex-wrap gap-2">
             <label className="inline-flex items-center gap-2 rounded-full border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700">
-              <input type="radio" name="medicationPrescribed" checked={medicationPrescribed === "sim"} onChange={() => setMedicationPrescribed("sim")} /> Sim
+              <input
+                type="radio"
+                name="medicationPrescribed"
+                checked={medicationPrescribed === "sim"}
+                onChange={() => setMedicationPrescribed("sim")}
+              />{" "}
+              Sim
             </label>
             <label className="inline-flex items-center gap-2 rounded-full border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700">
-              <input type="radio" name="medicationPrescribed" checked={medicationPrescribed === "nao"} onChange={() => setMedicationPrescribed("nao")} /> Nao
+              <input
+                type="radio"
+                name="medicationPrescribed"
+                checked={medicationPrescribed === "nao"}
+                onChange={() => setMedicationPrescribed("nao")}
+              />{" "}
+              Nao
             </label>
           </div>
           {medicationPrescribed === "sim" && (
@@ -2530,13 +3167,27 @@ const QuickConsultation = ({
         </div>
 
         <div className="rounded-xl border border-gray-200 p-3">
-          <p className="text-sm font-semibold text-gray-700">Exame complementar solicitado?</p>
+          <p className="text-sm font-semibold text-gray-700">
+            Exame complementar solicitado?
+          </p>
           <div className="mt-2 flex flex-wrap gap-2">
             <label className="inline-flex items-center gap-2 rounded-full border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700">
-              <input type="radio" name="examRequested" checked={examRequested === "sim"} onChange={() => setExamRequested("sim")} /> Sim
+              <input
+                type="radio"
+                name="examRequested"
+                checked={examRequested === "sim"}
+                onChange={() => setExamRequested("sim")}
+              />{" "}
+              Sim
             </label>
             <label className="inline-flex items-center gap-2 rounded-full border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700">
-              <input type="radio" name="examRequested" checked={examRequested === "nao"} onChange={() => setExamRequested("nao")} /> Nao
+              <input
+                type="radio"
+                name="examRequested"
+                checked={examRequested === "nao"}
+                onChange={() => setExamRequested("nao")}
+              />{" "}
+              Nao
             </label>
           </div>
           {examRequested === "sim" && (
@@ -2562,7 +3213,10 @@ const QuickConsultation = ({
           placeholder="Observacoes gerais"
         />
 
-        <div id="followup-section" className="rounded-xl border border-gray-200 p-3 space-y-3">
+        <div
+          id="followup-section"
+          className="rounded-xl border border-gray-200 p-3 space-y-3"
+        >
           <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
             <input
               type="checkbox"
@@ -2694,10 +3348,3 @@ const QuickConsultation = ({
 };
 
 export default QuickConsultation;
-
-
-
-
-
-
-

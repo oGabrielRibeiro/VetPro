@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import FeedbackBanner from "./FeedbackBanner";
 import AppIcon from "./AppIcon";
 
@@ -43,7 +43,7 @@ const ConsultationForm = ({
     birdType: "",
   });
 
-  // Atualizar dados do veterinário quando usuário mudar
+  // Atualizar dados do veterinÃ¡rio quando usuÃ¡rio mudar
   useEffect(() => {
     if (currentUser) {
       setForm(prev => ({
@@ -54,10 +54,10 @@ const ConsultationForm = ({
     }
   }, [currentUser]);
 
-  // Resetar campos específicos quando paciente mudar
+  // Resetar campos especÃ­ficos quando paciente mudar
   useEffect(() => {
     if (form.patientId) {
-      // Resetar campos específicos da espécie
+      // Resetar campos especÃ­ficos da espÃ©cie
       setForm(prev => ({
         ...prev,
         vaccinationStatus: "",
@@ -109,7 +109,7 @@ const ConsultationForm = ({
     if (!patient) return null;
     
     switch(patient.species) {
-      case "Mamífero":
+      case "MamÃ­fero":
         switch(patient.subcategory) {
           case "Canino":
           case "Felino":
@@ -118,7 +118,7 @@ const ConsultationForm = ({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
-                      Vacinação em dia?
+                      VacinaÃ§Ã£o em dia?
                     </label>
                     <select
                       value={form.vaccinationStatus}
@@ -128,34 +128,34 @@ const ConsultationForm = ({
                       <option value="">Selecione</option>
                       <option value="Em dia">Em dia</option>
                       <option value="Atrasada">Atrasada</option>
-                      <option value="Não aplicável">Não aplicável</option>
+                      <option value="NÃ£o aplicÃ¡vel">NÃ£o aplicÃ¡vel</option>
                     </select>
                   </div>
                   
                   <div>
                     <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
-                      Vermifugação
+                      VermifugaÃ§Ã£o
                     </label>
                     <input
                       type="text"
                       value={form.deworming}
                       onChange={(e) => setForm({...form, deworming: e.target.value})}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
-                      placeholder="Ex: Realizada há 2 meses"
+                      placeholder="Ex: Realizada hÃ¡ 2 meses"
                     />
                   </div>
                 </div>
                 
                 <div>
                   <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
-                    Alimentação
+                    AlimentaÃ§Ã£o
                   </label>
                   <input
                     type="text"
                     value={form.diet}
                     onChange={(e) => setForm({...form, diet: e.target.value})}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
-                    placeholder="Ex: Ração premium, 2x ao dia"
+                    placeholder="Ex: RaÃ§Ã£o premium, 2x ao dia"
                   />
                 </div>
                 
@@ -168,7 +168,7 @@ const ConsultationForm = ({
                     value={form.housing}
                     onChange={(e) => setForm({...form, housing: e.target.value})}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
-                    placeholder="Ex: Apartamento, acesso à varanda"
+                    placeholder="Ex: Apartamento, acesso Ã  varanda"
                   />
                 </div>
               </>
@@ -186,7 +186,7 @@ const ConsultationForm = ({
                     value={form.managementType}
                     onChange={(e) => setForm({...form, managementType: e.target.value})}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
-                    placeholder="Ex: Pastagem, estábulo"
+                    placeholder="Ex: Pastagem, estÃ¡bulo"
                   />
                 </div>
                 
@@ -202,21 +202,21 @@ const ConsultationForm = ({
                     <option value="">Selecione</option>
                     <option value="Esporte">Esporte</option>
                     <option value="Trabalho">Trabalho</option>
-                    <option value="Reprodução">Reprodução</option>
+                    <option value="ReproduÃ§Ã£o">ReproduÃ§Ã£o</option>
                     <option value="Lazer">Lazer</option>
                   </select>
                 </div>
                 
                 <div>
                   <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
-                    Histórico de casqueamento
+                    HistÃ³rico de casqueamento
                   </label>
                   <input
                     type="text"
                     value={form.hoofCare}
                     onChange={(e) => setForm({...form, hoofCare: e.target.value})}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
-                    placeholder="Ex: Realizado há 6 semanas"
+                    placeholder="Ex: Realizado hÃ¡ 6 semanas"
                   />
                 </div>
               </>
@@ -227,7 +227,7 @@ const ConsultationForm = ({
               <>
                 <div>
                   <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
-                    Sistema de produção
+                    Sistema de produÃ§Ã£o
                   </label>
                   <select
                     value={form.productionSystem}
@@ -243,7 +243,7 @@ const ConsultationForm = ({
                 
                 <div>
                   <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
-                    Lote/Identificação do animal
+                    Lote/IdentificaÃ§Ã£o do animal
                   </label>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <input
@@ -258,21 +258,21 @@ const ConsultationForm = ({
                       value={form.animalIdentification}
                       onChange={(e) => setForm({...form, animalIdentification: e.target.value})}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
-                      placeholder="Ex: Brinco eletrônico #123"
+                      placeholder="Ex: Brinco eletrÃ´nico #123"
                     />
                   </div>
                 </div>
                 
                 <div>
                   <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
-                    Status sanitário do rebanho
+                    Status sanitÃ¡rio do rebanho
                   </label>
                   <input
                     type="text"
                     value={form.herdHealthStatus}
                     onChange={(e) => setForm({...form, herdHealthStatus: e.target.value})}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
-                    placeholder="Ex: Vacinação em dia, sem surtos recentes"
+                    placeholder="Ex: VacinaÃ§Ã£o em dia, sem surtos recentes"
                   />
                 </div>
               </>
@@ -294,13 +294,13 @@ const ConsultationForm = ({
                 value={form.birdType}
                 onChange={(e) => setForm({...form, birdType: e.target.value})}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
-                placeholder="Ex: Papagaio, Canário, Avestruz"
+                placeholder="Ex: Papagaio, CanÃ¡rio, Avestruz"
               />
             </div>
             
             <div>
               <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
-                Ambiente de criação
+                Ambiente de criaÃ§Ã£o
               </label>
               <select
                 value={form.housing}
@@ -324,7 +324,7 @@ const ConsultationForm = ({
                 value={form.diet}
                 onChange={(e) => setForm({...form, diet: e.target.value})}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
-                placeholder="Ex: Ração específica, sementes, frutas"
+                placeholder="Ex: RaÃ§Ã£o especÃ­fica, sementes, frutas"
               />
             </div>
           </>
@@ -340,7 +340,7 @@ const ConsultationForm = ({
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 sm:p-6">
         <div className="flex justify-between items-start mb-6 no-print">
           <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-800">
-            Visualização do Prontuário
+            VisualizaÃ§Ã£o do ProntuÃ¡rio
           </h1>
           <div className="flex space-x-3">
             <button
@@ -367,13 +367,13 @@ const ConsultationForm = ({
           <div className="border-b border-gray-300 pb-4">
             <div className="flex justify-between items-start">
               <div>
-                <h1 className="text-2xl font-bold text-gray-800">PRONTUÁRIO CLÍNICO VETERINÁRIO</h1>
-                <p className="text-gray-600 mt-1">{currentUser?.clinicName || "Clínica VetCare"}</p>
-                <p className="text-gray-600">{currentUser?.clinicAddress || "Av. Paulista, 1000 - São Paulo/SP"}</p>
+                <h1 className="text-2xl font-bold text-gray-800">PRONTUÃRIO CLÃNICO VETERINÃRIO</h1>
+                <p className="text-gray-600 mt-1">{currentUser?.clinicName || "ClÃ­nica VetCare"}</p>
+                <p className="text-gray-600">{currentUser?.clinicAddress || "Av. Paulista, 1000 - SÃ£o Paulo/SP"}</p>
               </div>
               <div className="text-right">
                 <p className="font-bold text-lg">
-                  Nº {form.recordNumber || `VET-${new Date().getFullYear()}-${String(1).padStart(3, '0')}`}
+                  NÂº {form.recordNumber || `VET-${new Date().getFullYear()}-${String(1).padStart(3, '0')}`}
                 </p>
                 <p className="text-gray-600">{new Date(form.date).toLocaleDateString('pt-BR')}</p>
               </div>
@@ -391,7 +391,7 @@ const ConsultationForm = ({
                     <p className="ml-2">{getPatientById(form.patientId)?.name}</p>
                   </div>
                   <div>
-                    <span className="font-medium text-gray-700">Espécie:</span>
+                    <span className="font-medium text-gray-700">EspÃ©cie:</span>
                     <p className="ml-2">{getPatientById(form.patientId)?.species}</p>
                   </div>
                   {getPatientById(form.patientId)?.subcategory && (
@@ -401,7 +401,7 @@ const ConsultationForm = ({
                     </div>
                   )}
                   <div>
-                    <span className="font-medium text-gray-700">Raça:</span>
+                    <span className="font-medium text-gray-700">RaÃ§a:</span>
                     <p className="ml-2">{getPatientById(form.patientId)?.breed}</p>
                   </div>
                   <div>
@@ -435,7 +435,7 @@ const ConsultationForm = ({
           
           {/* Veterinarian Information */}
           <div className="border-b border-gray-200 pb-6">
-            <h2 className="font-bold text-lg text-gray-800 mb-3">DADOS DO VETERINÁRIO</h2>
+            <h2 className="font-bold text-lg text-gray-800 mb-3">DADOS DO VETERINÃRIO</h2>
             <div className="space-y-2">
               <div>
                 <span className="font-medium text-gray-700">Nome:</span>
@@ -452,33 +452,33 @@ const ConsultationForm = ({
           <div className="space-y-6">
             <div>
               <h2 className="font-bold text-lg text-gray-800 mb-3">QUEIXA PRINCIPAL</h2>
-              <p className="text-gray-700 whitespace-pre-line">{form.chiefComplaint || "Não informado"}</p>
+              <p className="text-gray-700 whitespace-pre-line">{form.chiefComplaint || "NÃ£o informado"}</p>
             </div>
             
             <div>
               <h2 className="font-bold text-lg text-gray-800 mb-3">ANAMNESE</h2>
-              <p className="text-gray-700 whitespace-pre-line">{form.anamnesis || "Não informado"}</p>
+              <p className="text-gray-700 whitespace-pre-line">{form.anamnesis || "NÃ£o informado"}</p>
             </div>
             
             {form.vaccinationStatus && (
               <div>
-                <h2 className="font-bold text-lg text-gray-800 mb-3">INFORMAÇÕES ESPECÍFICAS</h2>
+                <h2 className="font-bold text-lg text-gray-800 mb-3">INFORMAÃ‡Ã•ES ESPECÃFICAS</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {form.vaccinationStatus && (
                     <div>
-                      <span className="font-medium text-gray-700">Vacinação:</span>
+                      <span className="font-medium text-gray-700">VacinaÃ§Ã£o:</span>
                       <p className="ml-2">{form.vaccinationStatus}</p>
                     </div>
                   )}
                   {form.deworming && (
                     <div>
-                      <span className="font-medium text-gray-700">Vermifugação:</span>
+                      <span className="font-medium text-gray-700">VermifugaÃ§Ã£o:</span>
                       <p className="ml-2">{form.deworming}</p>
                     </div>
                   )}
                   {form.diet && (
                     <div>
-                      <span className="font-medium text-gray-700">Alimentação:</span>
+                      <span className="font-medium text-gray-700">AlimentaÃ§Ã£o:</span>
                       <p className="ml-2">{form.diet}</p>
                     </div>
                   )}
@@ -508,7 +508,7 @@ const ConsultationForm = ({
                   )}
                   {form.productionSystem && (
                     <div>
-                      <span className="font-medium text-gray-700">Sistema de Produção:</span>
+                      <span className="font-medium text-gray-700">Sistema de ProduÃ§Ã£o:</span>
                       <p className="ml-2">{form.productionSystem}</p>
                     </div>
                   )}
@@ -520,13 +520,13 @@ const ConsultationForm = ({
                   )}
                   {form.animalIdentification && (
                     <div>
-                      <span className="font-medium text-gray-700">Identificação:</span>
+                      <span className="font-medium text-gray-700">IdentificaÃ§Ã£o:</span>
                       <p className="ml-2">{form.animalIdentification}</p>
                     </div>
                   )}
                   {form.herdHealthStatus && (
                     <div>
-                      <span className="font-medium text-gray-700">Status Sanitário:</span>
+                      <span className="font-medium text-gray-700">Status SanitÃ¡rio:</span>
                       <p className="ml-2">{form.herdHealthStatus}</p>
                     </div>
                   )}
@@ -541,23 +541,23 @@ const ConsultationForm = ({
             )}
             
             <div>
-              <h2 className="font-bold text-lg text-gray-800 mb-3">AVALIAÇÃO CLÍNICA</h2>
-              <p className="text-gray-700 whitespace-pre-line">{form.clinicalAssessment || "Não informado"}</p>
+              <h2 className="font-bold text-lg text-gray-800 mb-3">AVALIAÃ‡ÃƒO CLÃNICA</h2>
+              <p className="text-gray-700 whitespace-pre-line">{form.clinicalAssessment || "NÃ£o informado"}</p>
             </div>
             
             <div>
-              <h2 className="font-bold text-lg text-gray-800 mb-3">DIAGNÓSTICO</h2>
-              <p className="text-gray-700 whitespace-pre-line">{form.diagnosis || "Não informado"}</p>
+              <h2 className="font-bold text-lg text-gray-800 mb-3">DIAGNÃ“STICO</h2>
+              <p className="text-gray-700 whitespace-pre-line">{form.diagnosis || "NÃ£o informado"}</p>
             </div>
             
             <div>
               <h2 className="font-bold text-lg text-gray-800 mb-3">CONDUTA / TRATAMENTO</h2>
-              <p className="text-gray-700 whitespace-pre-line">{form.treatment || "Não informado"}</p>
+              <p className="text-gray-700 whitespace-pre-line">{form.treatment || "NÃ£o informado"}</p>
             </div>
             
             <div>
-              <h2 className="font-bold text-lg text-gray-800 mb-3">OBSERVAÇÕES</h2>
-              <p className="text-gray-700 whitespace-pre-line">{form.observations || "Não informado"}</p>
+              <h2 className="font-bold text-lg text-gray-800 mb-3">OBSERVAÃ‡Ã•ES</h2>
+              <p className="text-gray-700 whitespace-pre-line">{form.observations || "NÃ£o informado"}</p>
             </div>
           </div>
           
@@ -585,7 +585,7 @@ const ConsultationForm = ({
             onClick={() => setIsPreviewMode(false)}
             className="bg-gray-200 text-gray-800 font-bold py-3 px-6 rounded-xl hover:bg-gray-300 transition-colors text-sm"
           >
-            Voltar para Edição
+            Voltar para EdiÃ§Ã£o
           </button>
           <button
             onClick={() => window.print()}
@@ -602,7 +602,7 @@ const ConsultationForm = ({
   return (
     <div className="max-w-4xl mx-auto">
       <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-800 mb-4 sm:mb-6">
-        Novo Prontuário
+        Novo ProntuÃ¡rio
       </h1>
       
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
@@ -635,11 +635,11 @@ const ConsultationForm = ({
             {form.patientId && (
               <>
                 <div className="border-t border-b border-gray-200 py-4">
-                  <h3 className="font-bold text-gray-800 mb-4">Informações do Veterinário</h3>
+                  <h3 className="font-bold text-gray-800 mb-4">InformaÃ§Ãµes do VeterinÃ¡rio</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
-                        Nome do Veterinário
+                        Nome do VeterinÃ¡rio
                       </label>
                       <input
                         type="text"
@@ -686,7 +686,7 @@ const ConsultationForm = ({
                     value={form.chiefComplaint}
                     onChange={(e) => setForm({...form, chiefComplaint: e.target.value})}
                     className="w-full px-3 py-2 sm:px-4 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 min-h-[60px] sm:min-h-[80px] text-sm"
-                    placeholder="Ex: Coceira excessiva, Vômitos, Perda de apetite"
+                    placeholder="Ex: Coceira excessiva, VÃ´mitos, Perda de apetite"
                     required
                   />
                 </div>
@@ -699,7 +699,7 @@ const ConsultationForm = ({
                     value={form.anamnesis}
                     onChange={(e) => setForm({...form, anamnesis: e.target.value})}
                     className="w-full px-3 py-2 sm:px-4 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 min-h-[80px] sm:min-h-[100px] text-sm"
-                    placeholder="Histórico do problema atual, duração, sintomas associados, etc."
+                    placeholder="HistÃ³rico do problema atual, duraÃ§Ã£o, sintomas associados, etc."
                   />
                 </div>
                 
@@ -707,25 +707,25 @@ const ConsultationForm = ({
                 
                 <div>
                   <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
-                    Avaliação Clínica
+                    AvaliaÃ§Ã£o ClÃ­nica
                   </label>
                   <textarea
                     value={form.clinicalAssessment}
                     onChange={(e) => setForm({...form, clinicalAssessment: e.target.value})}
                     className="w-full px-3 py-2 sm:px-4 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 min-h-[80px] sm:min-h-[100px] text-sm"
-                    placeholder="Exame físico, sinais vitais, achados relevantes"
+                    placeholder="Exame fÃ­sico, sinais vitais, achados relevantes"
                   />
                 </div>
                 
                 <div>
                   <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
-                    Diagnóstico
+                    DiagnÃ³stico
                   </label>
                   <textarea
                     value={form.diagnosis}
                     onChange={(e) => setForm({...form, diagnosis: e.target.value})}
                     className="w-full px-3 py-2 sm:px-4 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 min-h-[60px] sm:min-h-[80px] text-sm"
-                    placeholder="Diagnóstico provisório ou definitivo"
+                    placeholder="DiagnÃ³stico provisÃ³rio ou definitivo"
                   />
                 </div>
                 
@@ -737,19 +737,19 @@ const ConsultationForm = ({
                     value={form.treatment}
                     onChange={(e) => setForm({...form, treatment: e.target.value})}
                     className="w-full px-3 py-2 sm:px-4 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 min-h-[80px] sm:min-h-[100px] text-sm"
-                    placeholder="Medicações prescritas, procedimentos realizados, orientações"
+                    placeholder="MedicaÃ§Ãµes prescritas, procedimentos realizados, orientaÃ§Ãµes"
                   />
                 </div>
                 
                 <div>
                   <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
-                    Observações
+                    ObservaÃ§Ãµes
                   </label>
                   <textarea
                     value={form.observations}
                     onChange={(e) => setForm({...form, observations: e.target.value})}
                     className="w-full px-3 py-2 sm:px-4 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 min-h-[60px] sm:min-h-[80px] text-sm"
-                    placeholder="Observações adicionais, recomendações para o tutor, etc."
+                    placeholder="ObservaÃ§Ãµes adicionais, recomendaÃ§Ãµes para o tutor, etc."
                   />
                 </div>
                 
@@ -779,7 +779,7 @@ const ConsultationForm = ({
                           : "Clique para anexar arquivos ou arraste e solte aqui"}
                       </p>
                       <p className="text-[10px] sm:text-xs text-gray-500 mt-1">
-                        Suporta imagens (JPG, PNG) e PDFs. Máximo de 10MB por arquivo.
+                        Suporta imagens (JPG, PNG) e PDFs. MÃ¡ximo de 10MB por arquivo.
                       </p>
                     </label>
                   </div>
@@ -793,7 +793,7 @@ const ConsultationForm = ({
                         >
                           <div className="flex items-center space-x-2 sm:space-x-3">
                             <span className="text-xl sm:text-2xl">
-                              {file.type.startsWith('image/') ? '🖼️' : '📄'}
+                              {file.type.startsWith('image/') ? 'ðŸ–¼ï¸' : 'ðŸ“„'}
                             </span>
                             <div>
                               <p className="font-medium text-[10px] sm:text-xs truncate max-w-[150px] sm:max-w-xs">{file.name}</p>
@@ -807,7 +807,7 @@ const ConsultationForm = ({
                             onClick={() => setSelectedFiles(prev => prev.filter((_, i) => i !== index))}
                             className="text-gray-400 hover:text-red-500 text-lg"
                           >
-                            ✕
+                            âœ•
                           </button>
                         </div>
                       ))}
@@ -819,7 +819,7 @@ const ConsultationForm = ({
                   <button
                     type="button"
                     onClick={onCancel}
-                    className="w-full sm:w-auto bg-gray-200 text-gray-800 font-bold py-2.5 sm:py-3 px-4 sm:px-6 rounded-xl hover:bg-gray-300 transition-colors text-sm"
+                    className="w-full sm:w-auto bg-gray-200 dark:bg-dark-700 text-gray-800 dark:text-white font-bold py-2.5 sm:py-3 px-4 sm:px-6 rounded-xl hover:bg-gray-300 dark:hover:bg-dark-600 transition-colors text-sm"
                   >
                     Cancelar
                   </button>

@@ -1,78 +1,78 @@
-import React, { useEffect, useState } from 'react';
-import { useForm, Controller } from 'react-hook-form';
-import { yupResolver } from '@hookform/resolvers/yup';
-import Input from './Input';
-import Select from './Select';
-import DatePicker from './DatePicker';
-import { patientSchema } from '../utils/validationSchemas';
-import { formatPhone } from '../utils/validationSchemas';
+﻿import React, { useEffect, useState } from "react";
+import { useForm, Controller } from "react-hook-form";
+import { yupResolver } from "@hookform/resolvers/yup";
+import Input from "./Input";
+import Select from "./Select";
+import DatePicker from "./DatePicker";
+import { patientSchema } from "../utils/validationSchemas";
+import { formatPhone } from "../utils/validationSchemas";
 
 // Mapeamento de porte por subcategoria
 const porteMap = {
   // Grande porte
-  "Equino": "Grande",
-  "Bovino": "Grande",
-  "Suíno": "Grande",
-  // Médio porte
-  "Caprino": "Médio",
-  "Ovino": "Médio",
+  Equino: "Grande",
+  Bovino: "Grande",
+  "SuÃ­no": "Grande",
+  // MÃ©dio porte
+  Caprino: "MÃ©dio",
+  Ovino: "MÃ©dio",
   // Pequeno porte
-  "Canino": "Pequeno",
-  "Felino": "Pequeno",
+  Canino: "Pequeno",
+  Felino: "Pequeno",
 };
 
-// Função para calcular idade a partir da data de nascimento
+// FunÃ§Ã£o para calcular idade a partir da data de nascimento
 const calculateAge = (birthDate) => {
   if (!birthDate) return null;
-  
+
   const today = new Date();
   const birth = new Date(birthDate);
-  
+
   let years = today.getFullYear() - birth.getFullYear();
   let months = today.getMonth() - birth.getMonth();
-  
-  // Ajusta se o mês de nascimento ainda não passou este ano
+
+  // Ajusta se o mÃªs de nascimento ainda nÃ£o passou este ano
   if (months < 0 || (months === 0 && today.getDate() < birth.getDate())) {
     years--;
     months += 12;
   }
-  
-  // Ajusta se o dia ainda não passou neste mês
+
+  // Ajusta se o dia ainda nÃ£o passou neste mÃªs
   if (today.getDate() < birth.getDate()) {
     months--;
     if (months < 0) months += 12;
   }
-  
-  // Retorna objeto com idade formatada (anos e meses) e número
+
+  // Retorna objeto com idade formatada (anos e meses) e nÃºmero
   if (years > 0 && months > 0) {
-    return { 
-      formatted: `${years} Ano${years > 1 ? 's' : ''}, ${months} Mês${months > 1 ? 'es' : ''}`, 
-      numeric: years 
+    return {
+      formatted: `${years} Ano${years > 1 ? "s" : ""}, ${months} MÃªs${months > 1 ? "es" : ""}`,
+      numeric: years,
     };
   } else if (years > 0) {
-    return { 
-      formatted: `${years} Ano${years > 1 ? 's' : ''}`, 
-      numeric: years 
+    return {
+      formatted: `${years} Ano${years > 1 ? "s" : ""}`,
+      numeric: years,
     };
   } else if (months > 0) {
-    return { 
-      formatted: `${months} Mês${months > 1 ? 'es' : ''}`, 
-      numeric: 0 
+    return {
+      formatted: `${months} MÃªs${months > 1 ? "es" : ""}`,
+      numeric: 0,
     };
   } else {
-    return { formatted: 'Recém-nascido', numeric: 0 };
+    return { formatted: "RecÃ©m-nascido", numeric: 0 };
   }
 };
 
 const PatientForm = ({ patient, onSubmit, onCancel, isEditing }) => {
   const [calculatedAge, setCalculatedAge] = useState(null);
-  
+
   const speciesOptions = [
-    { value: "Mamífero", label: "Mamífero" },
+    { value: "MamÃ­fero", label: "MamÃ­fero" },
     { value: "Ave", label: "Ave" },
-    { value: "Réptil", label: "Réptil" },
+    { value: "RÃ©ptil", label: "RÃ©ptil" },
     { value: "Peixe", label: "Peixe" },
-    { value: "Anfíbio", label: "Anfíbio" },
+    { value: "AnfÃ­bio", label: "AnfÃ­bio" },
     { value: "Outro", label: "Outro" },
   ];
 
@@ -83,18 +83,18 @@ const PatientForm = ({ patient, onSubmit, onCancel, isEditing }) => {
     { value: "Bovino", label: "Bovino" },
     { value: "Caprino", label: "Caprino" },
     { value: "Ovino", label: "Ovino" },
-    { value: "Suíno", label: "Suíno" },
+    { value: "SuÃ­no", label: "SuÃ­no" },
     { value: "Outro", label: "Outro" },
   ];
 
   const sexOptions = [
     { value: "Macho", label: "Macho" },
-    { value: "Fêmea", label: "Fêmea" },
+    { value: "FÃªmea", label: "FÃªmea" },
   ];
 
   const porteOptions = [
     { value: "Pequeno", label: "Pequeno" },
-    { value: "Médio", label: "Médio" },
+    { value: "MÃ©dio", label: "MÃ©dio" },
     { value: "Grande", label: "Grande" },
     { value: "Gigante", label: "Gigante" },
   ];
@@ -142,7 +142,7 @@ const PatientForm = ({ patient, onSubmit, onCancel, isEditing }) => {
       const ageResult = calculateAge(birthDateValue);
       if (ageResult) {
         setCalculatedAge(ageResult);
-        // Define o valor numérico para o campo age (para o backend)
+        // Define o valor numÃ©rico para o campo age (para o backend)
         setValue("age", ageResult.numeric, { shouldValidate: true });
       }
     } else {
@@ -164,16 +164,16 @@ const PatientForm = ({ patient, onSubmit, onCancel, isEditing }) => {
     setValue(fieldName, formatted, { shouldValidate: false });
   };
 
-  // Handler para quando o usuário digita manualmente a idade
+  // Handler para quando o usuÃ¡rio digita manualmente a idade
   const handleAgeChange = (e) => {
-    // Limpa o erro de birthDate se o usuário começar a digitar idade manualmente
+    // Limpa o erro de birthDate se o usuÃ¡rio comeÃ§ar a digitar idade manualmente
     if (birthDateValue) {
       clearErrors("birthDate");
     }
     setCalculatedAge(null);
-    // Aceita o valor digitado (pode ser string ou número)
+    // Aceita o valor digitado (pode ser string ou nÃºmero)
     const value = e.target.value;
-    // Tenta converter para número se for possível
+    // Tenta converter para nÃºmero se for possÃ­vel
     const numericValue = parseInt(value);
     if (!isNaN(numericValue)) {
       setValue("age", numericValue, { shouldValidate: true });
@@ -184,11 +184,14 @@ const PatientForm = ({ patient, onSubmit, onCancel, isEditing }) => {
 
   const onFormSubmit = (data) => {
     console.log("Form submitted with data:", data);
-    // Garante que age e weight sejam números para o backend
+    // Garante que age e weight sejam nÃºmeros para o backend
     const submissionData = {
       ...data,
-      age: typeof data.age === 'string' ? parseInt(data.age) || null : data.age,
-      weight: typeof data.weight === 'string' ? parseFloat(data.weight) || null : data.weight,
+      age: typeof data.age === "string" ? parseInt(data.age) || null : data.age,
+      weight:
+        typeof data.weight === "string"
+          ? parseFloat(data.weight) || null
+          : data.weight,
       porte: data.porte ? data.porte.toLowerCase() : null,
     };
     console.log("Data to submit:", submissionData);
@@ -200,19 +203,30 @@ const PatientForm = ({ patient, onSubmit, onCancel, isEditing }) => {
     // Validar todos os campos primeiro
     const isValid = await trigger();
     console.log("Validation result:", isValid);
-    
+
     if (isValid) {
       const data = getValues();
       console.log("Raw form data:", JSON.stringify(data));
-      
-      // Garante que age e weight sejam números para o backend, e porte em minúsculo
+
+      // Garante que age e weight sejam nÃºmeros para o backend, e porte em minÃºsculo
       const submissionData = {
         ...data,
-        age: data.age ? (typeof data.age === 'string' ? parseInt(data.age, 10) || null : data.age) : null,
-        weight: data.weight ? (typeof data.weight === 'string' ? parseFloat(data.weight) || null : data.weight) : null,
+        age: data.age
+          ? typeof data.age === "string"
+            ? parseInt(data.age, 10) || null
+            : data.age
+          : null,
+        weight: data.weight
+          ? typeof data.weight === "string"
+            ? parseFloat(data.weight) || null
+            : data.weight
+          : null,
         porte: data.porte ? String(data.porte).toLowerCase() : null,
       };
-      console.log("Form data after conversion:", JSON.stringify(submissionData));
+      console.log(
+        "Form data after conversion:",
+        JSON.stringify(submissionData),
+      );
       onSubmit(submissionData);
     } else {
       console.log("Form has validation errors, not submitting");
@@ -221,16 +235,18 @@ const PatientForm = ({ patient, onSubmit, onCancel, isEditing }) => {
 
   return (
     <div className="max-w-2xl mx-auto pb-28 sm:pb-24">
-      <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-800 mb-4 sm:mb-6">
+      <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-800 dark:text-white mb-4 sm:mb-6">
         {isEditing ? "Editar Paciente" : "Novo Paciente"}
       </h1>
-      
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 sm:p-6">
+
+      <div className="bg-white dark:bg-dark-800 rounded-xl border border-gray-200 dark:border-dark-700 shadow-sm p-4 sm:p-6">
         <form className="space-y-4 sm:space-y-6">
-          {/* Seção: Identificação do Paciente */}
-          <div className="border-b border-gray-200 pb-4">
-            <h3 className="text-lg font-semibold text-gray-800 mb-3">Dados do Paciente</h3>
-            
+          {/* SeÃ§Ã£o: IdentificaÃ§Ã£o do Paciente */}
+          <div className="border-b border-gray-200 dark:border-dark-700 pb-4">
+            <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-3">
+              Dados do Paciente
+            </h3>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Input
                 label="Nome do Paciente"
@@ -239,16 +255,16 @@ const PatientForm = ({ patient, onSubmit, onCancel, isEditing }) => {
                 error={errors.name?.message}
                 {...register("name")}
               />
-              
+
               <Select
-                label="Espécie"
+                label="EspÃ©cie"
                 options={speciesOptions}
                 required
                 error={errors.species?.message}
                 {...register("species")}
               />
-              
-              {selectedSpecies === "Mamífero" && (
+
+              {selectedSpecies === "MamÃ­fero" && (
                 <Select
                   label="Subcategoria"
                   options={subcategoryOptions}
@@ -257,22 +273,22 @@ const PatientForm = ({ patient, onSubmit, onCancel, isEditing }) => {
                   {...register("subcategory")}
                 />
               )}
-              
+
               <Input
-                label="Raça"
-                placeholder="Ex: Labrador, Siamês"
+                label="RaÃ§a"
+                placeholder="Ex: Labrador, SiamÃªs"
                 required
                 error={errors.breed?.message}
                 {...register("breed")}
               />
-              
+
               <Select
                 label="Sexo"
                 options={sexOptions}
                 error={errors.sex?.message}
                 {...register("sex")}
               />
-              
+
               {/* DatePicker com Controller para react-hook-form */}
               <Controller
                 name="birthDate"
@@ -287,23 +303,27 @@ const PatientForm = ({ patient, onSubmit, onCancel, isEditing }) => {
                   />
                 )}
               />
-              
+
               {/* Campo de idade - calculado automaticamente ou manual */}
               <div>
                 <Input
                   label="Idade"
-                  placeholder={calculatedAge ? calculatedAge.formatted : "Ex: 3 Anos, 6 Meses"}
+                  placeholder={
+                    calculatedAge
+                      ? calculatedAge.formatted
+                      : "Ex: 3 Anos, 6 Meses"
+                  }
                   value={calculatedAge ? calculatedAge.numeric : undefined}
                   error={errors.age?.message}
                   onChange={handleAgeChange}
                 />
                 {calculatedAge && (
-                  <p className="text-xs text-emerald-600 mt-1 font-medium">
-                    ✨ Calculado automaticamente
+                  <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-1 font-medium">
+                    âœ¨ Calculado automaticamente
                   </p>
                 )}
               </div>
-              
+
               <Input
                 label="Peso (kg)"
                 placeholder="Ex: 15.5"
@@ -312,21 +332,21 @@ const PatientForm = ({ patient, onSubmit, onCancel, isEditing }) => {
                 error={errors.weight?.message}
                 {...register("weight")}
               />
-              
+
               <Input
                 label="Cor"
                 placeholder="Ex: Preto, Branco"
                 error={errors.color?.message}
                 {...register("color")}
               />
-              
+
               <Input
                 label="Microchip"
-                placeholder="Número do microchip"
+                placeholder="NÃºmero do microchip"
                 error={errors.microchip?.message}
                 {...register("microchip")}
               />
-              
+
               <div>
                 <Select
                   label="Porte"
@@ -335,27 +355,29 @@ const PatientForm = ({ patient, onSubmit, onCancel, isEditing }) => {
                   {...register("porte")}
                 />
                 {selectedSubcategory && porteMap[selectedSubcategory] && (
-                  <p className="text-xs text-emerald-600 mt-1 font-medium">
-                    ✨ Calculado automaticamente para {selectedSubcategory}
+                  <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-1 font-medium">
+                    âœ¨ Calculado automaticamente para {selectedSubcategory}
                   </p>
                 )}
               </div>
             </div>
           </div>
 
-          {/* Seção: Dados do Tutor */}
+          {/* SeÃ§Ã£o: Dados do Tutor */}
           <div className="pt-4">
-            <h3 className="text-lg font-semibold text-gray-800 mb-3">Dados do Tutor</h3>
-            
+            <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-3">
+              Dados do Tutor
+            </h3>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Input
                 label="Nome do Tutor"
-                placeholder="Nome completo do responsável"
+                placeholder="Nome completo do responsÃ¡vel"
                 required
                 error={errors.ownerName?.message}
                 {...register("ownerName")}
               />
-              
+
               <Input
                 label="Telefone"
                 placeholder="(11) 99999-9999"
@@ -364,7 +386,7 @@ const PatientForm = ({ patient, onSubmit, onCancel, isEditing }) => {
                   onChange: (e) => handlePhoneChange(e, "ownerPhone"),
                 })}
               />
-              
+
               <Input
                 label="Telefone Alternativo"
                 placeholder="(11) 99999-9999"
@@ -373,7 +395,7 @@ const PatientForm = ({ patient, onSubmit, onCancel, isEditing }) => {
                   onChange: (e) => handlePhoneChange(e, "ownerAltPhone"),
                 })}
               />
-              
+
               <Input
                 label="E-mail"
                 type="email"
@@ -381,11 +403,11 @@ const PatientForm = ({ patient, onSubmit, onCancel, isEditing }) => {
                 error={errors.ownerEmail?.message}
                 {...register("ownerEmail")}
               />
-              
+
               <div className="md:col-span-2">
                 <Input
-                  label="Endereço"
-                  placeholder="Endereço completo"
+                  label="EndereÃ§o"
+                  placeholder="EndereÃ§o completo"
                   error={errors.ownerAddress?.message}
                   {...register("ownerAddress")}
                 />
@@ -393,12 +415,12 @@ const PatientForm = ({ patient, onSubmit, onCancel, isEditing }) => {
             </div>
           </div>
 
-          <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4 border-t border-gray-200">
+          <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4 border-t border-gray-200 dark:border-dark-700">
             <button
               type="button"
               onClick={onCancel}
               disabled={isSubmitting}
-              className="w-full sm:w-auto px-6 py-3 rounded-xl bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold transition-colors disabled:opacity-50"
+              className="w-full sm:w-auto px-6 py-3 rounded-xl bg-gray-200 hover:bg-gray-300 dark:bg-dark-700 dark:hover:bg-dark-600 text-gray-800 dark:text-white font-bold transition-colors disabled:opacity-50"
             >
               Cancelar
             </button>
@@ -408,7 +430,11 @@ const PatientForm = ({ patient, onSubmit, onCancel, isEditing }) => {
               onClick={handleButtonClick}
               className="w-full sm:w-auto px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-cyan-700 hover:shadow-lg text-white font-bold transition-all disabled:opacity-50"
             >
-              {isSubmitting ? "Salvando..." : (isEditing ? "Atualizar Paciente" : "Cadastrar Paciente")}
+              {isSubmitting
+                ? "Salvando..."
+                : isEditing
+                  ? "Atualizar Paciente"
+                  : "Cadastrar Paciente"}
             </button>
           </div>
         </form>

@@ -26,6 +26,7 @@ jest.mock('../lib/prisma', () => ({
   },
   clinic: {
     findFirst: jest.fn(),
+    findUnique: jest.fn(),
   },
 }));
 

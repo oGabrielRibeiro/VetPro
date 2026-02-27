@@ -803,7 +803,7 @@ const MainApp = () => {
           />
         );
 
-      case "add-patient":
+case "add-patient":
         return (
           <PatientForm
             patient={editingPatient}
@@ -1006,7 +1006,7 @@ const MainApp = () => {
               onClick={() => setCurrentView("patients")}
               className="text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white font-medium mb-4 flex items-center text-sm"
             >
-              <AppIcon name="back" className="h-4 w-4 mr-2" /><span>Voltar para Pacientes</span>
+              <span className="mr-2">&lt;-</span> Voltar para Pacientes
             </button>
 
             <div className="flex flex-col sm:flex-row sm:items-center space-y-3 sm:space-y-0 sm:space-x-3">
@@ -1391,3 +1391,5 @@ function renderProfileBubble(profileUser) {
       </span>
     );
 }
+
+
