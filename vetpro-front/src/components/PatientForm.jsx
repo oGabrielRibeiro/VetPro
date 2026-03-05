@@ -188,12 +188,20 @@ const PatientForm = ({ patient, onSubmit, onCancel, isEditing }) => {
   };
 
   return (
-    <div className="max-w-2xl mx-auto pb-28 sm:pb-24">
-      <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-800 dark:text-white mb-4 sm:mb-6">
-        {isEditing ? "Editar Paciente" : "Novo Paciente"}
-      </h1>
+    <div className="max-w-2xl mx-auto pb-28 sm:pb-24 subtle-enter space-y-4">
+      <section className="shell-surface surface-static rounded-3xl border border-gray-200/80 dark:border-dark-700/70 p-4 sm:p-5">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-gray-500 dark:text-gray-400">
+          Cadastro clinico
+        </p>
+        <h1 className="shell-title mt-1 text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white">
+          {isEditing ? "Editar paciente" : "Novo paciente"}
+        </h1>
+        <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
+          Preencha dados essenciais para iniciar prontuarios e agenda.
+        </p>
+      </section>
 
-      <div className="bg-white dark:bg-dark-800 rounded-xl border border-gray-200 dark:border-dark-700 shadow-sm p-4 sm:p-6">
+      <div className="shell-surface surface-static rounded-3xl border border-gray-200/80 dark:border-dark-700/70 p-4 sm:p-6">
         <form className="space-y-4 sm:space-y-6">
           <div className="border-b border-gray-200 dark:border-dark-700 pb-4">
             <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-3">
@@ -368,7 +376,7 @@ const PatientForm = ({ patient, onSubmit, onCancel, isEditing }) => {
               type="button"
               onClick={onCancel}
               disabled={isSubmitting}
-              className="w-full sm:w-auto px-6 py-3 rounded-xl bg-gray-200 hover:bg-gray-300 dark:bg-dark-700 dark:hover:bg-dark-600 text-gray-800 dark:text-white font-bold transition-colors disabled:opacity-50"
+              className="btn btn-neutral btn-lg w-full sm:w-auto disabled:opacity-50"
             >
               Cancelar
             </button>
@@ -376,7 +384,7 @@ const PatientForm = ({ patient, onSubmit, onCancel, isEditing }) => {
               type="button"
               disabled={isSubmitting}
               onClick={handleButtonClick}
-              className="w-full sm:w-auto px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-cyan-700 hover:shadow-lg text-white font-bold transition-all disabled:opacity-50"
+              className="btn btn-success btn-lg w-full sm:w-auto disabled:opacity-50"
             >
               {isSubmitting
                 ? "Salvando..."

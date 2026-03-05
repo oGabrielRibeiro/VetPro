@@ -98,9 +98,13 @@ function mergePatientPersistentProfile(currentProfile, nextUpdate) {
 }
 
 function normalizeConsultationData(data = {}) {
+  const rawConsultationType = String(data.consultationType || '').trim();
+  const normalizedConsultationType =
+    rawConsultationType === 'consulta' ? 'nova' : rawConsultationType;
+
   const normalized = {
     consultationType:
-      data.consultationType ||
+      normalizedConsultationType ||
       (data.template === 'return' ? 'retorno' : 'nova'),
     chiefComplaint: data.chiefComplaint || null,
     anamnesis: data.anamnesis || null,

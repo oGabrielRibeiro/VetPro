@@ -14,7 +14,7 @@ const Login = () => {
 
   const submitLabel = useMemo(() => {
     if (authLoading) return "Processando...";
-    return isRegisterMode ? "Criar Conta" : "Entrar";
+    return isRegisterMode ? "Criar conta" : "Entrar";
   }, [authLoading, isRegisterMode]);
 
   const validate = () => {
@@ -64,16 +64,51 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-cyan-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100">
-        <div className="bg-gradient-to-r from-emerald-600 to-cyan-700 p-6 text-center">
-          <div className="flex items-center justify-center space-x-3 mb-2">
-            <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-white/20 overflow-hidden">
+    <div className="app-shell-bg min-h-screen flex items-center justify-center p-3 sm:p-4">
+      <div className="w-full max-w-[980px] grid grid-cols-1 lg:grid-cols-[1.05fr_0.95fr] gap-4 subtle-enter">
+        <section className="hidden lg:flex shell-surface rounded-3xl border border-gray-200/80 dark:border-dark-700/70 p-8 flex-col justify-between">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-gray-500 dark:text-gray-400">
+              VetPro Platform
+            </p>
+            <h1 className="shell-title mt-2 text-4xl font-black text-gray-900 dark:text-white leading-tight">
+              Prontuario veterinario com padrao SaaS
+            </h1>
+            <p className="mt-3 text-sm text-gray-600 dark:text-gray-300 max-w-lg">
+              Operacao clinica, atendimento em campo e inteligencia de dados em uma
+              experiencia unica para desktop e mobile.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-3 gap-3">
+            {[
+              { label: "Modo campo", icon: "consultations" },
+              { label: "Agenda", icon: "appointments" },
+              { label: "Relatorios", icon: "reports" },
+            ].map((item) => (
+              <div
+                key={item.label}
+                className="interactive-card rounded-2xl border border-gray-200 dark:border-dark-700 bg-white/80 dark:bg-dark-800/70 p-3 text-center"
+              >
+                <span className="mx-auto mb-2 inline-flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300">
+                  <AppIcon name={item.icon} />
+                </span>
+                <p className="text-xs font-semibold text-gray-700 dark:text-gray-300">
+                  {item.label}
+                </p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="shell-surface rounded-3xl border border-gray-200/80 dark:border-dark-700/70 overflow-hidden">
+          <div className="bg-gradient-to-r from-teal-600 to-blue-700 px-5 py-6 text-center">
+            <div className="mx-auto mb-2 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-white/20 overflow-hidden">
               {!loginLogoError ? (
                 <img
                   src="/logo192.png"
                   alt="Logo VetPro"
-                  className="h-8 w-8 object-contain"
+                  className="h-9 w-9 object-contain"
                   onError={() => setLoginLogoError(true)}
                 />
               ) : (
@@ -81,130 +116,138 @@ const Login = () => {
                   <AppIcon name="patients" />
                 </span>
               )}
-            </span>
-            <h1 className="text-2xl font-bold text-white">VetPro</h1>
-          </div>
-          <p className="text-emerald-100 text-sm">
-            Sistema Profissional de Prontuarios Veterinarios
-          </p>
-        </div>
-
-        <div className="p-6">
-          <div className="flex mb-6 bg-gray-100 rounded-lg overflow-hidden">
-            <button
-              type="button"
-              onClick={() => toggleMode(false)}
-              className={`flex-1 py-2 text-sm font-medium ${
-                !isRegisterMode ? "bg-white shadow text-emerald-600" : "text-gray-600"
-              }`}
-            >
-              Entrar
-            </button>
-            <button
-              type="button"
-              onClick={() => toggleMode(true)}
-              className={`flex-1 py-2 text-sm font-medium ${
-                isRegisterMode ? "bg-white shadow text-emerald-600" : "text-gray-600"
-              }`}
-            >
-              Criar Conta
-            </button>
-          </div>
-
-          {(formError || error) && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm mb-4">
-              {formError || error}
             </div>
-          )}
+            <h2 className="shell-title text-2xl font-extrabold text-white">VetPro</h2>
+            <p className="mt-1 text-xs text-teal-100">
+              Plataforma profissional de prontuarios veterinarios
+            </p>
+          </div>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
-            {isRegisterMode && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Nome Completo
-                </label>
-                <input
-                  type="text"
-                  value={name}
-                  onChange={(e) => {
-                    setName(e.target.value);
-                    if (formError) setFormError("");
-                  }}
-                  required
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-                  placeholder="Dr(a). Joao Silva"
-                />
+          <div className="p-5 sm:p-6">
+            <div className="mb-5 grid grid-cols-2 rounded-xl border border-gray-200 dark:border-dark-700 bg-gray-50 dark:bg-dark-900 p-1">
+              <button
+                type="button"
+                onClick={() => toggleMode(false)}
+                className={`h-10 rounded-lg text-sm font-semibold transition ${
+                  !isRegisterMode
+                    ? "bg-white dark:bg-dark-800 text-emerald-700 dark:text-emerald-300 shadow-sm"
+                    : "text-gray-600 dark:text-gray-400"
+                }`}
+              >
+                Entrar
+              </button>
+              <button
+                type="button"
+                onClick={() => toggleMode(true)}
+                className={`h-10 rounded-lg text-sm font-semibold transition ${
+                  isRegisterMode
+                    ? "bg-white dark:bg-dark-800 text-emerald-700 dark:text-emerald-300 shadow-sm"
+                    : "text-gray-600 dark:text-gray-400"
+                }`}
+              >
+                Criar conta
+              </button>
+            </div>
+
+            {(formError || error) && (
+              <div className="mb-4 rounded-xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 px-3 py-2.5 text-sm text-red-700 dark:text-red-300">
+                {formError || error}
               </div>
             )}
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">E-mail</label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => {
-                  setEmail(e.target.value);
-                  if (formError) setFormError("");
-                }}
-                required
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-                placeholder="seu@email.com"
-              />
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {isRegisterMode && (
+                <div>
+                  <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                    Nome completo
+                  </label>
+                  <input
+                    type="text"
+                    value={name}
+                    onChange={(e) => {
+                      setName(e.target.value);
+                      if (formError) setFormError("");
+                    }}
+                    required
+                    className="h-11 sm:h-10 w-full rounded-xl border border-gray-300 dark:border-dark-600 bg-white dark:bg-dark-800 px-3 text-sm"
+                    placeholder="Dr(a). Joao Silva"
+                  />
+                </div>
+              )}
+
+              <div>
+                <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                  E-mail
+                </label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    if (formError) setFormError("");
+                  }}
+                  required
+                  className="h-11 sm:h-10 w-full rounded-xl border border-gray-300 dark:border-dark-600 bg-white dark:bg-dark-800 px-3 text-sm"
+                  placeholder="seu@email.com"
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                  Senha
+                </label>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    if (formError) setFormError("");
+                  }}
+                  required
+                  minLength={6}
+                  className="h-11 sm:h-10 w-full rounded-xl border border-gray-300 dark:border-dark-600 bg-white dark:bg-dark-800 px-3 text-sm"
+                  placeholder="••••••••"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={authLoading}
+                className={`btn btn-success btn-lg btn-block ${
+                  authLoading ? "opacity-75 cursor-not-allowed" : ""
+                }`}
+              >
+                {submitLabel}
+              </button>
+            </form>
+
+            <div className="mt-5 text-center text-sm text-gray-600 dark:text-gray-300">
+              {isRegisterMode ? (
+                <>
+                  Ja possui conta?{" "}
+                  <button
+                    type="button"
+                    onClick={() => toggleMode(false)}
+                    className="font-semibold text-emerald-700 dark:text-emerald-300"
+                  >
+                    Entrar
+                  </button>
+                </>
+              ) : (
+                <>
+                  Novo na plataforma?{" "}
+                  <button
+                    type="button"
+                    onClick={() => toggleMode(true)}
+                    className="font-semibold text-emerald-700 dark:text-emerald-300"
+                  >
+                    Criar conta
+                  </button>
+                </>
+              )}
             </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Senha</label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => {
-                  setPassword(e.target.value);
-                  if (formError) setFormError("");
-                }}
-                required
-                minLength={6}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-                placeholder="••••••••"
-              />
-            </div>
-
-            <button
-              type="submit"
-              disabled={authLoading}
-              className={`w-full bg-gradient-to-r from-emerald-600 to-cyan-700 text-white font-bold py-3 px-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 ${
-                authLoading ? "opacity-75 cursor-not-allowed" : ""
-              }`}
-            >
-              {submitLabel}
-            </button>
-          </form>
-
-          <div className="mt-6 text-center text-sm text-gray-600">
-            {isRegisterMode ? (
-              <>
-                Ja possui conta?{" "}
-                <button
-                  type="button"
-                  onClick={() => toggleMode(false)}
-                  className="text-emerald-600 font-medium"
-                >
-                  Entrar
-                </button>
-              </>
-            ) : (
-              <>
-                Novo na plataforma?{" "}
-                <button
-                  type="button"
-                  onClick={() => toggleMode(true)}
-                  className="text-emerald-600 font-medium"
-                >
-                  Criar conta
-                </button>
-              </>
-            )}
           </div>
-        </div>
+        </section>
       </div>
     </div>
   );

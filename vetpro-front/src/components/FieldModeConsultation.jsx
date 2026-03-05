@@ -12,6 +12,10 @@ import {
   CONSULTATION_TYPE_OPTIONS,
   resolveConsultationContext,
 } from "../utils/consultationContext";
+import {
+  detectSpeakerFromText,
+  stripSpeakerMarkers,
+} from "../utils/transcriptParser";
 
 const SPECIFIC_FIELD_LABELS = {
   vaccinationStatus: "Vacinacao",
@@ -139,6 +143,7 @@ const FieldModeConsultation = ({
   const incrementalRequestRef = useRef(false);
   const incrementalTimerRef = useRef(null);
   const incrementalKeyRef = useRef("");
+  const draftSaveTimerRef = useRef(null);
   const [uploadedAudioName, setUploadedAudioName] = useState("");
   const [isMobile, setIsMobile] = useState(false);
   const [mobileStep, setMobileStep] = useState("captura");
@@ -159,6 +164,12 @@ const FieldModeConsultation = ({
     [consultationType],
   );
   const consultationTypeLabel = consultationContext.label;
+  const draftKey = useMemo(() => {
+    if (!patient?.id) return "";
+    const suffix =
+      initialData?.previousConsultationId || initialData?.id || "new";
+    return `vetpro_draft_field_${patient.id}_${suffix}`;
+  }, [patient?.id, initialData?.previousConsultationId, initialData?.id]);
 
   useEffect(() => {
     if (typeof window === "undefined") return undefined;
@@ -202,6 +213,9 @@ const FieldModeConsultation = ({
     recordedAudioBlobRef.current = null;
     setUploadedAudioName("");
     setMobileStep("captura");
+    if (draftKey) {
+      localStorage.removeItem(draftKey);
+    }
   };
 
   const buildChatInputFromSegments = (currentSegments, fallbackTranscript) => {
@@ -245,6 +259,9 @@ const FieldModeConsultation = ({
       if (incrementalTimerRef.current) {
         clearTimeout(incrementalTimerRef.current);
       }
+      if (draftSaveTimerRef.current) {
+        clearTimeout(draftSaveTimerRef.current);
+      }
       recognition?.stop?.();
       if (mediaRecorderRef.current?.state !== "inactive") {
         mediaRecorderRef.current?.stop?.();
@@ -271,6 +288,103 @@ const FieldModeConsultation = ({
       setWeight(String(initialData.weight));
     }
   }, [initialData]);
+
+  useEffect(() => {
+    if (!draftKey) return;
+    try {
+      const raw = localStorage.getItem(draftKey);
+      if (!raw) return;
+      const draft = JSON.parse(raw);
+
+      setWeight(draft.weight ?? patient?.weight ?? "");
+      setTemperature(draft.temperature || "");
+      setHeartRate(draft.heartRate || "");
+      setRespiratoryRate(draft.respiratoryRate || "");
+      setConsultationType(draft.consultationType || "nova");
+      setSegments(Array.isArray(draft.segments) ? draft.segments : []);
+      setParsedData(draft.parsedData || null);
+      setStructuredDraft(draft.structuredDraft || null);
+      setManualPorteOverride(draft.manualPorteOverride || null);
+      setPorteDetectionState(
+        draft.porteDetectionState || {
+          porte: "pequeno",
+          confident: false,
+          reason: "indefinido",
+        },
+      );
+      setAnalysisSource(draft.analysisSource || "local");
+      setCurrentSpeaker(draft.currentSpeaker || "Auto");
+      setUploadedAudioName(draft.uploadedAudioName || "");
+      setElapsedSeconds(Number(draft.elapsedSeconds || 0));
+      if (draft.startedAt) setStartedAt(draft.startedAt);
+      transcriptRef.current = String(draft.transcript || "");
+      setLiveInterim(String(draft.liveInterim || ""));
+      liveInterimRef.current = String(draft.liveInterim || "");
+      showFeedback("success", "Rascunho de campo restaurado.");
+    } catch {
+      // ignora rascunho corrompido
+    }
+  }, [draftKey, patient?.weight]);
+
+  useEffect(() => {
+    if (!draftKey || saving) return;
+    if (draftSaveTimerRef.current) {
+      clearTimeout(draftSaveTimerRef.current);
+    }
+
+    draftSaveTimerRef.current = setTimeout(() => {
+      const draft = {
+        weight,
+        temperature,
+        heartRate,
+        respiratoryRate,
+        consultationType,
+        segments,
+        parsedData,
+        structuredDraft,
+        manualPorteOverride,
+        porteDetectionState,
+        analysisSource,
+        currentSpeaker,
+        uploadedAudioName,
+        elapsedSeconds,
+        startedAt,
+        transcript: transcriptRef.current || "",
+        liveInterim,
+        updatedAt: new Date().toISOString(),
+      };
+      try {
+        localStorage.setItem(draftKey, JSON.stringify(draft));
+      } catch {
+        // sem espaço no storage
+      }
+    }, 800);
+
+    return () => {
+      if (draftSaveTimerRef.current) {
+        clearTimeout(draftSaveTimerRef.current);
+      }
+    };
+  }, [
+    draftKey,
+    saving,
+    weight,
+    temperature,
+    heartRate,
+    respiratoryRate,
+    consultationType,
+    segments,
+    parsedData,
+    structuredDraft,
+    manualPorteOverride,
+    porteDetectionState,
+    analysisSource,
+    currentSpeaker,
+    uploadedAudioName,
+    elapsedSeconds,
+    startedAt,
+    liveInterim,
+  ]);
 
   const formatElapsed = (seconds) => {
     const total = Math.max(0, Number(seconds) || 0);
@@ -342,79 +456,6 @@ const FieldModeConsultation = ({
       confident: false,
       reason: "sem-evidencia",
     };
-  };
-
-  const detectSpeakerFromText = (phrase, fallbackSpeaker = "Tutor") => {
-    const normalized = normalizeText(phrase || "");
-    if (!normalized) return fallbackSpeaker;
-
-    const symptomContext =
-      /\b(nao ta bem|não tá bem|sem apetite|vomit|diarre|febre|dor|apat|prostr|mucosa|coce)\b/.test(normalized);
-    const vetQuestionContext =
-      /\b(desde quando|ha quanto|há quanto|me explica|me conte|me conta|pode me dizer)\b/.test(normalized);
-    const vetActionContext =
-      /\b(vamos|no exame|ao exame|suspeita|diagnost|conduta|tratamento|prescrev|oriento|solicitei|pedi|coletar)\b/.test(normalized);
-
-    const tutorSignals = [
-      "doutor",
-      "doutora",
-      "ele ta",
-      "ela ta",
-      "ele esta",
-      "ela esta",
-      "em casa",
-      "desde ontem",
-      "desde hoje",
-      "nao come",
-      "nao bebe",
-      "vomito",
-      "diarreia",
-      "tosse",
-      "coceira",
-      "percebi",
-      "notei",
-      "estou preocupado",
-    ];
-
-    const medicoSignals = [
-      "no exame",
-      "ao exame",
-      "diagnostico",
-      "conduta",
-      "tratamento",
-      "prescrevo",
-      "prescricao",
-      "oriento",
-      "retorno",
-      "solicito exame",
-      "vamos medicar",
-      "fc",
-      "fr",
-      "temperatura",
-      "avaliacao clinica",
-    ];
-
-    let tutorScore = 0;
-    let medicoScore = 0;
-    tutorSignals.forEach((signal) => {
-      if (normalized.includes(signal)) tutorScore += 2;
-    });
-    medicoSignals.forEach((signal) => {
-      if (normalized.includes(signal)) medicoScore += 2;
-    });
-
-    if (/^(dr|dra|doutor|doutora)\b/.test(normalized)) {
-      if (symptomContext) tutorScore += 3;
-      else medicoScore += 1;
-    }
-    if (/\b(meu|minha|aqui em casa|em casa)\b/.test(normalized)) tutorScore += 2;
-    if (vetQuestionContext) medicoScore += 3;
-    if (vetActionContext) medicoScore += 2;
-
-    if (tutorScore > medicoScore) return "Tutor";
-    if (medicoScore > tutorScore) return "Medico";
-
-    return fallbackSpeaker;
   };
 
   const resolveSpeaker = (phrase) => {
@@ -760,11 +801,7 @@ const FieldModeConsultation = ({
   /* eslint-enable react-hooks/exhaustive-deps */
 
   const extractSpecificFieldsFallback = (sourceText = "", porte = "pequeno", parsed = {}) => {
-    const cleaned = String(sourceText || "")
-      .replace(/\[[0-9:]+\]/g, " ")
-      .replace(/\b(Tutor|Medico)\s*:\s*/gi, " ")
-      .replace(/\s+/g, " ")
-      .trim();
+    const cleaned = stripSpeakerMarkers(sourceText);
     if (!cleaned) return {};
 
     const norm = normalizeText(cleaned);
@@ -977,7 +1014,8 @@ const FieldModeConsultation = ({
     }
   };
 
-  const runFieldAssist = async (candidateSegments) => {
+  const runFieldAssist = async (candidateSegments, options = {}) => {
+    const fromUploadedAudio = Boolean(options?.fromUploadedAudio);
     const baseTranscript = transcriptRef.current.trim();
     const audioBlob = recordedAudioBlobRef.current;
     if (
@@ -1006,6 +1044,7 @@ const FieldModeConsultation = ({
 
       const response = await api.post("/consultations/field-assist", formData, {
         headers: { "Content-Type": "multipart/form-data" },
+        timeout: 120000,
       });
 
       const result = response.data || {};
@@ -1045,7 +1084,7 @@ const FieldModeConsultation = ({
             recordProfile: {
               porte: requestedPorte,
             },
-          });
+          }, { timeout: 90000 });
           bestDraft = draftResponse?.data?.draft || null;
           if (bestDraft) {
             const draftPorte = String(bestDraft.porte || "").toLowerCase();
@@ -1095,6 +1134,8 @@ const FieldModeConsultation = ({
           "error",
           "Nao foi possivel transcrever o audio. Verifique se o backend tem DEEPGRAM_API_KEY ou OPENAI_API_KEY.",
         );
+      } else if (fromUploadedAudio) {
+        showFeedback("success", "Audio processado com sucesso.");
       }
     } catch (error) {
       console.error("Falha no assistente de campo (backend):", error);
@@ -1106,6 +1147,15 @@ const FieldModeConsultation = ({
       setRuleAlerts([]);
       setRoleReliability({ reliable: false, score: 0.3, reason: "fallback_local" });
       setAnalysisSource("local");
+      if (fromUploadedAudio) {
+        showFeedback(
+          "error",
+          toUserFriendlyError(
+            error,
+            "Nao foi possivel processar o audio gravado agora. Tente novamente.",
+          ),
+        );
+      }
     } finally {
       setAnalyzing(false);
     }
@@ -1260,7 +1310,7 @@ const FieldModeConsultation = ({
     }
 
     showFeedback("success", "Audio carregado. Processando com IA de campo...");
-    await runFieldAssist([]);
+    await runFieldAssist([], { fromUploadedAudio: true });
     if (isMobile) {
       setMobileStep("revisao");
     }
@@ -1425,6 +1475,9 @@ const FieldModeConsultation = ({
     recordedAudioBlobRef.current = null;
     stopAudioCapture({ releaseStream: true });
     showFeedback("success", "Conversa descartada.");
+    if (draftKey) {
+      localStorage.removeItem(draftKey);
+    }
   };
 
   const useConversation = async () => {
@@ -1722,6 +1775,9 @@ const FieldModeConsultation = ({
         );
       }
       await stopAudioCapture({ releaseStream: true });
+      if (draftKey) {
+        localStorage.removeItem(draftKey);
+      }
       onBack?.();
       if (isMobile) {
         setMobileStep("captura");
@@ -1768,20 +1824,21 @@ const FieldModeConsultation = ({
   }
 
   return (
-    <div className="max-w-3xl mx-auto space-y-4 pb-52 sm:pb-28">
-      <div className="rounded-2xl border border-cyan-200 dark:border-cyan-800 bg-gradient-to-r from-cyan-50 to-emerald-50 dark:from-cyan-900 dark:to-emerald-900 p-4 sm:p-5 shadow-sm">
+    <div className="w-full max-w-4xl mx-auto space-y-3 sm:space-y-4 pb-52 sm:pb-28">
+      <div className="rounded-2xl border border-cyan-200 dark:border-cyan-800 bg-gradient-to-r from-cyan-50 to-emerald-50 dark:from-cyan-900 dark:to-emerald-900 p-3 sm:p-5 shadow-sm">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">Modo Campo</h1>
-            <p className="text-sm text-gray-700 dark:text-gray-200 mt-1">
-              Paciente: <strong>{patient.name}</strong> · Tutor: {patient.ownerName}
+            <h1 className="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white">Modo Campo</h1>
+            <p className="text-xs sm:text-sm text-gray-700 dark:text-gray-200 mt-1">
+              Paciente: <strong>{patient.name}</strong>
+              {!isMobile && <> · Tutor: {patient.ownerName}</>}
             </p>
             <p className="text-xs text-cyan-800 dark:text-cyan-300 mt-1 font-semibold">
               Contexto ativo: {consultationTypeLabel}
             </p>
           </div>
           <span
-            className={`px-3 py-1 rounded-full text-[11px] font-semibold ${
+            className={`px-2.5 sm:px-3 py-1 rounded-full text-[10px] sm:text-[11px] font-semibold ${
               isRecording
                 ? "bg-red-50 text-red-700"
                 : isPaused
@@ -1801,15 +1858,15 @@ const FieldModeConsultation = ({
           </p>
           <div className="grid grid-cols-3 gap-2">
             {[
-              ["captura", "1. Captura"],
-              ["revisao", "2. Revisao"],
-              ["salvar", "3. Salvar"],
+              ["captura", "Captura"],
+              ["revisao", "Revisao"],
+              ["salvar", "Salvar"],
             ].map(([step, label]) => (
               <button
                 key={step}
                 type="button"
                 onClick={() => scrollToStep(step)}
-                className={`rounded-lg border px-2 py-2 text-xs font-semibold ${
+                className={`rounded-lg border px-2 py-2 text-[11px] font-semibold ${
                   mobileStep === step
                     ? "border-cyan-600 bg-cyan-600 text-white"
                     : "border-gray-300 bg-white text-gray-700"
@@ -1830,7 +1887,7 @@ const FieldModeConsultation = ({
 
       <div
         ref={captureSectionRef}
-        className="rounded-2xl border border-gray-200 bg-white p-4 sm:p-6 space-y-4"
+        className="rounded-2xl border border-gray-200 bg-white p-3 sm:p-5 lg:p-6 space-y-3 sm:space-y-4"
       >
         <div>
           <label className="mb-1 block text-xs font-semibold text-gray-600 uppercase tracking-wide">
@@ -1839,7 +1896,7 @@ const FieldModeConsultation = ({
           <select
             value={consultationType}
             onChange={(event) => setConsultationType(event.target.value)}
-            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm"
+            className="h-11 sm:h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm"
             disabled={isTypeLockedByContext}
           >
             {CONSULTATION_TYPE_OPTIONS.map((option) => (
@@ -1874,7 +1931,7 @@ const FieldModeConsultation = ({
           <select
             value={audioProfile}
             onChange={(e) => setAudioProfile(e.target.value)}
-            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm"
+            className="h-11 sm:h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm"
           >
             <option value="normal">Normal</option>
             <option value="ruidoso">Campo ruidoso (filtra falas curtas)</option>
@@ -1924,12 +1981,12 @@ const FieldModeConsultation = ({
           <p className="text-[11px] text-cyan-700 font-semibold">
             Analise: {analysisSource === "deepgram" ? "Diarizacao Deepgram" : "Heuristica local"}
           </p>
-          {roleReliability && (
+          {!isMobile && roleReliability && (
             <p className={`text-[11px] font-semibold ${roleReliability.reliable ? "text-emerald-700" : "text-amber-700"}`}>
               Separacao Tutor/Vet: {roleReliability.reliable ? "estavel" : "incerta"} ({Math.round((roleReliability.score || 0) * 100)}%)
             </p>
           )}
-          <div className="w-full max-w-md rounded-lg border border-cyan-200 bg-white p-2 space-y-2">
+          <div className="w-full rounded-lg border border-cyan-200 bg-white p-2 sm:p-3 space-y-2">
             <p className="text-[11px] font-semibold text-cyan-800">
               Porte do prontuario:{" "}
               <strong>{activePorte === "grande" ? "Grande porte" : "Pequeno porte"}</strong>
@@ -1975,7 +2032,7 @@ const FieldModeConsultation = ({
               )}
             </div>
           </div>
-          <div className="w-full max-w-md rounded-lg border border-cyan-200 bg-white p-2">
+          <div className="w-full rounded-lg border border-cyan-200 bg-white p-2 sm:p-3">
             <input
               ref={audioFileInputRef}
               type="file"
@@ -1992,7 +2049,11 @@ const FieldModeConsultation = ({
               Usar audio gravado
             </button>
             <p className="mt-1 text-[11px] text-gray-500">
-              {uploadedAudioName ? `Arquivo: ${uploadedAudioName}` : "Selecione um arquivo de audio do celular/computador (max. 25MB)."}
+              {uploadedAudioName
+                ? `Arquivo: ${uploadedAudioName}`
+                : isMobile
+                  ? "Selecione um audio (max. 25MB)."
+                  : "Selecione um arquivo de audio do celular/computador (max. 25MB)."}
             </p>
           </div>
         </div>
@@ -2133,7 +2194,7 @@ const FieldModeConsultation = ({
 
       <div
         ref={reviewSectionRef}
-        className="rounded-xl border border-emerald-200 bg-white p-4 space-y-3"
+        className="rounded-xl border border-emerald-200 bg-white p-3 sm:p-5 lg:p-6 space-y-3"
       >
         <div className="flex items-center justify-between gap-2">
           <h2 className="text-sm font-semibold text-gray-600 uppercase tracking-wide">
@@ -2175,7 +2236,7 @@ const FieldModeConsultation = ({
 
       <div
         ref={saveSectionRef}
-        className="rounded-xl border border-gray-200 bg-white p-4 sm:p-6 space-y-4"
+        className="rounded-xl border border-gray-200 bg-white p-3 sm:p-5 lg:p-6 space-y-4"
       >
         <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
           Parametros vitais (edicao manual)
@@ -2222,13 +2283,17 @@ const FieldModeConsultation = ({
         <div className="h-3" />
       </div>
 
-      <FloatingFormActions maxWidthClass="max-w-3xl" mobileSticky>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+      <FloatingFormActions
+        maxWidthClass="max-w-4xl"
+        mobileSticky
+        desktopFloating={false}
+      >
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2">
           <button
             type="button"
             onClick={() => handleSave(false)}
             disabled={saving || analyzing}
-            className="btn btn-success btn-lg btn-block"
+            className="btn btn-success btn-lg btn-block min-h-[48px] sm:min-h-[52px] text-sm sm:text-base"
           >
             {saving && <LoadingDot />}
             {saving ? "Salvando..." : "Salvar Campo"}
@@ -2237,7 +2302,7 @@ const FieldModeConsultation = ({
             type="button"
             onClick={() => handleSave(true)}
             disabled={saving || analyzing}
-            className="btn btn-primary btn-lg btn-block"
+            className="btn btn-primary btn-lg btn-block min-h-[48px] sm:min-h-[52px] text-sm sm:text-base"
           >
             {saving && <LoadingDot />}
             {saving ? "Processando..." : "Salvar + Receita"}
@@ -2245,14 +2310,14 @@ const FieldModeConsultation = ({
           <button
             type="button"
             onClick={goToManualEditor}
-            className="btn btn-neutral btn-lg btn-block"
+            className="btn btn-neutral btn-lg btn-block min-h-[48px] sm:min-h-[52px] text-sm sm:text-base"
           >
             Consulta manual
           </button>
           <button
             type="button"
             onClick={clearCapturedData}
-            className="btn btn-neutral btn-lg btn-block"
+            className="btn btn-neutral btn-lg btn-block min-h-[48px] sm:min-h-[52px] text-sm sm:text-base"
           >
             Limpar capturas
           </button>

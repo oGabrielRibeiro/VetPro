@@ -31,12 +31,62 @@ function normalizeText(value = '') {
     .toLowerCase();
 }
 
+function normalizeSpeakerLabel(value = 'Tutor') {
+  const raw = normalizeText(value).trim();
+  if (
+    raw === 'medico' ||
+    raw === 'veterinario' ||
+    raw === 'veterinaria' ||
+    raw === 'vet' ||
+    raw === 'dr' ||
+    raw === 'dra' ||
+    raw === 'doutor' ||
+    raw === 'doutora' ||
+    raw === 'assistant'
+  ) {
+    return 'Medico';
+  }
+  return 'Tutor';
+}
+
+function parseTaggedSpeakerPhrase(phrase = '', fallbackSpeaker = 'Tutor') {
+  const fallback = normalizeSpeakerLabel(fallbackSpeaker);
+  const stripped = String(phrase || '')
+    .replace(
+      /^\s*(?:\[\d{1,2}:\d{2}(?::\d{2})?\]|\d{1,2}:\d{2}(?::\d{2})?)\s*/,
+      '',
+    )
+    .trim();
+
+  if (!stripped) {
+    return { explicit: false, speaker: fallback, text: '' };
+  }
+
+  const match = stripped.match(
+    /^(Tutor|Responsavel|Responsável|Proprietario|Proprietário|Vet|Veterinario|Veterinário|Veterinaria|Veterinária|Medico|Médico|Dr|Dra|Doutor|Doutora)\s*(?::|-|–|—|->|=>|\|)\s*(.+)$/i,
+  );
+
+  if (!match) {
+    return { explicit: false, speaker: fallback, text: stripped };
+  }
+
+  return {
+    explicit: true,
+    speaker: normalizeSpeakerLabel(match[1]),
+    text: String(match[2] || '').trim(),
+  };
+}
+
 /**
  * Detecta o speaker (Tutor ou Medico) baseado no texto
  */
 function detectSpeakerFromText(phrase, fallbackSpeaker = 'Tutor') {
-  const normalized = normalizeText(phrase || '');
-  if (!normalized) return fallbackSpeaker;
+  const parsedPhrase = parseTaggedSpeakerPhrase(phrase, fallbackSpeaker);
+  const fallback = normalizeSpeakerLabel(fallbackSpeaker);
+  if (parsedPhrase.explicit) return parsedPhrase.speaker;
+
+  const normalized = normalizeText(parsedPhrase.text || '');
+  if (!normalized) return fallback;
 
   const tutorSignals = [
     'doutor',
@@ -147,7 +197,7 @@ function detectSpeakerFromText(phrase, fallbackSpeaker = 'Tutor') {
   if (tutorScore > vetScore) return 'Tutor';
   if (vetScore > tutorScore) return 'Medico';
 
-  return fallbackSpeaker;
+  return fallback;
 }
 
 /**

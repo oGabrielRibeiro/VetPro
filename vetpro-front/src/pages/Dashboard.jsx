@@ -51,135 +51,210 @@ const Dashboard = ({
     [patients],
   );
 
+  const stats = [
+    {
+      label: "Pacientes ativos",
+      value: totalPatients,
+      tone: "from-blue-50 to-cyan-50 text-blue-800",
+      icon: "patients",
+    },
+    {
+      label: "Consultas totais",
+      value: totalConsultations,
+      tone: "from-indigo-50 to-violet-50 text-indigo-800",
+      icon: "consultations",
+    },
+    {
+      label: "Atendimentos hoje",
+      value: todayAppointments,
+      tone: "from-amber-50 to-orange-50 text-amber-800",
+      icon: "appointments",
+    },
+    {
+      label: "Taxa de retorno",
+      value: `${returnRate}%`,
+      tone: "from-emerald-50 to-teal-50 text-emerald-800",
+      icon: "reports",
+    },
+  ];
+
   return (
-    <div className="max-w-7xl mx-auto">
-      <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-800 mb-4 sm:mb-6">Dashboard</h1>
-
-      <div className="grid grid-cols-1 gap-3 sm:gap-4 mb-4 sm:mb-6">
-        <button
-          onClick={() => onAddPatient?.()}
-          className="btn btn-success btn-lg btn-block !min-h-[52px] text-sm sm:text-base"
-        >
-          <div className="flex items-center justify-center space-x-2">
-            <AppIcon name="plus" />
-            <span>Novo Paciente</span>
-          </div>
-        </button>
-
-        <button
-          onClick={() => onNewConsultation?.()}
-          className="btn btn-primary btn-lg btn-block !min-h-[52px] text-sm sm:text-base"
-        >
-          <div className="flex items-center justify-center space-x-2">
-            <AppIcon name="consultations" />
-            <span>Nova Consulta</span>
-          </div>
-        </button>
-      </div>
-
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 sm:p-6 mb-6">
-        <h2 className="text-lg font-bold text-gray-800 mb-4">Status do Sistema</h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
-          <div className="bg-blue-50 rounded-lg p-3 sm:p-4 text-center">
-            <div className="text-2xl sm:text-3xl font-bold text-blue-700 mb-1 sm:mb-2">{totalPatients}</div>
-            <div className="text-xs sm:text-sm text-blue-800 font-medium">Pacientes</div>
-          </div>
-          <div className="bg-purple-50 rounded-lg p-3 sm:p-4 text-center">
-            <div className="text-2xl sm:text-3xl font-bold text-purple-700 mb-1 sm:mb-2">{totalConsultations}</div>
-            <div className="text-xs sm:text-sm text-purple-800 font-medium">Consultas</div>
-          </div>
-          <div className="bg-amber-50 rounded-lg p-3 sm:p-4 text-center">
-            <div className="text-2xl sm:text-3xl font-bold text-amber-700 mb-1 sm:mb-2">{todayAppointments}</div>
-            <div className="text-xs sm:text-sm text-amber-800 font-medium">Hoje</div>
-          </div>
-          <div className="bg-emerald-50 rounded-lg p-3 sm:p-4 text-center">
-            <div className="text-2xl sm:text-3xl font-bold text-emerald-700 mb-1 sm:mb-2">{returnRate}%</div>
-            <div className="text-xs sm:text-sm text-emerald-800 font-medium">Taxa de Retorno</div>
-          </div>
-        </div>
-      </div>
-
-      <div className="mb-6 sm:mb-8">
-        <div className="flex justify-between items-center mb-3 sm:mb-4">
-          <h2 className="text-base sm:text-xl font-bold text-gray-800">Pacientes Recentes</h2>
-          <button onClick={() => onOpenPatients?.()} className="text-emerald-600 hover:text-emerald-700 font-medium text-xs sm:text-sm">
-            Ver todos
-          </button>
-        </div>
-        <div className="flex space-x-3 sm:space-x-4 overflow-x-auto pb-3 sm:pb-4 hide-scrollbar">
-          {recentPatients.map((patient) => (
-            <div
-              key={patient.id}
-              className="flex-shrink-0 w-48 sm:w-56 md:w-64 bg-white rounded-xl border border-gray-200 shadow-sm p-3 sm:p-4 cursor-pointer hover:shadow-md transition-shadow"
-              onClick={() => onViewConsultations(patient)}
-            >
-              <div className="flex items-start space-x-2 sm:space-x-3">
-                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center">
-                  <SpeciesIcon species={patient.species} subcategory={patient.subcategory} breed={patient.breed} className="h-6 w-6" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-bold text-sm sm:text-base text-gray-800 truncate">{patient.name}</h3>
-                  <p className="text-xs sm:text-sm text-gray-500 truncate">{patient.ownerName}</p>
-                  <p className="text-xs sm:text-sm text-gray-600 mt-0.5 sm:mt-1">
-                    {patient.species} {patient.subcategory && `- ${patient.subcategory}`}
-                  </p>
-                  <button className="mt-1 sm:mt-2 text-[10px] sm:text-xs text-emerald-600 hover:text-emerald-700 font-medium">
-                    Ver prontuario
-                  </button>
-                </div>
-              </div>
+    <div className="w-full max-w-7xl mx-auto space-y-3 sm:space-y-4 subtle-enter">
+      <section className="shell-surface rounded-3xl border border-gray-200/80 dark:border-dark-700/70 p-3 sm:p-5 lg:p-6">
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1.5fr_1fr]">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-gray-500 dark:text-gray-400">
+              Command Center
+            </p>
+            <h1 className="shell-title mt-1 text-xl sm:text-3xl font-extrabold text-gray-900 dark:text-white">
+              Operacao clinica em tempo real
+            </h1>
+            <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
+              Acompanhe indicadores, abra prontuarios e inicie atendimento de campo com menos toques.
+            </p>
+            <div className="mt-4 flex flex-col sm:flex-row gap-2">
+              <button
+                onClick={() => onAddPatient?.()}
+                className="btn btn-success btn-lg w-full sm:w-auto"
+              >
+                <AppIcon name="plus" />
+                Novo paciente
+              </button>
+              <button
+                onClick={() => onNewConsultation?.()}
+                className="btn btn-primary btn-lg w-full sm:w-auto"
+              >
+                <AppIcon name="consultations" />
+                Nova consulta
+              </button>
             </div>
-          ))}
+          </div>
+          <div className="rounded-2xl border border-teal-200/70 dark:border-teal-800/50 bg-gradient-to-br from-teal-50 via-cyan-50 to-blue-50 dark:from-teal-900/30 dark:via-cyan-900/20 dark:to-blue-900/20 p-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-teal-700 dark:text-teal-300">
+              Hoje
+            </p>
+            <p className="mt-2 text-3xl font-black text-teal-900 dark:text-teal-200">
+              {todayAppointments}
+            </p>
+            <p className="mt-1 text-xs text-teal-800 dark:text-teal-300">
+              agendamento(s) no dia
+            </p>
+            <button
+              type="button"
+              onClick={() => onOpenAppointments?.() || onViewAppointments?.()}
+              className="mt-4 w-full rounded-xl border border-teal-300/70 dark:border-teal-700 bg-white/80 dark:bg-dark-800/80 px-3 py-2 text-xs font-semibold text-teal-800 dark:text-teal-300"
+            >
+              Abrir agenda
+            </button>
+          </div>
         </div>
-      </div>
+      </section>
 
-      <div>
-        <div className="flex justify-between items-center mb-3 sm:mb-4">
-          <h2 className="text-base sm:text-xl font-bold text-gray-800">Consultas de Hoje</h2>
-          <button
-            onClick={() => onOpenAppointments?.() || onViewAppointments?.()}
-            className="text-emerald-600 hover:text-emerald-700 font-medium text-xs sm:text-sm"
+      <section className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {stats.map((item) => (
+          <article
+            key={item.label}
+            className={`rounded-2xl border border-gray-200/80 dark:border-dark-700/70 bg-gradient-to-br ${item.tone} p-3.5`}
           >
-            Ver agenda
-          </button>
+            <div className="flex items-center justify-between">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.1em] opacity-80">
+                {item.label}
+              </p>
+              <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-white/80 text-gray-700 dark:bg-dark-800 dark:text-gray-200">
+                <AppIcon name={item.icon} />
+              </span>
+            </div>
+            <p className="mt-2 text-2xl sm:text-3xl font-black">{item.value}</p>
+          </article>
+        ))}
+      </section>
+
+      <section className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+        <div className="shell-surface rounded-3xl border border-gray-200/80 dark:border-dark-700/70 p-4 sm:p-5">
+          <div className="mb-3 flex items-center justify-between gap-2">
+            <h2 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white">
+              Pacientes recentes
+            </h2>
+            <button
+              onClick={() => onOpenPatients?.()}
+              className="text-xs font-semibold text-emerald-700 dark:text-emerald-300"
+            >
+              Ver todos
+            </button>
+          </div>
+          <div className="space-y-2.5">
+            {recentPatients.map((patient) => (
+              <button
+                key={patient.id}
+                type="button"
+                className="interactive-card w-full rounded-2xl border border-gray-200 dark:border-dark-700 bg-white/80 dark:bg-dark-800/70 p-3 text-left hover:border-emerald-200 dark:hover:border-emerald-800 transition-colors"
+                onClick={() => onViewConsultations(patient)}
+              >
+                <div className="flex items-center gap-3">
+                  <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300">
+                    <SpeciesIcon
+                      species={patient.species}
+                      subcategory={patient.subcategory}
+                      breed={patient.breed}
+                      className="h-5 w-5"
+                    />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-sm font-semibold text-gray-900 dark:text-white truncate">
+                      {patient.name}
+                    </span>
+                    <span className="block text-xs text-gray-500 dark:text-gray-400 truncate">
+                      {patient.ownerName}
+                    </span>
+                  </span>
+                </div>
+              </button>
+            ))}
+            {!recentPatients.length && (
+              <div className="rounded-2xl border border-dashed border-gray-300 dark:border-dark-600 p-5 text-center text-sm text-gray-500 dark:text-gray-400">
+                Nenhum paciente recente.
+              </div>
+            )}
+          </div>
         </div>
-        <div className="space-y-3">
-          {todayAppointmentList.length > 0 ? (
-            todayAppointmentList.map((appointment) => {
-                const patient = patients.find((p) => p.id === appointment.patientId);
+        <div className="shell-surface rounded-3xl border border-gray-200/80 dark:border-dark-700/70 p-4 sm:p-5">
+          <div className="mb-3 flex items-center justify-between gap-2">
+            <h2 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white">
+              Agenda de hoje
+            </h2>
+            <button
+              onClick={() => onOpenAppointments?.() || onViewAppointments?.()}
+              className="text-xs font-semibold text-emerald-700 dark:text-emerald-300"
+            >
+              Ver agenda
+            </button>
+          </div>
+          <div className="space-y-2.5">
+            {todayAppointmentList.length > 0 ? (
+              todayAppointmentList.map((appointment) => {
+                const patient = patients.find(
+                  (p) => String(p.id) === String(appointment.patientId),
+                );
                 if (!patient) return null;
                 return (
-                  <div key={appointment.id} className="bg-white rounded-xl border border-gray-200 p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between hover:shadow-sm transition-shadow">
-                    <div className="mb-2 sm:mb-0">
-                      <div className="flex items-center space-x-2 sm:space-x-3">
-                        <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center">
-                          <SpeciesIcon species={patient.species} subcategory={patient.subcategory} breed={patient.breed} className="h-4 w-4" />
-                        </div>
-                        <div>
-                          <h3 className="font-bold text-sm sm:text-base text-gray-800">{patient.name}</h3>
-                          <p className="text-xs sm:text-sm text-gray-600">{patient.ownerName}</p>
-                        </div>
+                  <article
+                    key={appointment.id}
+                    className="interactive-card rounded-2xl border border-gray-200 dark:border-dark-700 bg-white/80 dark:bg-dark-800/70 p-3"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">
+                          {patient.name}
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                          {patient.ownerName}
+                        </p>
                       </div>
+                      <p className="text-sm font-bold text-blue-700 dark:text-blue-300">
+                        {appointment.time || "--:--"}
+                      </p>
                     </div>
-                    <div className="text-right">
-                      <p className="font-bold text-lg text-blue-600">{appointment.time}</p>
-                      <p className="text-xs sm:text-sm text-gray-500 mt-0.5 sm:mt-1">{appointment.reason}</p>
-                    </div>
-                  </div>
+                    <p className="mt-1 text-xs text-gray-600 dark:text-gray-300">
+                      {appointment.reason || "Sem motivo informado"}
+                    </p>
+                  </article>
                 );
               })
-          ) : (
-            <div className="bg-white rounded-xl border border-dashed border-gray-300 p-6 sm:p-8 text-center">
-              <div className="mx-auto mb-3 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-gray-100 text-gray-700">
-                <AppIcon name="appointments" />
+            ) : (
+              <div className="rounded-2xl border border-dashed border-gray-300 dark:border-dark-600 p-6 text-center">
+                <span className="mx-auto mb-2 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-gray-100 dark:bg-dark-700 text-gray-600 dark:text-gray-300">
+                  <AppIcon name="appointments" />
+                </span>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Nenhuma consulta agendada para hoje.
+                </p>
               </div>
-              <p className="text-xs sm:text-sm text-gray-500">Nenhuma consulta agendada para hoje</p>
-            </div>
-          )}
+            )}
+          </div>
         </div>
-      </div>
+      </section>
 
-      <div className="mt-6 sm:hidden grid grid-cols-2 gap-2">
+      <div className="mt-1 sm:hidden grid grid-cols-2 gap-2">
         <button
           onClick={() => onOpenPatients?.()}
           className="btn btn-info-soft btn-lg btn-block"

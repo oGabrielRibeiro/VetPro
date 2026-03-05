@@ -1,5 +1,6 @@
 const {
   parseClinicalFieldsFromSegments,
+  analyzeFieldConversation,
 } = require('../services/fieldAssistFunctions');
 
 describe('fieldAssistFunctions.parseClinicalFieldsFromSegments', () => {
@@ -86,5 +87,137 @@ describe('fieldAssistFunctions.parseClinicalFieldsFromSegments', () => {
     expect(result.parsed.anamnesis).toMatch(/ontem|anamnese/i);
     expect(result.parsed.diagnosis).toMatch(/traqueite/i);
     expect(result.parsed.treatment).toMatch(/repouso|nebulizacao/i);
+  });
+
+  it('deve respeitar prefixo explicito de speaker com timestamp e separador hifen', () => {
+    const segments = [
+      {
+        stamp: '00:01',
+        speaker: 'Tutor',
+        text: '[00:01] Tutor - Ele esta mancando desde ontem.',
+      },
+      {
+        stamp: '00:10',
+        speaker: 'Tutor',
+        text: '[00:10] Vet - No exame fisico: dor a palpacao e edema local.',
+      },
+      {
+        stamp: '00:19',
+        speaker: 'Tutor',
+        text: '[00:19] Medico - Diagnostico: entorse. Tratamento com anti-inflamatorio.',
+      },
+    ];
+
+    const result = parseClinicalFieldsFromSegments(segments, '');
+
+    expect(result.context.tutorContent).toMatch(/mancando desde ontem/i);
+    expect(result.context.medicoContent).toMatch(
+      /exame fisico|diagnostico|tratamento/i,
+    );
+    expect(result.parsed.diagnosis).toMatch(/entorse|diagnostico/i);
+    expect(result.parsed.treatment).toMatch(/tratamento|anti-inflamatorio/i);
+  });
+
+  it('deve normalizar alias de speaker Vet no fallback do segmento', () => {
+    const segments = [
+      {
+        stamp: '00:01',
+        speaker: 'Vet',
+        text: 'Solicito hemograma e ultrassom abdominal.',
+      },
+    ];
+
+    const result = parseClinicalFieldsFromSegments(segments, '');
+
+    expect(result.context.medicoContent).toMatch(/hemograma|ultrassom/i);
+    expect(result.parsed.examDetails).toMatch(/hemograma|ultrassom/i);
+  });
+});
+
+describe('fieldAssistFunctions.analyzeFieldConversation', () => {
+  const originalFetch = global.fetch;
+  const originalApiKey = process.env.OPENAI_API_KEY;
+
+  afterEach(() => {
+    global.fetch = originalFetch;
+    if (typeof originalApiKey === 'undefined') {
+      delete process.env.OPENAI_API_KEY;
+    } else {
+      process.env.OPENAI_API_KEY = originalApiKey;
+    }
+    jest.restoreAllMocks();
+  });
+
+  it('deve transcrever audio e preencher campos estruturados com IA', async () => {
+    process.env.OPENAI_API_KEY = 'test-openai-key';
+
+    const fetchMock = jest
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          text: 'Tutor relata tosse desde ontem e vomito em duas ocasioes.',
+          duration: 9.4,
+          segments: [
+            { start: 0, text: 'Tutor relata tosse desde ontem.' },
+            { start: 4, text: 'Vet orienta hidratacao e retorno em 48 horas.' },
+          ],
+        }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          choices: [
+            {
+              message: {
+                content: JSON.stringify({
+                  transcricao_organizada:
+                    '[TUTOR]: Tutor relata tosse desde ontem e vomito em duas ocasioes.',
+                  identificacao: {},
+                  anamnese: {
+                    queixa_principal: 'Tosse e vomito',
+                    historico_do_problema: 'Sinais iniciaram ontem',
+                  },
+                  exame_fisico: {
+                    achados_relevantes: 'Nao informado na consulta',
+                  },
+                  avaliacao: {
+                    diagnostico_presuntivo: 'Gastroenterite em avaliacao',
+                  },
+                  plano: {
+                    orientacoes_ao_tutor: 'Hidratacao oral e repouso',
+                    medicacoes_prescritas: 'Antiemetico conforme prescricao',
+                    retorno: 'Reavaliar em 48 horas',
+                    exames_solicitados: 'Nao informado na consulta',
+                  },
+                }),
+              },
+            },
+          ],
+        }),
+      });
+
+    global.fetch = fetchMock;
+
+    const result = await analyzeFieldConversation({
+      audioBuffer: Buffer.from('fake-audio-buffer'),
+      mimeType: 'audio/wav',
+      filename: 'consulta.wav',
+      segments: [],
+      transcript: '',
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls[0][0]).toContain('/audio/transcriptions');
+    expect(fetchMock.mock.calls[1][0]).toContain('/chat/completions');
+    expect(fetchMock.mock.calls[0][1].headers.Authorization).toBe(
+      'Bearer test-openai-key',
+    );
+    expect(result.transcript).toMatch(/tosse desde ontem/i);
+    expect(result.parsed.chiefComplaint).toBe('Tosse e vomito');
+    expect(result.parsed.diagnosis).toBe('Gastroenterite em avaliacao');
+    expect(result.parsed.treatment).toBe('Hidratacao oral e repouso');
+    expect(Array.isArray(result.segments)).toBe(true);
+    expect(result.segments.length).toBeGreaterThan(0);
   });
 });

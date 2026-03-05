@@ -15,6 +15,7 @@ import {
   isReturnConsultationType,
   resolveConsultationContext,
 } from "../utils/consultationContext";
+import { splitDialogueByRole } from "../utils/transcriptParser";
 
 const SMALL_ANIMAL_FIELDS = [
   { key: "vaccinationStatus", label: "Vacinacao" },
@@ -439,74 +440,6 @@ const QuickConsultation = ({ patient, onSave, onBack, initialData = null }) => {
       .map((item) => item.replace(/\s+/g, " ").trim())
       .filter(Boolean);
 
-  const splitDialogueByRoleLocal = (text = "") => {
-    const lines = String(text || "")
-      .replace(/\r/g, "")
-      .split(/\n+/g)
-      .map((line) => line.trim())
-      .filter(Boolean);
-
-    if (!lines.length) {
-      return { tutorText: "", vetText: "", turns: [] };
-    }
-
-    let lastRole = "Tutor";
-    const turns = lines.map((line) => {
-      const normalized = normalizeText(line);
-      let tutorScore = 0;
-      let vetScore = 0;
-
-      [
-        "notei",
-        "percebi",
-        "ele",
-        "ela",
-        "anda",
-        "parece",
-        "apetite",
-        "vomito",
-        "diarreia",
-        "preguic",
-      ].forEach((token) => {
-        if (normalized.includes(token)) tutorScore += 2;
-      });
-      [
-        "entendi",
-        "vamos",
-        "no exame",
-        "diagnostico",
-        "conduta",
-        "tratamento",
-        "prescrev",
-        "retorno",
-        "reavaliar",
-      ].forEach((token) => {
-        if (normalized.includes(token)) vetScore += 2;
-      });
-
-      let role = lastRole;
-      if (tutorScore > vetScore) role = "Tutor";
-      else if (vetScore > tutorScore) role = "Medico";
-      lastRole = role;
-
-      return { role, text: line };
-    });
-
-    return {
-      tutorText: turns
-        .filter((t) => t.role === "Tutor")
-        .map((t) => t.text)
-        .join(" ")
-        .trim(),
-      vetText: turns
-        .filter((t) => t.role === "Medico")
-        .map((t) => t.text)
-        .join(" ")
-        .trim(),
-      turns,
-    };
-  };
-
   const isSocialSentence = (sentence = "") => {
     const normalized = normalizeText(sentence);
     if (!normalized) return true;
@@ -600,7 +533,7 @@ const QuickConsultation = ({ patient, onSave, onBack, initialData = null }) => {
   const parseTranscriptToSections = (text) => {
     const content = (text || "").trim();
     if (!content) return null;
-    const dialogue = splitDialogueByRoleLocal(content);
+    const dialogue = splitDialogueByRole(content);
     const tutorContext = dialogue.tutorText || content;
     const vetContext = dialogue.vetText || content;
     const complaintFallback = extractClinicalComplaintSentence(
@@ -2681,7 +2614,7 @@ const QuickConsultation = ({ patient, onSave, onBack, initialData = null }) => {
   }
 
   return (
-    <div className="max-w-3xl mx-auto space-y-4 pb-36 sm:pb-28">
+    <div className="w-full max-w-4xl mx-auto space-y-3 sm:space-y-4 pb-36 sm:pb-28">
       <button
         type="button"
         onClick={onBack}
@@ -2690,8 +2623,8 @@ const QuickConsultation = ({ patient, onSave, onBack, initialData = null }) => {
         Voltar
       </button>
 
-      <div className="rounded-2xl border border-emerald-200 dark:border-emerald-800 bg-gradient-to-r from-emerald-50 to-cyan-50 dark:from-emerald-900 dark:to-cyan-900 p-4 sm:p-5">
-        <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
+      <div className="rounded-2xl border border-emerald-200 dark:border-emerald-800 bg-gradient-to-r from-emerald-50 to-cyan-50 dark:from-emerald-900 dark:to-cyan-900 p-3 sm:p-5">
+        <h1 className="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white">
           Consulta Clinica Completa
         </h1>
         <p className="text-sm text-gray-700 dark:text-gray-200 mt-1">
@@ -2706,7 +2639,7 @@ const QuickConsultation = ({ patient, onSave, onBack, initialData = null }) => {
             <select
               value={consultationType}
               onChange={(e) => setConsultationType(e.target.value)}
-              className="mt-1 rounded-lg border border-emerald-200 bg-white px-3 py-2 text-sm"
+              className="mt-1 h-11 sm:h-10 rounded-lg border border-emerald-200 bg-white px-3 text-sm"
               disabled={isReturnTypeLockedByContext}
             >
               {CONSULTATION_TYPE_OPTIONS.map((option) => (
@@ -3269,7 +3202,7 @@ const QuickConsultation = ({ patient, onSave, onBack, initialData = null }) => {
           )}
         </div>
 
-        <FloatingFormActions maxWidthClass="max-w-3xl">
+        <FloatingFormActions maxWidthClass="max-w-4xl">
           <div className="sm:hidden space-y-2">
             <div className="grid grid-cols-2 gap-2">
               <button

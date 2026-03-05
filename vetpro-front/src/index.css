@@ -3,44 +3,126 @@
 @tailwind utilities;
 
 :root {
-  --vp-primary: #0ea5e9;
-  --vp-primary-strong: #0284c7;
-  --vp-accent: #10b981;
-  --vp-bg: #f7f9fc;
+  --vp-primary: #0f766e;
+  --vp-primary-strong: #0f5f5b;
+  --vp-accent: #2563eb;
+  --vp-bg: #f4f7fb;
   --vp-card: #ffffff;
-  --vp-border: #e2e8f0;
-  --vp-text: #1f2937;
-  --vp-text-secondary: #6b7280;
-  --vp-radius: 12px;
-  --vp-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+  --vp-border: #d8e2ee;
+  --vp-text: #122033;
+  --vp-text-secondary: #5c6c80;
+  --vp-radius: 14px;
+  --vp-shadow: 0 14px 30px rgba(13, 38, 59, 0.1);
   --vp-transition: 160ms ease;
 }
 
 /* Dark mode variables */
 .dark {
-  --vp-bg: #121218;
-  --vp-card: #1e1e26;
-  --vp-border: #2e2e3a;
-  --vp-text: #f5f5f7;
-  --vp-text-secondary: #a1a1aa;
-  --vp-shadow: 0 10px 24px rgba(0, 0, 0, 0.4);
+  --vp-bg: #09121e;
+  --vp-card: #111f2d;
+  --vp-border: #213548;
+  --vp-text: #e8f1fa;
+  --vp-text-secondary: #a5b7cc;
+  --vp-shadow: 0 14px 30px rgba(0, 0, 0, 0.42);
 }
 
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
+  font-family: "Plus Jakarta Sans", "Avenir Next", "Segoe UI", sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: var(--vp-bg);
+  background:
+    radial-gradient(circle at 12% 8%, rgba(15, 118, 110, 0.18), transparent 34%),
+    radial-gradient(circle at 82% 12%, rgba(37, 99, 235, 0.16), transparent 30%),
+    var(--vp-bg);
   color: var(--vp-text);
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
-    monospace;
+  font-family: "IBM Plex Mono", Consolas, "Courier New", monospace;
+}
+
+.app-shell-bg {
+  background:
+    radial-gradient(circle at 8% 4%, rgba(15, 118, 110, 0.16), transparent 24%),
+    radial-gradient(circle at 96% 3%, rgba(37, 99, 235, 0.13), transparent 28%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.85), transparent 25%),
+    var(--vp-bg);
+}
+
+.dark .app-shell-bg {
+  background:
+    radial-gradient(circle at 8% 4%, rgba(16, 185, 129, 0.15), transparent 23%),
+    radial-gradient(circle at 96% 3%, rgba(56, 189, 248, 0.14), transparent 27%),
+    linear-gradient(180deg, rgba(9, 18, 30, 0.55), transparent 25%),
+    var(--vp-bg);
+}
+
+.shell-surface {
+  border: 1px solid var(--vp-border);
+  background: color-mix(in srgb, var(--vp-card) 84%, #f8fcff 16%);
+  backdrop-filter: blur(12px);
+  box-shadow: var(--vp-shadow);
+  transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+}
+
+.dark .shell-surface {
+  background: color-mix(in srgb, var(--vp-card) 90%, #15283b 10%);
+}
+
+.shell-surface:hover {
+  border-color: color-mix(in srgb, var(--vp-border) 65%, var(--vp-primary) 35%);
+  box-shadow: 0 16px 36px rgba(13, 38, 59, 0.14);
+}
+
+.surface-static:hover {
+  border-color: var(--vp-border);
+  box-shadow: var(--vp-shadow);
+}
+
+.interactive-card {
+  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+}
+
+.interactive-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 28px rgba(13, 38, 59, 0.13);
+}
+
+.interactive-card:active {
+  transform: translateY(0);
+}
+
+.shell-title {
+  letter-spacing: -0.015em;
+}
+
+.subtle-enter {
+  animation: subtle-enter 300ms ease-out;
+}
+
+@keyframes subtle-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 768px) {
+  .shell-surface:hover {
+    border-color: var(--vp-border);
+    box-shadow: var(--vp-shadow);
+  }
+
+  .interactive-card:hover {
+    transform: none;
+    box-shadow: var(--vp-shadow);
+  }
 }
 
 ::-webkit-scrollbar {

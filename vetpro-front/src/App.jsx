@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import Login from "./pages/Login";
 import Sidebar from "./components/Sidebar";
 import FeedbackBanner from "./components/FeedbackBanner";
+import GlobalStatusBar from "./components/GlobalStatusBar";
 import AppIcon from "./components/AppIcon";
 import SpeciesIcon from "./components/SpeciesIcon";
 import PatientForm from "./components/PatientForm";
@@ -67,7 +68,19 @@ const MainApp = () => {
   const [fieldMode, setFieldMode] = useState(
     () => localStorage.getItem("vetpro_field_mode") === "true",
   );
-  const [dataError, setDataError] = useState("");  const [actionFeedback, setActionFeedback] = useState(null);
+  const [dataError, setDataError] = useState("");
+  const [actionFeedback, setActionFeedback] = useState(null);
+  const [systemStatus, setSystemStatus] = useState({
+    status: "idle",
+    message: "",
+  });
+  const [queueSize, setQueueSize] = useState(() => {
+    try {
+      return getQueue().length;
+    } catch {
+      return 0;
+    }
+  });
 
   const [currentConsultation, setCurrentConsultation] = useState(null);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
@@ -126,6 +139,10 @@ const MainApp = () => {
 
   const showActionSuccess = useCallback((message) => {
     setActionFeedback({ type: "success", message });
+  }, []);
+
+  const updateSystemStatus = useCallback((status, message) => {
+    setSystemStatus({ status, message });
   }, []);
 
   const fetchPatients = useCallback(async () => {
@@ -200,6 +217,10 @@ const MainApp = () => {
       const queue = getQueue();
       if (queue.length === 0) return;
 
+      updateSystemStatus(
+        "syncing",
+        `Sincronizando ${queue.length} item(ns) pendente(s)...`,
+      );
       console.log("Sincronizando dados offline...");
 
       for (const item of queue) {
@@ -208,12 +229,18 @@ const MainApp = () => {
             await api.post("/consultations", item.data);
           } catch (error) {
             console.error("Falha ao sincronizar consulta offline:", error);
+            updateSystemStatus(
+              "error",
+              "Falha ao sincronizar dados offline. Tentaremos novamente.",
+            );
             return;
           }
         }
       }
 
       clearQueue();
+      setQueueSize(0);
+      updateSystemStatus("success", "Dados offline sincronizados com sucesso.");
       showActionSuccess("Dados offline sincronizados com sucesso.");
       await fetchConsultations();
     };
@@ -223,7 +250,7 @@ const MainApp = () => {
     return () => {
       window.removeEventListener("online", syncData);
     };
-  }, [fetchConsultations, showActionSuccess]);
+  }, [fetchConsultations, showActionSuccess, updateSystemStatus]);
 
   useEffect(() => {
     const updateStatus = () => setIsOnline(navigator.onLine);
@@ -235,6 +262,28 @@ const MainApp = () => {
       window.removeEventListener("offline", updateStatus);
     };
   }, []);
+
+  useEffect(() => {
+    if (!isOnline) {
+      updateSystemStatus(
+        "offline",
+        "Modo offline ativo. Alteracoes serao sincronizadas ao reconectar.",
+      );
+      return;
+    }
+    if (queueSize > 0) {
+      updateSystemStatus(
+        "queued",
+        `${queueSize} item(ns) aguardando sincronizacao.`,
+      );
+      return;
+    }
+    setSystemStatus((current) =>
+      current.status === "offline" || current.status === "queued"
+        ? { status: "idle", message: "" }
+        : current,
+    );
+  }, [isOnline, queueSize, updateSystemStatus]);
 
   useEffect(() => {
     localStorage.setItem("vetpro_field_mode", fieldMode ? "true" : "false");
@@ -263,11 +312,20 @@ const MainApp = () => {
         type: "CREATE_CONSULTATION",
         data: payload,
       });
+      setQueueSize((current) => {
+        const next = current + 1;
+        updateSystemStatus(
+          "queued",
+          `Consulta salva offline. ${next} item(ns) na fila.`,
+        );
+        return next;
+      });
 
       showActionSuccess("Sem internet. Consulta salva offline.");
       return { offline: true };
     }
     try {
+      updateSystemStatus("syncing", "Salvando consulta...");
       const response = await api.post("/consultations", payload);
       const savedConsultation = normalizeConsultation(response.data);
 
@@ -291,12 +349,14 @@ const MainApp = () => {
       await fetchConsultations();
       await fetchPatients();
       await fetchAppointments();
+      updateSystemStatus("success", "Consulta salva com sucesso.");
       return savedConsultation;
     } catch (error) {
       console.error("Erro ao salvar consulta:", error);
       showActionError(
         toUserFriendlyError(error, "Não foi possível salvar a consulta."),
       );
+      updateSystemStatus("error", "Erro ao salvar consulta.");
       throw error;
     }
   };
@@ -336,12 +396,14 @@ const MainApp = () => {
 
   const handleAddAppointment = async (appointmentData) => {
     try {
+      updateSystemStatus("syncing", "Salvando agendamento...");
       if (appointmentData?.id) {
         await api.put(`/appointments/${appointmentData.id}`, appointmentData);
       } else {
         await api.post("/appointments", appointmentData);
       }
       await fetchAppointments();
+      updateSystemStatus("success", "Agendamento salvo com sucesso.");
       setCurrentView("appointments");
       return true;
     } catch (error) {
@@ -349,20 +411,24 @@ const MainApp = () => {
       showActionError(
         toUserFriendlyError(error, "Não foi possível salvar o agendamento."),
       );
+      updateSystemStatus("error", "Erro ao salvar agendamento.");
       return false;
     }
   };
 
   const handleDeleteAppointment = async (id) => {
     try {
+      updateSystemStatus("syncing", "Removendo agendamento...");
       await api.delete(`/appointments/${id}`);
       await fetchAppointments();
+      updateSystemStatus("success", "Agendamento removido.");
       return true;
     } catch (error) {
       console.error("Erro ao excluir agendamento:", error);
       showActionError(
         toUserFriendlyError(error, "Não foi possível excluir o agendamento."),
       );
+      updateSystemStatus("error", "Erro ao remover agendamento.");
       return false;
     }
   };
@@ -504,6 +570,28 @@ const MainApp = () => {
         return "Meu Perfil";
       default:
         return "VetPro";
+    }
+  };
+
+  const currentViewHint = () => {
+    switch (currentView) {
+      case "dashboard":
+        return "Indicadores operacionais e acoes rapidas";
+      case "patients":
+        return "Base clinica com historico e perfil persistente";
+      case "appointments":
+        return "Agenda do dia com retornos e prioridades";
+      case "consultations":
+      case "patient-consultations":
+      case "new-consultation-quick":
+      case "new-consultation-field":
+        return "Fluxo de prontuario com suporte em campo";
+      case "reports":
+        return "Desempenho clinico e produtividade";
+      case "profile":
+        return "Configuracoes da conta e identidade da clinica";
+      default:
+        return "Workspace veterinario";
     }
   };
 
@@ -1099,7 +1187,7 @@ const MainApp = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-dark-900">
+      <div className="app-shell-bg min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600"></div>
       </div>
     );
@@ -1110,13 +1198,7 @@ const MainApp = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-dark-900 flex">
-      {/* INDICADOR OFFLINE */}
-      {!isOnline && (
-        <div className="bg-yellow-500 text-white text-center py-2 text-sm font-medium w-full">
-          ! Modo Offline - Seus dados serao sincronizados quando voltar internet
-        </div>
-      )}
+    <div className="app-shell-bg min-h-screen flex">
       {/* Desktop Sidebar */}
       {!isMobile && (
         <Sidebar
@@ -1129,97 +1211,124 @@ const MainApp = () => {
 
       {/* Mobile top bar */}
       {isMobile && (
-        <header className="fixed top-0 left-0 right-0 z-40 bg-white/95 dark:bg-dark-800/95 backdrop-blur border-b border-gray-200 dark:border-dark-700 px-3 sm:px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))] flex items-center justify-between gap-2">
-          <div className="flex items-center space-x-2">
-            <span className="h-8 w-8 rounded-full bg-emerald-100 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-300 grid place-items-center text-sm font-bold">
+        <header className="fixed top-0 left-0 right-0 z-40 px-3 sm:px-4 pt-[max(0.55rem,env(safe-area-inset-top))]">
+          <div className="shell-surface rounded-2xl border border-gray-200/80 dark:border-dark-700/70 px-3 py-2.5 flex items-center justify-between gap-2">
+            <div className="flex items-center space-x-2.5 min-w-0">
+              <span className="h-9 w-9 rounded-2xl bg-gradient-to-br from-teal-500 to-blue-600 text-white grid place-items-center text-sm font-bold flex-shrink-0">
               {user?.name?.charAt(0)?.toUpperCase() || "V"}
-            </span>
-            <div className="leading-tight">
-              <p className="text-xs text-gray-500 dark:text-gray-400">VetPro</p>
-              <p className="text-sm font-semibold text-gray-800 dark:text-white">{currentViewTitle()}</p>
+              </span>
+              <div className="leading-tight min-w-0">
+                <p className="text-[11px] uppercase tracking-[0.12em] text-gray-500 dark:text-gray-400">
+                  VetPro Workspace
+                </p>
+                <p className="shell-title text-sm font-bold text-gray-900 dark:text-white truncate">
+                  {currentViewTitle()}
+                </p>
+              </div>
             </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={toggleDarkMode}
-              className={`p-2 rounded-full transition ${isDark ? 'bg-yellow-500 text-white' : 'bg-gray-200 dark:bg-dark-700 text-gray-700 dark:text-gray-300'}`}
-              title={isDark ? "Modo Claro" : "Modo Escuro"}
-            >
-              {isDark ? '☀️' : '🌙'}
-            </button>
-            <button
-              type="button"
-              onClick={handleToggleFieldMode}
-              className={`px-3 py-1.5 text-[11px] font-semibold rounded-full border transition ${
-                fieldMode
-                  ? "bg-emerald-600 text-white border-emerald-600"
-                  : "bg-white dark:bg-dark-700 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-dark-600"
-              }`}
-            >
-              {fieldMode ? "Desativar Campo" : "Ativar Campo"}
-            </button>
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={toggleDarkMode}
+                className={`h-9 w-9 rounded-xl border text-sm transition ${
+                  isDark
+                    ? "bg-yellow-500 text-white border-yellow-500"
+                    : "bg-white text-gray-700 border-gray-200 dark:bg-dark-700 dark:text-gray-300 dark:border-dark-600"
+                }`}
+                title={isDark ? "Modo Claro" : "Modo Escuro"}
+              >
+                {isDark ? "L" : "E"}
+              </button>
+              <button
+                type="button"
+                onClick={handleToggleFieldMode}
+                className={`h-9 px-3 text-[11px] font-semibold rounded-xl border transition ${
+                  fieldMode
+                    ? "bg-emerald-600 text-white border-emerald-600"
+                    : "bg-white dark:bg-dark-700 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-dark-600"
+                }`}
+              >
+                {fieldMode ? "Campo ON" : "Campo OFF"}
+              </button>
+            </div>
           </div>
         </header>
       )}
 
       {/* Main Content */}
       <div
-        className={`flex-1 overflow-auto px-2 sm:px-3 pb-[7.5rem] md:px-6 md:pb-6 ${
-          isMobile ? "pt-24" : "pt-6"
+        className={`flex-1 overflow-auto px-2 sm:px-3 pb-[8.2rem] md:px-6 md:pb-6 ${
+          isMobile ? "pt-24" : "pt-5"
         }`}
       >
-        {!isMobile && (
-          <div className="sticky top-0 z-30 mb-4 flex items-center justify-between bg-white/90 dark:bg-dark-800/90 backdrop-blur border border-gray-200 dark:border-dark-700 rounded-2xl px-4 py-3 shadow-sm">
-            <div className="leading-tight">
-              <p className="text-xs text-gray-500 dark:text-gray-400">VetPro</p>
-              <p className="text-sm font-semibold text-gray-800 dark:text-white">{currentViewTitle()}</p>
+        <div className="mx-auto w-full max-w-[1280px] subtle-enter">
+          {!isMobile && (
+            <div className="sticky top-3 z-30 mb-4 shell-surface rounded-2xl border border-gray-200/80 dark:border-dark-700/70 px-4 py-3 flex items-center justify-between gap-3">
+              <div className="leading-tight">
+                <p className="text-[11px] uppercase tracking-[0.12em] text-gray-500 dark:text-gray-400">
+                  VetPro Workspace
+                </p>
+                <p className="shell-title text-lg font-extrabold text-gray-900 dark:text-white">
+                  {currentViewTitle()}
+                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  {currentViewHint()}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={toggleDarkMode}
+                  className={`h-10 w-10 rounded-xl border text-sm transition ${
+                    isDark
+                      ? "bg-yellow-500 text-white border-yellow-500"
+                      : "bg-white text-gray-700 border-gray-200 dark:bg-dark-700 dark:text-gray-300 dark:border-dark-600"
+                  }`}
+                  title={isDark ? "Modo Claro" : "Modo Escuro"}
+                >
+                  {isDark ? "L" : "E"}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleToggleFieldMode}
+                  className={`h-10 rounded-xl px-4 text-xs font-bold shadow-sm border ${
+                    fieldMode
+                      ? "bg-emerald-600 text-white border-emerald-600"
+                      : "bg-white dark:bg-dark-700 border-gray-300 dark:border-dark-600 text-gray-700 dark:text-gray-300"
+                  }`}
+                >
+                  {fieldMode ? "Modo Campo Ativo" : "Ativar Modo Campo"}
+                </button>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={toggleDarkMode}
-                className={`p-2 rounded-full transition ${isDark ? 'bg-yellow-500 text-white' : 'bg-gray-200 dark:bg-dark-700 text-gray-700 dark:text-gray-300'}`}
-                title={isDark ? "Modo Claro" : "Modo Escuro"}
-              >
-                {isDark ? '☀️' : '🌙'}
-              </button>
-              <button
-                type="button"
-                onClick={handleToggleFieldMode}
-                className={`rounded-full px-4 py-2 text-xs font-bold shadow-sm ${
-                  fieldMode 
-                    ? "bg-emerald-600 text-white" 
-                    : "bg-white dark:bg-dark-700 border border-gray-300 dark:border-dark-600 text-gray-700 dark:text-gray-300"
-                }`}
-              >
-                {fieldMode ? "Desativar Modo Campo" : "Ativar Modo Campo"}
-              </button>
-            </div>
-          </div>
-        )}
-        {dataError && (
-          <FeedbackBanner
-            className="mb-3"
-            type="error"
-            message={dataError}
-            onClose={() => {
-              setDataError("");
-              fetchPatients();
-              fetchConsultations();
-              fetchAppointments();
-            }}
+          )}
+          {dataError && (
+            <FeedbackBanner
+              className="mb-3"
+              type="error"
+              message={dataError}
+              onClose={() => {
+                setDataError("");
+                fetchPatients();
+                fetchConsultations();
+                fetchAppointments();
+              }}
+            />
+          )}
+          <GlobalStatusBar
+            status={systemStatus.status}
+            message={systemStatus.message}
           />
-        )}
-        {actionFeedback?.message && (
-          <FeedbackBanner
-            className="mb-3"
-            type={actionFeedback.type === "success" ? "success" : "error"}
-            message={actionFeedback.message}
-            onClose={() => setActionFeedback(null)}
-          />
-        )}
-        <Suspense fallback={lazyFallback}>{renderCurrentView()}</Suspense>
+          {actionFeedback?.message && (
+            <FeedbackBanner
+              className="mb-3"
+              type={actionFeedback.type === "success" ? "success" : "error"}
+              message={actionFeedback.message}
+              onClose={() => setActionFeedback(null)}
+            />
+          )}
+          <Suspense fallback={lazyFallback}>{renderCurrentView()}</Suspense>
+        </div>
       </div>
 
       {showPatientPicker && (
@@ -1266,8 +1375,8 @@ const MainApp = () => {
 
       {/* Mobile Bottom Navigation */}
       {isMobile && (
-        <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-gray-200 dark:border-dark-700 bg-white/95 dark:bg-dark-800/95 pb-[max(0.4rem,env(safe-area-inset-bottom))] backdrop-blur">
-          <div className="grid grid-cols-7">
+        <nav className="fixed bottom-0 left-0 right-0 z-40 px-3 pb-[max(0.45rem,env(safe-area-inset-bottom))]">
+          <div className="shell-surface rounded-2xl border border-gray-200/80 dark:border-dark-700/70 grid grid-cols-7">
             {MOBILE_NAV_ITEMS.map((item) => (
               <button
                 key={item.id}

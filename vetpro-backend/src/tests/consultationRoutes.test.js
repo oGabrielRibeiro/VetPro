@@ -32,6 +32,26 @@ jest.mock('../lib/prisma', () => ({
 
 const prisma = require('../lib/prisma');
 
+jest.mock('../services/fieldAssistService', () => {
+  const actual = jest.requireActual('../services/fieldAssistService');
+  return {
+    ...actual,
+    analyzeFieldConversation: jest.fn().mockResolvedValue({
+      parsed: {
+        chiefComplaint: 'tosse persistente',
+        treatment: 'hidratacao e repouso',
+      },
+      transcript:
+        'Tutor relata tosse persistente. Vet orienta hidratacao e repouso.',
+      segments: [
+        { stamp: '00:00', speaker: 'Tutor', text: 'Ele esta tossindo.' },
+      ],
+    }),
+  };
+});
+
+const fieldAssistService = require('../services/fieldAssistService');
+
 // Mock do auth middleware
 jest.mock('../middlewares/authMiddleware', () => {
   return (req, res, next) => {
@@ -143,6 +163,32 @@ describe('API - Consultas', () => {
       expect(String(response.body.parsed?.chiefComplaint || '')).toMatch(
         /tossindo|ontem/i,
       );
+    });
+  });
+
+  describe('POST /api/consultations/field-assist', () => {
+    it('deve receber upload de audio e encaminhar buffer ao service', async () => {
+      const response = await request(app)
+        .post('/api/consultations/field-assist')
+        .attach('audio', Buffer.from('RIFFFAKEAUDIO'), {
+          filename: 'consulta.wav',
+          contentType: 'audio/wav',
+        })
+        .field('mimeType', 'audio/wav')
+        .expect('Content-Type', /json/);
+
+      expect(response.status).toBe(200);
+      expect(fieldAssistService.analyzeFieldConversation).toHaveBeenCalledTimes(
+        1,
+      );
+
+      const payload =
+        fieldAssistService.analyzeFieldConversation.mock.calls[0][0];
+      expect(Buffer.isBuffer(payload.audioBuffer)).toBe(true);
+      expect(payload.audioBuffer.length).toBeGreaterThan(0);
+      expect(payload.mimeType).toBe('audio/wav');
+      expect(payload.filename).toBe('consulta.wav');
+      expect(response.body.parsed.chiefComplaint).toBe('tosse persistente');
     });
   });
 });

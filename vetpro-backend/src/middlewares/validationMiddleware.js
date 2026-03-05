@@ -31,7 +31,7 @@ const updatePatientSchema = createPatientSchema.partial();
 const createConsultationSchema = z.object({
   patientId: z.string().uuid('ID de paciente inválido').optional(),
   consultationType: z
-    .enum(['consulta', 'retorno', 'emergencia', 'checkup'])
+    .enum(['nova', 'consulta', 'retorno', 'emergencia', 'checkup'])
     .optional(),
   chiefComplaint: z.string().optional(),
   anamnesis: z.string().optional(),

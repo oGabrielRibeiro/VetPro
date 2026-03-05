@@ -5,8 +5,11 @@ async function authMiddleware(req, res, next) {
   let token;
 
   const authHeader = req.headers.authorization;
-  if (authHeader) {
+  if (authHeader && typeof authHeader === 'string') {
     [, token] = authHeader.split(' ');
+  }
+  if (!token && req.query && typeof req.query.token === 'string') {
+    token = req.query.token.trim();
   }
 
   if (!token) {

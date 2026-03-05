@@ -32,7 +32,7 @@ describe('authMiddleware', () => {
   });
 
   it('deve retornar TOKEN_MISSING quando não há Authorization', async () => {
-    const req = { headers: {} };
+    const req = { headers: {}, query: {} };
     const res = createRes();
     const next = jest.fn();
 
@@ -47,7 +47,7 @@ describe('authMiddleware', () => {
 
   it('deve retornar 500 quando JWT_SECRET não está definido', async () => {
     process.env.JWT_SECRET = '';
-    const req = { headers: { authorization: 'Bearer token' } };
+    const req = { headers: { authorization: 'Bearer token' }, query: {} };
     const res = createRes();
     const next = jest.fn();
 
@@ -63,7 +63,7 @@ describe('authMiddleware', () => {
       error.name = 'TokenExpiredError';
       throw error;
     });
-    const req = { headers: { authorization: 'Bearer expired-token' } };
+    const req = { headers: { authorization: 'Bearer expired-token' }, query: {} };
     const res = createRes();
     const next = jest.fn();
 
@@ -80,7 +80,7 @@ describe('authMiddleware', () => {
     jwt.verify.mockReturnValue({ userId: 'user-123' });
     prisma.user.findUnique.mockResolvedValue(null);
 
-    const req = { headers: { authorization: 'Bearer valid-token' } };
+    const req = { headers: { authorization: 'Bearer valid-token' }, query: {} };
     const res = createRes();
     const next = jest.fn();
 
@@ -102,7 +102,7 @@ describe('authMiddleware', () => {
       name: 'Dr Vet',
     });
 
-    const req = { headers: { authorization: 'Bearer valid-token' } };
+    const req = { headers: { authorization: 'Bearer valid-token' }, query: {} };
     const res = createRes();
     const next = jest.fn();
 
@@ -119,5 +119,24 @@ describe('authMiddleware', () => {
     expect(next).toHaveBeenCalledTimes(1);
     expect(res.status).not.toHaveBeenCalled();
   });
-});
 
+  it('deve autenticar usando token da query quando nao ha Authorization', async () => {
+    jwt.verify.mockReturnValue({ userId: 'user-123' });
+    prisma.user.findUnique.mockResolvedValue({
+      id: 'user-123',
+      clinicId: 'clinic-1',
+      email: 'vet@clinic.com',
+      name: 'Dr Vet',
+    });
+
+    const req = { headers: {}, query: { token: 'query-token' } };
+    const res = createRes();
+    const next = jest.fn();
+
+    await authMiddleware(req, res, next);
+
+    expect(jwt.verify).toHaveBeenCalledWith('query-token', 'test-secret');
+    expect(next).toHaveBeenCalledTimes(1);
+    expect(res.status).not.toHaveBeenCalled();
+  });
+});

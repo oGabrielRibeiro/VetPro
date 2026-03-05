@@ -5,6 +5,7 @@ const FloatingFormActions = ({
   maxWidthClass = "max-w-3xl",
   bottomOffsetClass = "bottom-14 sm:bottom-4",
   mobileSticky = false,
+  desktopFloating = true,
 }) => {
   const anchorRef = useRef(null);
   const [attachedToEnd, setAttachedToEnd] = useState(false);
@@ -67,7 +68,7 @@ const FloatingFormActions = ({
   return (
     <>
       <div ref={anchorRef} className="h-px w-full" />
-      {attachedToEnd ? (
+      {attachedToEnd || !desktopFloating ? (
         <div className="mt-4 px-4 sm:px-0">
           <div
             className={`mx-auto ${maxWidthClass} rounded-2xl border border-slate-200 bg-white/95 backdrop-blur shadow-[0_10px_26px_rgba(15,23,42,0.12)] px-4 py-3 sm:py-4`}

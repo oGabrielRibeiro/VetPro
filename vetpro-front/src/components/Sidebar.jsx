@@ -14,11 +14,11 @@ const Sidebar = ({ currentUser, currentView, setCurrentView, onLogout }) => {
     currentUser?.clinic?.logoUrl || currentUser?.clinicLogoPreview;
 
   return (
-    <div className="w-64 bg-white border-r border-gray-200 flex flex-col flex-shrink-0 h-screen sticky top-0">
-      <div className="p-4 sm:p-6 border-b border-gray-100">
-        <div className="flex items-center space-x-2 sm:space-x-3">
+    <aside className="w-72 shell-surface border-r border-gray-200/80 dark:border-dark-700/70 flex flex-col flex-shrink-0 h-screen sticky top-0">
+      <div className="p-5 sm:p-6 border-b border-gray-200/70 dark:border-dark-700/70">
+        <div className="flex items-center space-x-3">
           {clinicLogo ? (
-            <div className="h-10 w-10 rounded-xl bg-white border border-gray-200 overflow-hidden grid place-items-center">
+            <div className="h-11 w-11 rounded-2xl bg-white border border-gray-200/80 dark:border-dark-600 overflow-hidden grid place-items-center shadow-sm">
               <img
                 src={clinicLogo}
                 alt="Logo"
@@ -26,44 +26,57 @@ const Sidebar = ({ currentUser, currentView, setCurrentView, onLogout }) => {
               />
             </div>
           ) : (
-            <div className="h-10 w-10 rounded-xl bg-emerald-100 text-emerald-700 grid place-items-center">
+            <div className="h-11 w-11 rounded-2xl bg-gradient-to-br from-teal-500 to-blue-600 text-white grid place-items-center shadow-sm">
               <AppIcon name="patients" />
             </div>
           )}
           <div>
-            <h1 className="font-bold text-lg sm:text-xl text-gray-800">VetPro</h1>
-            <p className="text-xs sm:text-sm text-gray-500">
+            <h1 className="shell-title font-extrabold text-xl text-gray-900 dark:text-white">
+              VetPro
+            </h1>
+            <p className="text-xs text-gray-500 dark:text-gray-400">
               {currentUser?.clinicName || currentUser?.clinic || "Clinica Veterinaria"}
             </p>
           </div>
         </div>
       </div>
 
-      <nav className="p-3 sm:p-4 flex-1 overflow-y-auto">
-        <div className="space-y-1">
+      <nav className="p-4 sm:p-5 flex-1 overflow-y-auto">
+        <p className="mb-3 px-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-gray-400 dark:text-gray-500">
+          Workspace
+        </p>
+        <div className="space-y-1.5">
           {navItems.map((item) => (
             <button
               key={item.id}
               onClick={() => setCurrentView(item.id)}
-              className={`w-full flex items-center space-x-2 sm:space-x-3 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl transition-all ${
+              className={`w-full flex items-center space-x-3 px-3.5 py-3 rounded-xl border transition-all ${
                 currentView === item.id
-                  ? "bg-emerald-50 text-emerald-700 font-medium shadow-sm"
-                  : "text-gray-700 hover:bg-gray-50"
+                  ? "border-teal-200 bg-gradient-to-r from-teal-50 to-blue-50 text-teal-800 dark:border-teal-700/60 dark:from-teal-900/40 dark:to-blue-900/25 dark:text-teal-200 shadow-sm"
+                  : "border-transparent text-gray-700 hover:border-gray-200 hover:bg-white/80 dark:text-gray-300 dark:hover:border-dark-600 dark:hover:bg-dark-800/65"
               }`}
             >
-              <AppIcon name={item.icon} />
-              <span className="text-sm sm:text-base">{item.label}</span>
+              <span
+                className={`inline-flex h-8 w-8 items-center justify-center rounded-lg ${
+                  currentView === item.id
+                    ? "bg-white text-teal-700 dark:bg-dark-800 dark:text-teal-300"
+                    : "bg-gray-100 text-gray-600 dark:bg-dark-700 dark:text-gray-300"
+                }`}
+              >
+                <AppIcon name={item.icon} />
+              </span>
+              <span className="text-sm font-semibold">{item.label}</span>
             </button>
           ))}
         </div>
       </nav>
 
-      <div className="p-3 sm:p-4 border-t border-gray-100">
+      <div className="p-4 sm:p-5 border-t border-gray-200/70 dark:border-dark-700/70">
         <div
-          className="flex items-center space-x-2 sm:space-x-3 p-2 sm:p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors"
+          className="flex items-center space-x-3 p-3 rounded-xl border border-gray-200 bg-white/80 dark:border-dark-600 dark:bg-dark-800/70 cursor-pointer hover:border-teal-200 dark:hover:border-teal-800 transition-colors"
           onClick={() => setCurrentView("profile")}
         >
-          <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 font-bold text-xs sm:text-sm overflow-hidden flex-shrink-0">
+          <div className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center text-emerald-700 dark:text-emerald-300 font-bold text-sm overflow-hidden flex-shrink-0">
             {currentUser?.profilePhotoPreview ? (
               <img
                 src={currentUser.profilePhotoPreview}
@@ -74,9 +87,11 @@ const Sidebar = ({ currentUser, currentView, setCurrentView, onLogout }) => {
               <span>{currentUser?.name?.charAt(0) || "U"}</span>
             )}
           </div>
-          <div className="flex-1 min-w-0 hidden sm:block">
-            <p className="font-medium text-xs sm:text-sm truncate">{currentUser?.name || "Usuario"}</p>
-            <p className="text-[10px] sm:text-xs text-gray-500 truncate">
+          <div className="flex-1 min-w-0">
+            <p className="font-semibold text-sm truncate text-gray-800 dark:text-gray-100">
+              {currentUser?.name || "Usuario"}
+            </p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
               {currentUser?.crmvState && currentUser?.crmvNumber
                 ? `CRMV-${currentUser.crmvState} ${currentUser.crmvNumber}`
                 : "Veterinario"}
@@ -84,18 +99,18 @@ const Sidebar = ({ currentUser, currentView, setCurrentView, onLogout }) => {
           </div>
         </div>
 
-        <div className="mt-3 p-3 bg-emerald-50 rounded-lg text-center">
-          <div className="flex items-center justify-center space-x-2">
-            <span className="text-green-600 text-lg">OK</span>
-            <p className="text-[10px] sm:text-xs font-medium text-emerald-800">
-              Sessao segura ativa
-            </p>
-          </div>
+        <div className="mt-3 rounded-xl border border-teal-200/80 bg-gradient-to-r from-teal-50 to-blue-50 px-3 py-2.5 dark:border-teal-800/70 dark:from-teal-900/30 dark:to-blue-900/20">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-teal-700 dark:text-teal-300">
+            Sessao segura
+          </p>
+          <p className="mt-0.5 text-xs text-teal-900 dark:text-teal-200">
+            Ambiente autenticado e sincronizando dados em tempo real.
+          </p>
         </div>
 
         <button
           onClick={() => onLogout()}
-          className="btn btn-danger-soft btn-md btn-block mt-3 text-xs sm:text-sm"
+          className="btn btn-danger-soft btn-md btn-block mt-3 text-sm"
         >
           <span className="mr-2">
             <AppIcon name="logout" />
@@ -103,7 +118,7 @@ const Sidebar = ({ currentUser, currentView, setCurrentView, onLogout }) => {
           <span>Sair</span>
         </button>
       </div>
-    </div>
+    </aside>
   );
 };
 

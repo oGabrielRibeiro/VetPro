@@ -18,11 +18,57 @@ function normalizeSpeakerFromRole(role = '') {
   if (
     raw === 'assistant' ||
     raw === 'medico' ||
+    raw === 'médico' ||
     raw === 'veterinario' ||
+    raw === 'veterinário' ||
+    raw === 'veterinaria' ||
+    raw === 'veterinária' ||
+    raw === 'dr' ||
+    raw === 'dra' ||
+    raw === 'doutor' ||
+    raw === 'doutora' ||
     raw === 'vet'
   )
     return 'Medico';
   return 'Tutor';
+}
+
+function stripLeadingTimestamp(text = '') {
+  return String(text || '')
+    .replace(
+      /^\s*(?:\[\d{1,2}:\d{2}(?::\d{2})?\]|\d{1,2}:\d{2}(?::\d{2})?)\s*/,
+      '',
+    )
+    .trim();
+}
+
+function extractSpeakerFromTaggedLine(line = '', fallbackSpeaker = 'Tutor') {
+  const stripped = stripLeadingTimestamp(line);
+  if (!stripped) {
+    return {
+      explicit: false,
+      speaker: normalizeSpeakerFromRole(fallbackSpeaker),
+      text: '',
+    };
+  }
+
+  const match = stripped.match(
+    /^(Tutor|Responsavel|Responsável|Proprietario|Proprietário|Vet|Veterinario|Veterinário|Veterinaria|Veterinária|Medico|Médico|Dr|Dra|Doutor|Doutora)\s*(?::|-|–|—|->|=>|\|)\s*(.+)$/i,
+  );
+
+  if (!match) {
+    return {
+      explicit: false,
+      speaker: normalizeSpeakerFromRole(fallbackSpeaker),
+      text: stripped,
+    };
+  }
+
+  return {
+    explicit: true,
+    speaker: normalizeSpeakerFromRole(match[1]),
+    text: String(match[2] || '').trim(),
+  };
 }
 
 function splitLinesAsSegments(content = '', speaker = 'Tutor', startAt = 0) {
@@ -45,6 +91,13 @@ function buildClinicalSegmentsFromMessages(messages = []) {
   const safeMessages = Array.isArray(messages) ? messages : [];
   let elapsed = 0;
   const segments = [];
+  const pushSegment = (speaker = 'Tutor', text = '') => {
+    const cleanText = String(text || '').trim();
+    if (!cleanText) return;
+    const stamp = `${String(Math.floor(elapsed / 60)).padStart(2, '0')}:${String(elapsed % 60).padStart(2, '0')}`;
+    segments.push({ stamp, speaker, text: cleanText });
+    elapsed += Math.max(4, Math.ceil(cleanText.split(/\s+/g).length / 2));
+  };
 
   for (const item of safeMessages) {
     const content = String(item?.content || '').trim();
@@ -57,22 +110,12 @@ function buildClinicalSegmentsFromMessages(messages = []) {
       .map((line) => line.trim())
       .filter(Boolean);
 
-    let consumedExplicit = false;
-    for (const line of explicitLines) {
-      const match = line.match(
-        /^(Tutor|Medico|Médico|Veterinario|Vet)\s*:\s*(.+)$/i,
-      );
-      if (!match) continue;
-      consumedExplicit = true;
-      const who = normalizeSpeakerFromRole(match[1]);
-      const text = String(match[2] || '').trim();
-      if (!text) continue;
-      const stamp = `${String(Math.floor(elapsed / 60)).padStart(2, '0')}:${String(elapsed % 60).padStart(2, '0')}`;
-      segments.push({ stamp, speaker: who, text });
-      elapsed += Math.max(4, Math.ceil(text.split(/\s+/g).length / 2));
-    }
+    const parsedLines = explicitLines.map((line) =>
+      extractSpeakerFromTaggedLine(line, defaultSpeaker),
+    );
+    const hasExplicitSpeaker = parsedLines.some((line) => line.explicit);
 
-    if (!consumedExplicit) {
+    if (!hasExplicitSpeaker) {
       const lineSegments = splitLinesAsSegments(
         content,
         defaultSpeaker,
@@ -92,6 +135,14 @@ function buildClinicalSegmentsFromMessages(messages = []) {
             Math.ceil(String(tail.text || '').split(/\s+/g).length / 2),
           );
       }
+      continue;
+    }
+
+    for (const parsedLine of parsedLines) {
+      pushSegment(
+        parsedLine.explicit ? parsedLine.speaker : defaultSpeaker,
+        parsedLine.text,
+      );
     }
   }
 
@@ -646,10 +697,10 @@ function splitConversationSentences(text = '') {
 
 function splitDialogueLines(text = '') {
   const normalizedText = String(text || '')
-    .replace(/\r/g, '')
+    .replace(/\r/g, '\n')
     .replace(
-      /\b(tutor|responsavel|proprietario|proprietária|vet|veterinario|veterinário|medico|medico veterinario|medico veterinário|dra|dr)\s*:/gi,
-      '\n$1:',
+      /\b(tutor|responsavel|responsável|proprietario|proprietário|vet|veterinario|veterinário|medico|médico|dra|dr|doutor|doutora)\s*(?::|-|–|—|->|=>|\|)/gi,
+      '\n$&',
     );
 
   return normalizedText
@@ -733,16 +784,20 @@ function splitDialogueByRole(text = '') {
 
   let lastRole = 'Tutor';
   const turns = lines.map((line) => {
-    const tutorScore = scoreTutorLine(line);
-    const vetScore = scoreVetLine(line);
-    let role = 'Unknown';
+    const parsedLine = extractSpeakerFromTaggedLine(line, lastRole);
+    const cleanLine = parsedLine.text;
 
-    if (tutorScore > vetScore) role = 'Tutor';
-    else if (vetScore > tutorScore) role = 'Medico';
-    else role = lastRole;
+    let role = parsedLine.explicit ? parsedLine.speaker : 'Unknown';
+    if (!parsedLine.explicit) {
+      const tutorScore = scoreTutorLine(cleanLine);
+      const vetScore = scoreVetLine(cleanLine);
+      if (tutorScore > vetScore) role = 'Tutor';
+      else if (vetScore > tutorScore) role = 'Medico';
+      else role = lastRole;
+    }
 
     lastRole = role === 'Unknown' ? lastRole : role;
-    return { role, text: line };
+    return { role, text: cleanLine };
   });
 
   const tutorText = turns
