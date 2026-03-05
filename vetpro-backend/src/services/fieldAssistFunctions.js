@@ -952,7 +952,7 @@ ${combinedText}`;
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt },
         ],
-        temperature: 0.2,
+        temperature: 0,
         response_format: { type: 'json_object' },
       }),
     });

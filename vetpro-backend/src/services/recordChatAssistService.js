@@ -105,7 +105,7 @@ async function generateWithOpenAI({
     },
     body: JSON.stringify({
       model,
-      temperature: 0.2,
+      temperature: 0,
       response_format: { type: 'json_object' },
       messages: completionMessages,
     }),
@@ -314,7 +314,7 @@ async function refineFieldWithOpenAI({
     },
     body: JSON.stringify({
       model,
-      temperature: 0.2,
+      temperature: 0,
       messages: [
         { role: 'system', content: prompt },
         { role: 'user', content: String(text || '') },

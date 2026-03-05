@@ -545,6 +545,20 @@ const FieldModeConsultation = ({
       .map((item) => item.trim())
       .filter(Boolean);
 
+  const looksLikeConversationalNoise = (value = "") => {
+    const normalized = normalizeText(value);
+    if (!normalized) return true;
+    if (normalized.length < 8) return true;
+    if (
+      /^(certo|ok|okay|entendi|beleza|perfeito|isso|entao|então|ricardo|doutor|doutora|dr|dra)\b/.test(
+        normalized,
+      )
+    ) {
+      return true;
+    }
+    return false;
+  };
+
   const removeDuplicateLines = (items = []) => {
     const seen = new Set();
     const output = [];
@@ -557,6 +571,132 @@ const FieldModeConsultation = ({
       output.push(text);
     }
     return output;
+  };
+
+  const squashRepeatedSpecificValues = (rawFields = {}) => {
+    const entries = Object.entries(rawFields || {}).filter(([, value]) =>
+      String(value || "").trim(),
+    );
+    if (!entries.length) return {};
+
+    const frequency = new Map();
+    entries.forEach(([key, value]) => {
+      const normalized = normalizeText(String(value || ""));
+      if (!normalized) return;
+      const prev = frequency.get(normalized) || { count: 0, keys: [] };
+      prev.count += 1;
+      prev.keys.push(key);
+      frequency.set(normalized, prev);
+    });
+
+    const cleaned = {};
+    entries.forEach(([key, value]) => {
+      const text = String(value || "").trim();
+      const normalized = normalizeText(text);
+      const meta = frequency.get(normalized);
+      // Se o mesmo trecho aparece em muitos campos, mantemos só nos 2 primeiros.
+      if (meta && meta.count > 2) {
+        const idx = meta.keys.indexOf(key);
+        if (idx > 1) return;
+      }
+      cleaned[key] = text;
+    });
+
+    return cleaned;
+  };
+
+  const isNonInformativeSpecificValue = (value = "") => {
+    const normalized = normalizeText(value);
+    if (!normalized) return true;
+    if (
+      /\b(nao informado|não informado|nao informada|não informada|sem informacao|sem informação|nao consta|não consta|n\/a|indefinido|nao mencionado|não mencionado)\b/.test(
+        normalized,
+      )
+    ) {
+      return true;
+    }
+    return false;
+  };
+
+  const isSpecificValueGrounded = (value = "", transcriptSource = "") => {
+    const source = normalizeText(transcriptSource);
+    const normalized = normalizeText(value);
+    if (!source || !normalized) return false;
+    const tokens = normalized
+      .split(/[^a-z0-9]+/g)
+      .map((token) => token.trim())
+      .filter((token) => token.length >= 4);
+    if (!tokens.length) return false;
+    const hits = tokens.filter((token) => source.includes(token)).length;
+    return hits >= 2 || hits / tokens.length >= 0.5;
+  };
+
+  const sanitizeSpecificFieldsWithEvidence = (
+    rawFields = {},
+    transcriptSource = "",
+  ) => {
+    const cleaned = {};
+    Object.entries(rawFields || {}).forEach(([key, value]) => {
+      const text = String(value || "").trim();
+      if (!text) return;
+      if (isNonInformativeSpecificValue(text)) return;
+      if (looksLikeConversationalNoise(text)) return;
+      if (!isSpecificValueGrounded(text, transcriptSource)) return;
+      cleaned[key] = text;
+    });
+    return squashRepeatedSpecificValues(cleaned);
+  };
+
+  const mergeSpecificFieldsByEvidence = ({
+    fallbackSpecific = {},
+    aiSpecific = {},
+    transcriptSource = "",
+  }) => {
+    const sanitizedFallback = sanitizeSpecificFieldsWithEvidence(
+      fallbackSpecific,
+      transcriptSource,
+    );
+    const sanitizedAI = sanitizeSpecificFieldsWithEvidence(
+      aiSpecific,
+      transcriptSource,
+    );
+    return {
+      ...sanitizedFallback,
+      ...Object.entries(sanitizedAI).reduce((acc, [key, value]) => {
+        if (sanitizedFallback[key]) return acc;
+        acc[key] = value;
+        return acc;
+      }, {}),
+    };
+  };
+
+  const enrichCriticalParsedFields = (baseParsed = {}, transcriptText = "", sourceSegments = []) => {
+    const current = { ...(baseParsed || {}) };
+    const local = parseTranscriptLocal(transcriptText, sourceSegments) || {};
+
+    const mergeKey = (key) => {
+      const currentValue = String(current?.[key] || "").trim();
+      if (currentValue) return;
+      const localValue = String(local?.[key] || "").trim();
+      if (localValue) current[key] = localValue;
+    };
+
+    ["chiefComplaint", "anamnesis", "physicalExam", "diagnosis", "treatment", "medications"].forEach(
+      mergeKey,
+    );
+
+    if (!String(current?.diagnosis || "").trim()) {
+      const phrases = splitIntoPhrases(transcriptText);
+      const diagnosisPhrase = phrases.find((phrase) => {
+        const normalized = normalizeText(phrase);
+        return /\b(diagnost|suspeita|compativel com|quadro de|hipotese)\b/.test(normalized);
+      });
+      if (diagnosisPhrase) {
+        current.diagnosis = diagnosisPhrase.trim();
+      }
+    }
+
+    return current;
   };
 
   const keywordSets = {
@@ -813,13 +953,27 @@ const FieldModeConsultation = ({
       const match = cleaned.match(regex);
       return match?.[1] ? String(match[1]).trim() : "";
     };
-    const pickSentence = (tokens = []) => {
+    const usedSentences = new Set();
+    const pickSentence = (tokens = [], options = {}) => {
+      const { minHits = 1, allowReuse = false } = options;
       const normTokens = tokens.map((token) => normalizeText(token));
+      let best = "";
+      let bestHits = 0;
       for (const sentence of sentences) {
         const sentenceNorm = normalizeText(sentence);
-        if (normTokens.some((token) => token && sentenceNorm.includes(token))) {
-          return sentence;
+        if (looksLikeConversationalNoise(sentenceNorm)) continue;
+        if (!allowReuse && usedSentences.has(sentenceNorm)) continue;
+        const hits = normTokens.filter(
+          (token) => token && sentenceNorm.includes(token),
+        ).length;
+        if (hits >= minHits && hits > bestHits) {
+          best = sentence;
+          bestHits = hits;
         }
+      }
+      if (best) {
+        usedSentences.add(normalizeText(best));
+        return best;
       }
       return "";
     };
@@ -839,17 +993,17 @@ const FieldModeConsultation = ({
       else if (/\bleite|lacta[cç][aã]o\b/i.test(norm)) out.animalFunction = "Leite";
       else if (/\bcorte|engorda\b/i.test(norm)) out.animalFunction = "Corte";
 
-      out.herdVaccination = pickSentence(["vacina", "raiva", "tetano", "gripe", "encefalo"]);
-      out.herdDeworming = pickSentence(["vermifug", "ivermect"]);
-      out.waterIntake = pickSentence(["ingestao de agua", "consumo de agua", "agua diminu", "água diminu"]);
-      out.hoofStatus = pickSentence(["casco", "locomoc", "claudic", "flanco", "arranho", "arranh"]);
-      out.rumenMotility = pickSentence(["motilidade", "ruminal", "hipomotilidade", "sons diminu"]);
-      out.fecesAndUrine = pickSentence(["fezes", "urina"]);
-      out.historicalDiseases = pickSentence(["historico do lote", "aie", "mormo", "sem ocorrencia", "sem ocorrência"]);
+      out.herdVaccination = pickSentence(["vacina", "raiva", "tetano", "gripe", "encefalo"], { minHits: 1 });
+      out.herdDeworming = pickSentence(["vermifug", "ivermect"], { minHits: 1 });
+      out.waterIntake = pickSentence(["ingestao de agua", "consumo de agua", "agua diminu", "água diminu"], { minHits: 1 });
+      out.hoofStatus = pickSentence(["casco", "locomoc", "claudic", "flanco", "arranho", "arranh"], { minHits: 1 });
+      out.rumenMotility = pickSentence(["motilidade", "ruminal", "hipomotilidade", "sons diminu"], { minHits: 1 });
+      out.fecesAndUrine = pickSentence(["fezes", "urina"], { minHits: 1 });
+      out.historicalDiseases = pickSentence(["historico do lote", "aie", "mormo", "sem ocorrencia", "sem ocorrência"], { minHits: 1 });
       out.physicalExamDetailed = limit(
-        String(parsed?.physicalExam || "").trim() || pickSentence(["mucosa", "tpc", "febre", "frequencia cardiaca", "fc"]),
+        String(parsed?.physicalExam || "").trim() || pickSentence(["mucosa", "tpc", "febre", "frequencia cardiaca", "fc"], { minHits: 1 }),
       );
-      out.requestedExamPanel = pickSentence(["hemograma", "bioquim", "aie", "mormo", "coleta", "exame"]);
+      out.requestedExamPanel = pickSentence(["hemograma", "bioquim", "aie", "mormo", "coleta", "exame"], { minHits: 1 });
       out.previousTreatmentHistory = limit(
         [
           String(parsed?.treatment || "").trim(),
@@ -868,30 +1022,32 @@ const FieldModeConsultation = ({
           .join(", "),
       );
 
-      return Object.entries(out).reduce((acc, [key, value]) => {
+      const reduced = Object.entries(out).reduce((acc, [key, value]) => {
         const cleanedValue = limit(value);
         if (cleanedValue) acc[key] = cleanedValue;
         return acc;
       }, {});
+      return squashRepeatedSpecificValues(reduced);
     }
 
     const smallOut = {
-      vaccinationProtocol: pickSentence(["v8", "v10", "antirrab", "raiva", "vacina"]),
-      dewormingStatus: pickSentence(["vermifug", "ivermect"]),
-      ectoparasiteControl: pickSentence(["pulga", "carrapato", "ectoparasita", "pipeta"]),
-      diet: pickSentence(["racao", "ração", "dieta", "petisco"]),
-      waterIntakeSmall: pickSentence(["ingestao de agua", "consumo de agua", "agua"]),
-      behavior: pickSentence(["apatia", "pregui", "comportamento", "letarg"]),
-      allergyHistory: pickSentence(["alerg", "prurido", "coceira"]),
+      vaccinationProtocol: pickSentence(["v8", "v10", "antirrab", "raiva", "vacina"], { minHits: 1 }),
+      dewormingStatus: pickSentence(["vermifug", "ivermect"], { minHits: 1 }),
+      ectoparasiteControl: pickSentence(["pulga", "carrapato", "ectoparasita", "pipeta"], { minHits: 1 }),
+      diet: pickSentence(["racao", "ração", "dieta", "petisco"], { minHits: 1 }),
+      waterIntakeSmall: pickSentence(["ingestao de agua", "consumo de agua", "agua"], { minHits: 1 }),
+      behavior: pickSentence(["apatia", "pregui", "comportamento", "letarg"], { minHits: 1 }),
+      allergyHistory: pickSentence(["alerg", "prurido", "coceira"], { minHits: 1 }),
     };
     if (/\batrasad/i.test(norm)) smallOut.vaccinationStatus = "Atrasada";
     else if (/\bem dia\b/i.test(norm)) smallOut.vaccinationStatus = "Em dia";
 
-    return Object.entries(smallOut).reduce((acc, [key, value]) => {
+    const reduced = Object.entries(smallOut).reduce((acc, [key, value]) => {
       const cleanedValue = limit(value);
       if (cleanedValue) acc[key] = cleanedValue;
       return acc;
     }, {});
+    return squashRepeatedSpecificValues(reduced);
   };
 
   const confidenceLabel = (score) => {
@@ -1109,18 +1265,33 @@ const FieldModeConsultation = ({
         console.error("Falha ao detalhar draft da consulta de campo:", draftError);
       }
 
-      const normalizedParsed = bestDraft
+      const sanitizedBestDraft = bestDraft
         ? {
-            chiefComplaint: String(bestDraft.chiefComplaint || parsed?.chiefComplaint || "").trim(),
-            anamnesis: String(bestDraft.anamnesis || parsed?.anamnesis || "").trim(),
-            physicalExam: String(bestDraft.physicalExam || parsed?.physicalExam || "").trim(),
-            diagnosis: String(bestDraft.diagnosis || parsed?.diagnosis || "").trim(),
-            treatment: String(bestDraft.treatment || parsed?.treatment || "").trim(),
-            medications: String(bestDraft.medications || parsed?.medications || "").trim(),
+            ...bestDraft,
+            specificFields: sanitizeSpecificFieldsWithEvidence(
+              bestDraft?.specificFields || {},
+              fallbackTranscript,
+            ),
+          }
+        : null;
+
+      const normalizedParsedRaw = sanitizedBestDraft
+        ? {
+            chiefComplaint: String(sanitizedBestDraft.chiefComplaint || parsed?.chiefComplaint || "").trim(),
+            anamnesis: String(sanitizedBestDraft.anamnesis || parsed?.anamnesis || "").trim(),
+            physicalExam: String(sanitizedBestDraft.physicalExam || parsed?.physicalExam || "").trim(),
+            diagnosis: String(sanitizedBestDraft.diagnosis || parsed?.diagnosis || "").trim(),
+            treatment: String(sanitizedBestDraft.treatment || parsed?.treatment || "").trim(),
+            medications: String(sanitizedBestDraft.medications || parsed?.medications || "").trim(),
           }
         : parsed;
+      const normalizedParsed = enrichCriticalParsedFields(
+        normalizedParsedRaw,
+        fallbackTranscript,
+        fallbackSegments,
+      );
 
-      setStructuredDraft(bestDraft);
+      setStructuredDraft(sanitizedBestDraft);
       setParsedData(normalizedParsed);
       setParsedConfidence((prev) =>
         prev || result.parsedConfidence || buildLocalConfidence(normalizedParsed, fallbackSegments),
@@ -1549,14 +1720,11 @@ const FieldModeConsultation = ({
       draft.specificFields && typeof draft.specificFields === "object"
         ? draft.specificFields
         : {};
-    const specificFields = {
-      ...fallbackSpecific,
-      ...Object.entries(aiSpecific).reduce((acc, [key, value]) => {
-        const text = String(value || "").trim();
-        if (text) acc[key] = text;
-        return acc;
-      }, {}),
-    };
+    const specificFields = mergeSpecificFieldsByEvidence({
+      fallbackSpecific,
+      aiSpecific,
+      transcriptSource: transcriptForSpecific,
+    });
     const filledSpecificItems = Object.entries(specificFields)
       .map(([key, value]) => ({
         key,
@@ -2194,10 +2362,10 @@ const FieldModeConsultation = ({
 
       <div
         ref={reviewSectionRef}
-        className="rounded-xl border border-emerald-200 bg-white p-3 sm:p-5 lg:p-6 space-y-3"
+        className="rounded-xl border border-emerald-200 dark:border-emerald-800 bg-white dark:bg-dark-800/80 p-3 sm:p-5 lg:p-6 space-y-3"
       >
         <div className="flex items-center justify-between gap-2">
-          <h2 className="text-sm font-semibold text-gray-600 uppercase tracking-wide">
+          <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200 uppercase tracking-wide">
             Revisao rapida do prontuario
           </h2>
           <button
@@ -2210,11 +2378,11 @@ const FieldModeConsultation = ({
           </button>
         </div>
         {!parsedData ? (
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-gray-600 dark:text-gray-300">
             Inicie a captura e pause para revisar os campos preenchidos automaticamente.
           </p>
         ) : (
-          <div className="grid grid-cols-1 gap-2 text-sm">
+          <div className="grid grid-cols-1 gap-2 text-sm text-gray-800 dark:text-gray-100">
             <p><strong>Queixa:</strong> {parsedData.chiefComplaint || "-"}</p>
             <p><strong>Anamnese:</strong> {parsedData.anamnesis || "-"}</p>
             <p><strong>Exame fisico:</strong> {parsedData.physicalExam || "-"}</p>

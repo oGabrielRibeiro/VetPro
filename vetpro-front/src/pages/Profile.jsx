@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import FeedbackBanner from "../components/FeedbackBanner";
 import AppIcon from "../components/AppIcon";
+import ConfirmDialog from "../components/ConfirmDialog";
 
 const emptyForm = {
   name: "",
@@ -608,41 +609,18 @@ const Profile = ({ profile, onSave, onCancel, onDeleteAccount, onBack }) => {
         </div>
       </form>
 
-      {showDeleteModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-md rounded-2xl bg-white dark:bg-dark-800 p-5 shadow-xl">
-            <h2 className="text-lg font-bold text-gray-800 dark:text-white">
-              Confirmar exclusao
-            </h2>
-            <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
-              Tem certeza que deseja excluir sua conta? Esta acao e irreversivel
-              e apaga todos os seus dados.
-            </p>
-            <div className="mt-4 rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 px-3 py-2 text-xs text-red-700 dark:text-red-300">
-              Dica: se quiser apenas sair, use o botao "Sair" no menu.
-            </div>
-
-            <div className="mt-5 flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setShowDeleteModal(false)}
-                className="rounded-lg border border-gray-300 dark:border-dark-600 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-dark-700"
-                disabled={deleteLoading}
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                onClick={handleDeleteAccount}
-                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-70"
-                disabled={deleteLoading}
-              >
-                {deleteLoading ? "Excluindo..." : "Excluir conta"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmDialog
+        isOpen={showDeleteModal}
+        title="Confirmar exclusao"
+        message="Tem certeza que deseja excluir sua conta? Esta acao e irreversivel e apaga todos os seus dados."
+        note='Dica: se quiser apenas sair, use o botao "Sair" no menu.'
+        cancelLabel="Cancelar"
+        confirmLabel={deleteLoading ? "Excluindo..." : "Excluir conta"}
+        confirmVariant="danger"
+        loading={deleteLoading}
+        onCancel={() => setShowDeleteModal(false)}
+        onConfirm={handleDeleteAccount}
+      />
     </div>
   );
 };

@@ -4,6 +4,7 @@ import VoiceTextarea from "./VoiceTextarea";
 import FeedbackBanner from "./FeedbackBanner";
 import LoadingDot from "./LoadingDot";
 import FloatingFormActions from "./FloatingFormActions";
+import ConfirmDialog from "./ConfirmDialog";
 import { toUserFriendlyError } from "../utils/errorMessages";
 import {
   PORTE_NOTES_MARK_END,
@@ -237,10 +238,36 @@ function isNotInformed(value = "") {
 
 function sanitizeSpecificFields(source = {}) {
   if (!source || typeof source !== "object") return {};
-  return Object.entries(source).reduce((acc, [key, value]) => {
+  const cleaned = Object.entries(source).reduce((acc, [key, value]) => {
     const text = String(value || "").trim();
     if (!text || isNotInformed(text)) return acc;
+    const normalized = normalizeWords(text);
+    if (
+      /^(certo|ok|entendi|beleza|perfeito|isso|entao|então|ricardo|doutor|doutora|dr|dra)\b/.test(
+        normalized,
+      )
+    ) {
+      return acc;
+    }
     acc[key] = text;
+    return acc;
+  }, {});
+
+  const values = Object.entries(cleaned);
+  const freq = new Map();
+  values.forEach(([key, value]) => {
+    const token = normalizeWords(value);
+    const prev = freq.get(token) || { count: 0, keys: [] };
+    prev.count += 1;
+    prev.keys.push(key);
+    freq.set(token, prev);
+  });
+
+  return values.reduce((acc, [key, value]) => {
+    const token = normalizeWords(value);
+    const meta = freq.get(token);
+    if (meta && meta.count > 2 && meta.keys.indexOf(key) > 1) return acc;
+    acc[key] = value;
     return acc;
   }, {});
 }
@@ -281,6 +308,7 @@ const QuickConsultation = ({ patient, onSave, onBack, initialData = null }) => {
   );
   const [saving, setSaving] = useState(false);
   const [showMobileMoreActions, setShowMobileMoreActions] = useState(false);
+  const [showClearConfirmModal, setShowClearConfirmModal] = useState(false);
 
   const [conversationTranscript, setConversationTranscript] = useState("");
   const [conversationRecognition, setConversationRecognition] = useState(null);
@@ -2471,12 +2499,7 @@ const QuickConsultation = ({ patient, onSave, onBack, initialData = null }) => {
     </div>
   );
 
-  const clearAllFields = () => {
-    const confirmed = window.confirm(
-      "Deseja limpar todos os campos deste prontuario?",
-    );
-    if (!confirmed) return;
-
+  const executeClearAllFields = () => {
     setWeight("");
     setTemperature("");
     setHeartRate("");
@@ -2517,6 +2540,10 @@ const QuickConsultation = ({ patient, onSave, onBack, initialData = null }) => {
     if (draftKey) {
       localStorage.removeItem(draftKey);
     }
+  };
+
+  const clearAllFields = () => {
+    setShowClearConfirmModal(true);
   };
 
   const saveConsultationWithPrescription = async (download) => {
@@ -3276,6 +3303,20 @@ const QuickConsultation = ({ patient, onSave, onBack, initialData = null }) => {
           </div>
         </FloatingFormActions>
       </div>
+
+      <ConfirmDialog
+        isOpen={showClearConfirmModal}
+        title="Limpar prontuario?"
+        message="Esta acao remove todos os campos preenchidos desta consulta."
+        cancelLabel="Cancelar"
+        confirmLabel="Limpar tudo"
+        confirmVariant="danger"
+        onCancel={() => setShowClearConfirmModal(false)}
+        onConfirm={() => {
+          executeClearAllFields();
+          setShowClearConfirmModal(false);
+        }}
+      />
     </div>
   );
 };
