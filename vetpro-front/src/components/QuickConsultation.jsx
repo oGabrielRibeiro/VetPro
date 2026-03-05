@@ -238,6 +238,11 @@ function isNotInformed(value = "") {
 
 function sanitizeSpecificFields(source = {}) {
   if (!source || typeof source !== "object") return {};
+  const hasClinicalSignal = (normalized = "") =>
+    /\b(febre|dor|exame|diagnost|suspeita|tratamento|conduta|medic|vacina|vermifug|casco|ruminal|fezes|urina|apetite|mucosa|fc|fr)\b/.test(
+      normalized,
+    );
+
   const cleaned = Object.entries(source).reduce((acc, [key, value]) => {
     const text = String(value || "").trim();
     if (!text || isNotInformed(text)) return acc;
@@ -247,7 +252,7 @@ function sanitizeSpecificFields(source = {}) {
         normalized,
       )
     ) {
-      return acc;
+      if (!hasClinicalSignal(normalized)) return acc;
     }
     acc[key] = text;
     return acc;

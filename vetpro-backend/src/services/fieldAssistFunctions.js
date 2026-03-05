@@ -687,6 +687,11 @@ async function analyzeFieldConversation({
         aiFields.anamnese ||
         heuristicFields.anamnesis ||
         '',
+      anamnesis:
+        aiFields.historico_do_problema ||
+        aiFields.anamnese ||
+        heuristicFields.anamnesis ||
+        '',
       alimentacao: aiFields.alimentacao || '',
       ambiente: aiFields.ambiente || '',
       vacinacao: aiFields.vacinacao || '',
@@ -746,6 +751,7 @@ async function analyzeFieldConversation({
     combinedParsed = {
       chiefComplaint: heuristicResult?.parsed?.chiefComplaint || '',
       anamnese: heuristicResult?.parsed?.anamnesis || '',
+      anamnesis: heuristicResult?.parsed?.anamnesis || '',
       physicalExam: heuristicResult?.parsed?.physicalExam || '',
       diagnosis: heuristicResult?.parsed?.diagnosis || '',
       treatment: heuristicResult?.parsed?.treatment || '',

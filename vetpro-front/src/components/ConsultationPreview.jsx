@@ -615,7 +615,7 @@ const ConsultationPreview = ({
         )}
 
         {/* Botões de ação */}
-        <div className="mt-4 sm:mt-0 sm:sticky sm:bottom-0 z-20 border-t border-gray-200 bg-white/95 backdrop-blur p-4 sm:p-6">
+        <div className="mt-4 border-t border-gray-200 bg-white/95 backdrop-blur p-4 sm:p-6">
           <div className="mx-auto max-w-4xl grid grid-cols-2 gap-2 sm:flex sm:justify-end sm:space-x-3 sm:gap-0">
           <button
             onClick={() => onClose?.()}

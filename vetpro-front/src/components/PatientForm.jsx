@@ -16,6 +16,20 @@ const porteMap = {
   Felino: "Pequeno",
 };
 
+const normalizePorteForApi = (value) => {
+  const raw = String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase();
+  if (!raw) return null;
+  if (raw === "pequeno") return "pequeno";
+  if (raw === "medio") return "pequeno";
+  if (raw === "grande") return "grande";
+  if (raw === "gigante") return "grande";
+  return null;
+};
+
 const calculateAge = (birthDate) => {
   if (!birthDate) return null;
 
@@ -181,7 +195,7 @@ const PatientForm = ({ patient, onSubmit, onCancel, isEditing }) => {
           ? parseFloat(data.weight) || null
           : data.weight
         : null,
-      porte: data.porte ? String(data.porte).toLowerCase() : null,
+      porte: normalizePorteForApi(data.porte),
     };
 
     onSubmit(submissionData);

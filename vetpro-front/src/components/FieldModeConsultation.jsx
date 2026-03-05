@@ -81,6 +81,58 @@ const PERSISTENT_SPECIFIC_KEYS = {
   ]),
 };
 
+const CAMPOS_ESPECIFICOS_POR_PORTE = {
+  pequeno: [
+    "vaccinationStatus",
+    "vaccinationProtocol",
+    "lastVaccines",
+    "dewormingStatus",
+    "ectoparasiteControl",
+    "diet",
+    "rationBrand",
+    "feedingFrequency",
+    "waterIntakeSmall",
+    "housing",
+    "lifestyle",
+    "contactWithAnimals",
+    "reproductiveStatusSmall",
+    "preventiveCare",
+    "behavior",
+    "allergyHistory",
+    "chronicDiseases",
+    "currentSupplements",
+  ],
+  grande: [
+    "farmName",
+    "productionSystem",
+    "animalFunction",
+    "batch",
+    "animalId",
+    "bodyConditionScore",
+    "reproductiveStatus",
+    "daysInMilk",
+    "parity",
+    "herdVaccination",
+    "herdDeworming",
+    "forage",
+    "concentrate",
+    "waterIntake",
+    "mineralSupplementation",
+    "hoofStatus",
+    "rumenMotility",
+    "fecesAndUrine",
+    "milkProduction",
+    "historicalDiseases",
+    "propertyAndManagement",
+    "contactAnimals",
+    "animalIdentificationDetails",
+    "neonateAndReproduction",
+    "previousTreatmentHistory",
+    "physicalExamDetailed",
+    "requestedExamPanel",
+  ],
+};
+
 const FieldModeConsultation = ({
   patient,
   initialData = null,
@@ -549,14 +601,14 @@ const FieldModeConsultation = ({
     const normalized = normalizeText(value);
     if (!normalized) return true;
     if (normalized.length < 8) return true;
-    if (
-      /^(certo|ok|okay|entendi|beleza|perfeito|isso|entao|então|ricardo|doutor|doutora|dr|dra)\b/.test(
+    const hasClinicalSignal =
+      /\b(febre|dor|exame|diagnost|suspeita|tratamento|conduta|medic|vacina|vermifug|casco|ruminal|fezes|urina|apetite|mucosa|fc|fr)\b/.test(
         normalized,
-      )
-    ) {
-      return true;
-    }
-    return false;
+      );
+    if (hasClinicalSignal) return false;
+    return /^(certo|ok|okay|entendi|beleza|perfeito|isso|entao|então|ricardo|doutor|doutora|dr|dra)\b/.test(
+      normalized,
+    );
   };
 
   const removeDuplicateLines = (items = []) => {
@@ -621,49 +673,168 @@ const FieldModeConsultation = ({
   const isSpecificValueGrounded = (value = "", transcriptSource = "") => {
     const source = normalizeText(transcriptSource);
     const normalized = normalizeText(value);
-    if (!source || !normalized) return false;
+    if (!normalized) return false;
+    if (!source) return true;
     const tokens = normalized
       .split(/[^a-z0-9]+/g)
       .map((token) => token.trim())
-      .filter((token) => token.length >= 4);
+      .filter((token) => token.length >= 3);
     if (!tokens.length) return false;
     const hits = tokens.filter((token) => source.includes(token)).length;
-    return hits >= 2 || hits / tokens.length >= 0.5;
+    return hits >= 1 || hits / tokens.length >= 0.34;
+  };
+
+  const correspondeSemanticaCampoEspecifico = (key = "", value = "") => {
+    const normalized = normalizeText(value);
+    if (!normalized) return false;
+    const map = {
+      vaccinationStatus: /\b(vacina|vacin|atrasad|em dia)\b/,
+      vaccinationProtocol: /\b(v8|v10|raiva|antirrab|protocolo)\b/,
+      lastVaccines: /\b(vacina|dose|reforco|reforço|raiva)\b/,
+      dewormingStatus: /\b(vermif|iverm|albend|vermifug)\b/,
+      ectoparasiteControl: /\b(pulga|carrapato|ectoparasita|pipeta|coleira)\b/,
+      diet: /\b(dieta|racao|ração|aliment)\b/,
+      rationBrand: /\b(racao|ração|marca)\b/,
+      feedingFrequency: /\b(vez|dia|refeic|aliment)\b/,
+      waterIntakeSmall: /\b(agua|água|ingest|consumo|litro)\b/,
+      housing: /\b(casa|apartamento|domic|canil|ambiente)\b/,
+      lifestyle: /\b(ativo|sedent|passeio|rua|quintal)\b/,
+      contactWithAnimals: /\b(contato|animal|convive|outros)\b/,
+      reproductiveStatusSmall: /\b(castr|inteiro|cio|gest|prenhe)\b/,
+      preventiveCare: /\b(prevent|vacina|vermif|ecto)\b/,
+      behavior: /\b(comport|apat|letarg|agitado|ansioso)\b/,
+      allergyHistory: /\b(alerg|prurid|coce|dermat)\b/,
+      chronicDiseases: /\b(cronic|diabet|renal|cardio|epilep)\b/,
+      currentSupplements: /\b(suplement|vitamin|omega|probiot)\b/,
+      farmName: /\b(haras|fazenda|sitio|sítio|propriedade)\b/,
+      productionSystem: /\b(extensivo|intensivo|semi|confin|leite|corte|esporte|trabalho)\b/,
+      animalFunction: /\b(esporte|trabalho|leite|corte|reproduc)\b/,
+      batch: /\b(lote|grupo|piquete|baia)\b/,
+      animalId: /\b(brinco|chip|id|registro|nome)\b/,
+      bodyConditionScore: /\b([1-5](?:[.,][0-9])?|ecc|escore)\b/,
+      reproductiveStatus: /\b(prenhe|gest|lact|seca|anestro|pos[- ]?parto|pós[- ]?parto)\b/,
+      daysInMilk: /\b(\d{1,3}\s*dias?|del)\b/,
+      parity: /\b(partos?|paridade|\d+)\b/,
+      herdVaccination: /\b(vacin|raiva|brucel|clostrid|rebanho)\b/,
+      herdDeworming: /\b(vermif|iverm|rebanho)\b/,
+      forage: /\b(volumoso|pasto|silagem|feno|capim)\b/,
+      concentrate: /\b(concentrado|racao|ração|milho|farelo)\b/,
+      waterIntake: /\b(agua|água|ingest|consumo|litro)\b/,
+      mineralSupplementation: /\b(sal mineral|mineral|suplement)\b/,
+      hoofStatus: /\b(casco|locomoc|claudic|andadura)\b/,
+      rumenMotility: /\b(rumen|ruminal|motilidade|contrac|timpan)\b/,
+      fecesAndUrine: /\b(fezes|urina|diarre|disuria|disúria)\b/,
+      milkProduction: /\b(leite|litro|ordenha|produc)\b/,
+      historicalDiseases: /\b(historic|sanitar|mastite|metrite|aie|mormo)\b/,
+      propertyAndManagement: /\b(propriedade|manejo|fazenda|haras|rotina)\b/,
+      contactAnimals: /\b(contact|contato|lote|rebanho|animais)\b/,
+      animalIdentificationDetails: /\b(nome|pelagem|idade|brinco|chip|raca|raça)\b/,
+      neonateAndReproduction: /\b(neonato|umbigo|brix|colostro|insemin|parto|distoc)\b/,
+      previousTreatmentHistory: /\b(tratamento|hidrat|ringer|antibiot|anti[- ]?inflamat|medic)\b/,
+      physicalExamDetailed: /\b(exame|mucosa|fc|fr|temperatura|tpc|desidrat)\b/,
+      requestedExamPanel: /\b(exame|hemograma|bioquim|ultrassom|coleta|painel)\b/,
+    };
+    const matcher = map[key];
+    if (!matcher) return true;
+    return matcher.test(normalized);
+  };
+
+  const extrairCamposEspecificosDoParsed = (parsed = {}, porte = "pequeno") => {
+    const safe = parsed && typeof parsed === "object" ? parsed : {};
+    const limit = (value, size = 180) =>
+      String(value || "").replace(/\s+/g, " ").trim().slice(0, size);
+
+    if (porte === "grande") {
+      const mapped = {
+        herdVaccination: safe.vacinacao || "",
+        herdDeworming: safe.vermifugacao || "",
+        propertyAndManagement: safe.ambiente || "",
+        historicalDiseases: safe.doencas_previas || "",
+        previousTreatmentHistory: [safe.uso_medicacao, safe.treatment, safe.medications]
+          .filter(Boolean)
+          .join(". "),
+        physicalExamDetailed: safe.physicalExam || safe.exame_fisico || "",
+        requestedExamPanel: safe.examDetails || safe.exames_solicitados || "",
+      };
+      return Object.entries(mapped).reduce((acc, [key, value]) => {
+        const text = limit(value);
+        if (text) acc[key] = text;
+        return acc;
+      }, {});
+    }
+
+    const mapped = {
+      vaccinationStatus: safe.vacinacao || "",
+      dewormingStatus: safe.vermifugacao || "",
+      diet: safe.alimentacao || "",
+      housing: safe.ambiente || "",
+      chronicDiseases: safe.doencas_previas || "",
+      currentSupplements: safe.uso_medicacao || "",
+      behavior: safe.anamnesis || safe.anamnese || "",
+      waterIntakeSmall: safe.anamnesis || "",
+    };
+    return Object.entries(mapped).reduce((acc, [key, value]) => {
+      const text = limit(value);
+      if (text) acc[key] = text;
+      return acc;
+    }, {});
   };
 
   const sanitizeSpecificFieldsWithEvidence = (
     rawFields = {},
     transcriptSource = "",
+    options = {},
   ) => {
+    const porte = options?.porte === "grande" ? "grande" : "pequeno";
+    const allowedKeys = new Set(CAMPOS_ESPECIFICOS_POR_PORTE[porte] || []);
+    const strictGrounding = options?.strictGrounding !== false;
     const cleaned = {};
     Object.entries(rawFields || {}).forEach(([key, value]) => {
+      if (allowedKeys.size && !allowedKeys.has(key)) return;
       const text = String(value || "").trim();
       if (!text) return;
       if (isNonInformativeSpecificValue(text)) return;
       if (looksLikeConversationalNoise(text)) return;
-      if (!isSpecificValueGrounded(text, transcriptSource)) return;
+      const grounded = isSpecificValueGrounded(text, transcriptSource);
+      const semanticMatch = correspondeSemanticaCampoEspecifico(key, text);
+      if (strictGrounding) {
+        if (!grounded && !semanticMatch) return;
+      } else if (!grounded && !semanticMatch && text.length > 40) {
+        return;
+      }
       cleaned[key] = text;
     });
     return squashRepeatedSpecificValues(cleaned);
   };
 
   const mergeSpecificFieldsByEvidence = ({
+    parsedSpecific = {},
     fallbackSpecific = {},
     aiSpecific = {},
     transcriptSource = "",
+    porte = "pequeno",
   }) => {
+    const sanitizedParsed = sanitizeSpecificFieldsWithEvidence(
+      parsedSpecific,
+      transcriptSource,
+      { porte, strictGrounding: true },
+    );
     const sanitizedFallback = sanitizeSpecificFieldsWithEvidence(
       fallbackSpecific,
       transcriptSource,
+      { porte, strictGrounding: true },
     );
     const sanitizedAI = sanitizeSpecificFieldsWithEvidence(
       aiSpecific,
       transcriptSource,
+      { porte, strictGrounding: false },
     );
     return {
+      ...sanitizedParsed,
       ...sanitizedFallback,
       ...Object.entries(sanitizedAI).reduce((acc, [key, value]) => {
-        if (sanitizedFallback[key]) return acc;
+        const current = String(sanitizedFallback[key] || sanitizedParsed[key] || "").trim();
+        if (current && current.length >= String(value || "").trim().length) return acc;
         acc[key] = value;
         return acc;
       }, {}),
@@ -684,6 +855,11 @@ const FieldModeConsultation = ({
     ["chiefComplaint", "anamnesis", "physicalExam", "diagnosis", "treatment", "medications"].forEach(
       mergeKey,
     );
+
+    if (!String(current?.anamnesis || "").trim()) {
+      const alias = String(current?.anamnese || local?.anamnese || "").trim();
+      if (alias) current.anamnesis = alias;
+    }
 
     if (!String(current?.diagnosis || "").trim()) {
       const phrases = splitIntoPhrases(transcriptText);
@@ -1265,31 +1441,78 @@ const FieldModeConsultation = ({
         console.error("Falha ao detalhar draft da consulta de campo:", draftError);
       }
 
-      const sanitizedBestDraft = bestDraft
-        ? {
-            ...bestDraft,
-            specificFields: sanitizeSpecificFieldsWithEvidence(
-              bestDraft?.specificFields || {},
-              fallbackTranscript,
-            ),
-          }
-        : null;
+      const parsedFromResult = {
+        chiefComplaint: String(
+          parsed?.chiefComplaint || parsed?.queixa_principal || "",
+        ).trim(),
+        anamnesis: String(
+          parsed?.anamnesis || parsed?.anamnese || parsed?.historico_do_problema || "",
+        ).trim(),
+        physicalExam: String(
+          parsed?.physicalExam || parsed?.achados_relevantes || "",
+        ).trim(),
+        diagnosis: String(
+          parsed?.diagnosis || parsed?.diagnostico_presuntivo || "",
+        ).trim(),
+        treatment: String(
+          parsed?.treatment || parsed?.orientacoes_ao_tutor || "",
+        ).trim(),
+        medications: String(
+          parsed?.medications || parsed?.medicacoes_prescritas || "",
+        ).trim(),
+      };
 
-      const normalizedParsedRaw = sanitizedBestDraft
+      const parsedBaseDoDraft = bestDraft
         ? {
-            chiefComplaint: String(sanitizedBestDraft.chiefComplaint || parsed?.chiefComplaint || "").trim(),
-            anamnesis: String(sanitizedBestDraft.anamnesis || parsed?.anamnesis || "").trim(),
-            physicalExam: String(sanitizedBestDraft.physicalExam || parsed?.physicalExam || "").trim(),
-            diagnosis: String(sanitizedBestDraft.diagnosis || parsed?.diagnosis || "").trim(),
-            treatment: String(sanitizedBestDraft.treatment || parsed?.treatment || "").trim(),
-            medications: String(sanitizedBestDraft.medications || parsed?.medications || "").trim(),
+            chiefComplaint: String(bestDraft.chiefComplaint || parsedFromResult.chiefComplaint || "").trim(),
+            anamnesis: String(bestDraft.anamnesis || parsedFromResult.anamnesis || "").trim(),
+            physicalExam: String(bestDraft.physicalExam || parsedFromResult.physicalExam || "").trim(),
+            diagnosis: String(bestDraft.diagnosis || parsedFromResult.diagnosis || "").trim(),
+            treatment: String(bestDraft.treatment || parsedFromResult.treatment || "").trim(),
+            medications: String(bestDraft.medications || parsedFromResult.medications || "").trim(),
           }
-        : parsed;
+        : parsedFromResult;
       const normalizedParsed = enrichCriticalParsedFields(
-        normalizedParsedRaw,
+        parsedBaseDoDraft,
         fallbackTranscript,
         fallbackSegments,
       );
+
+      const porteForSpecific =
+        manualPorteOverride ||
+        (String(bestDraft?.porte || "").toLowerCase() === "grande" ? "grande" : "") ||
+        inferPorteFromContext(fallbackTranscript).porte ||
+        "pequeno";
+      const parsedSpecific = extrairCamposEspecificosDoParsed(
+        { ...(parsed || {}), ...(normalizedParsed || {}) },
+        porteForSpecific,
+      );
+      const fallbackSpecific = extractSpecificFieldsFallback(
+        fallbackTranscript,
+        porteForSpecific,
+        normalizedParsed,
+      );
+      const aiSpecificRaw =
+        bestDraft?.specificFields && typeof bestDraft.specificFields === "object"
+          ? bestDraft.specificFields
+          : {};
+      const mergedSpecificFields = mergeSpecificFieldsByEvidence({
+        parsedSpecific,
+        fallbackSpecific,
+        aiSpecific: aiSpecificRaw,
+        transcriptSource: fallbackTranscript,
+        porte: porteForSpecific,
+      });
+      const sanitizedBestDraft = bestDraft
+        ? {
+            ...bestDraft,
+            porte: porteForSpecific,
+            specificFields: mergedSpecificFields,
+          }
+        : {
+            porte: porteForSpecific,
+            specificFields: mergedSpecificFields,
+          };
 
       setStructuredDraft(sanitizedBestDraft);
       setParsedData(normalizedParsed);
@@ -1716,14 +1939,17 @@ const FieldModeConsultation = ({
       .filter(Boolean)
       .join("\n");
     const fallbackSpecific = extractSpecificFieldsFallback(transcriptForSpecific, porte, parsed);
+    const parsedSpecific = extrairCamposEspecificosDoParsed(parsed, porte);
     const aiSpecific =
       draft.specificFields && typeof draft.specificFields === "object"
         ? draft.specificFields
         : {};
     const specificFields = mergeSpecificFieldsByEvidence({
+      parsedSpecific,
       fallbackSpecific,
       aiSpecific,
       transcriptSource: transcriptForSpecific,
+      porte,
     });
     const filledSpecificItems = Object.entries(specificFields)
       .map(([key, value]) => ({

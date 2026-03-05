@@ -14,7 +14,8 @@ const createPatientSchema = z.object({
   color: z.string().optional(),
   microchip: z.string().optional(),
   photoUrl: z.string().url().optional().or(z.literal('')),
-  porte: z.enum(['pequeno', 'grande']).optional(),
+  // Aceita qualquer string e normaliza no service para manter compatibilidade
+  porte: z.string().optional(),
   ownerName: z.string().optional(),
   ownerPhone: z.string().optional(),
   ownerAltPhone: z.string().optional(),

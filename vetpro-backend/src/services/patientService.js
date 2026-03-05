@@ -35,6 +35,24 @@ function normalizeStatus(value) {
   return 'ativo';
 }
 
+function normalizeText(value) {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toLowerCase();
+}
+
+function normalizePorte(value) {
+  const raw = normalizeText(value || '');
+  if (!raw) return null;
+  if (raw === 'pequeno') return 'pequeno';
+  if (raw === 'grande') return 'grande';
+  if (raw === 'medio' || raw === 'médio') return 'pequeno';
+  if (raw === 'gigante') return 'grande';
+  return null;
+}
+
 function parseDate(value) {
   if (!value) return null;
   const parsed = new Date(value);
@@ -62,7 +80,7 @@ function parseAge(value) {
   return null;
 }
 
-function validatePatientInput(data = {}, mode = 'create') {
+function validatePatientInput(data = {}) {
   const name = String(data.name || '').trim();
   const species = String(data.specie || data.species || '').trim();
   const ownerName = String(data.ownerName || '').trim();
@@ -90,10 +108,6 @@ function validatePatientInput(data = {}, mode = 'create') {
       'Status invalido. Use ativo, obito ou transferido.',
     );
   }
-
-  if (mode === 'create' && !ownerName) {
-    throw new ValidationError('Tutor obrigatorio para criar paciente.');
-  }
 }
 
 function normalizePatientInput(data = {}) {
@@ -120,7 +134,7 @@ function normalizePatientInput(data = {}) {
     microchip: data.microchip ? data.microchip.trim() : null,
     photoUrl: data.photoUrl ? data.photoUrl.trim() : null,
     status: normalizeStatus(data.status),
-    porte: data.porte ? data.porte.trim().toLowerCase() : null,
+    porte: normalizePorte(data.porte),
     ownerName: (data.ownerName || '').trim(),
     ownerPhone: normalizePhone(data.ownerPhone),
     ownerAltPhone: normalizePhone(data.ownerAltPhone),

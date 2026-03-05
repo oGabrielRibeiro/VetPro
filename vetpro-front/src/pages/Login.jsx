@@ -66,7 +66,7 @@ const Login = () => {
   return (
     <div className="app-shell-bg min-h-screen flex items-center justify-center p-3 sm:p-4">
       <div className="w-full max-w-[980px] grid grid-cols-1 lg:grid-cols-[1.05fr_0.95fr] gap-4 subtle-enter">
-        <section className="hidden lg:flex shell-surface rounded-3xl border border-gray-200/80 dark:border-dark-700/70 p-8 flex-col justify-between">
+        <section className="hidden lg:flex shell-surface rounded-3xl border border-gray-200/80 dark:border-dark-700/70 p-8 flex-col gap-8">
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-gray-500 dark:text-gray-400">
               VetPro Platform
@@ -80,7 +80,7 @@ const Login = () => {
             </p>
           </div>
 
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-3 gap-3 max-w-xl">
             {[
               { label: "Modo campo", icon: "consultations" },
               { label: "Agenda", icon: "appointments" },
