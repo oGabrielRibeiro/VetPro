@@ -31,7 +31,9 @@ describe('heuristicService', () => {
       },
     ]);
 
-    expect(unified.context?.tutorContent).toMatch(/nao quer comer|desde ontem/i);
+    expect(unified.context?.tutorContent).toMatch(
+      /nao quer comer|desde ontem/i,
+    );
     expect(unified.context?.medicoContent).toMatch(
       /exame fisico|diagnostico|tratamento/i,
     );

@@ -1,29 +1,31 @@
 const jwt = require('jsonwebtoken');
 const prisma = require('../lib/prisma');
+const { getJwtSecret, getJwtRefreshSecret } = require('../config/jwtConfig');
 
-const JWT_SECRET = process.env.JWT_SECRET;
-const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET;
 const ACCESS_TOKEN_EXPIRY = process.env.JWT_EXPIRES_IN || '15m'; // 15 minutos
 const REFRESH_TOKEN_EXPIRY = process.env.JWT_REFRESH_EXPIRES_IN || '7d'; // 7 dias
 
 function assertSecrets() {
-  if (!JWT_SECRET || !JWT_REFRESH_SECRET) {
+  const jwtSecret = getJwtSecret();
+  const jwtRefreshSecret = getJwtRefreshSecret();
+  if (!jwtSecret || !jwtRefreshSecret) {
     throw new Error('JWT_SECRET e JWT_REFRESH_SECRET devem estar definidos.');
   }
+  return { jwtSecret, jwtRefreshSecret };
 }
 
 /**
  * Gera um access token JWT
  */
 function generateAccessToken(user) {
-  assertSecrets();
+  const { jwtSecret } = assertSecrets();
   return jwt.sign(
     {
       userId: user.id,
       email: user.email,
       clinicId: user.clinicId,
     },
-    JWT_SECRET,
+    jwtSecret,
     { expiresIn: ACCESS_TOKEN_EXPIRY },
   );
 }
@@ -32,13 +34,13 @@ function generateAccessToken(user) {
  * Gera um refresh token JWT
  */
 function generateRefreshToken(user) {
-  assertSecrets();
+  const { jwtRefreshSecret } = assertSecrets();
   return jwt.sign(
     {
       userId: user.id,
       type: 'refresh',
     },
-    JWT_REFRESH_SECRET,
+    jwtRefreshSecret,
     { expiresIn: REFRESH_TOKEN_EXPIRY },
   );
 }
@@ -56,8 +58,8 @@ function generateTokenPair(user) {
  * Verifica se um token é válido (access ou refresh)
  */
 function verifyToken(token, isRefreshToken = false) {
-  assertSecrets();
-  const secret = isRefreshToken ? JWT_REFRESH_SECRET : JWT_SECRET;
+  const { jwtSecret, jwtRefreshSecret } = assertSecrets();
+  const secret = isRefreshToken ? jwtRefreshSecret : jwtSecret;
   return jwt.verify(token, secret);
 }
 
@@ -114,8 +116,8 @@ module.exports = {
   verifyToken,
   refreshAccessToken,
   verifyAccessToken,
-  JWT_SECRET,
-  JWT_REFRESH_SECRET,
+  JWT_SECRET: getJwtSecret(),
+  JWT_REFRESH_SECRET: getJwtRefreshSecret(),
   ACCESS_TOKEN_EXPIRY,
   REFRESH_TOKEN_EXPIRY,
 };

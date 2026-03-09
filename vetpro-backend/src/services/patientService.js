@@ -80,80 +80,182 @@ function parseAge(value) {
   return null;
 }
 
-function validatePatientInput(data = {}) {
+function hasOwn(data, key) {
+  return Object.prototype.hasOwnProperty.call(data || {}, key);
+}
+
+const updatablePatientFields = [
+  'name',
+  'specie',
+  'species',
+  'subcategory',
+  'breed',
+  'sex',
+  'age',
+  'birthDate',
+  'weight',
+  'color',
+  'microchip',
+  'photoUrl',
+  'status',
+  'porte',
+  'ownerName',
+  'ownerPhone',
+  'ownerAltPhone',
+  'ownerEmail',
+  'ownerCpf',
+  'ownerAddress',
+  'ownerNotes',
+  'emergencyFlag',
+  'responsibleVet',
+  'originClinic',
+  'anestheticRiskScore',
+  'persistentProfile',
+];
+
+function validatePatientInput(data = {}, options = {}) {
+  const partial = Boolean(options.partial);
   const name = String(data.name || '').trim();
   const species = String(data.specie || data.species || '').trim();
   const ownerName = String(data.ownerName || '').trim();
 
-  if (!name) throw new ValidationError('Nome do paciente e obrigatorio.');
-  if (!species) throw new ValidationError('Especie e obrigatoria.');
-  if (!ownerName)
-    throw new ValidationError('Tutor obrigatorio para criar paciente.');
-
-  const cpf = normalizeCpf(data.ownerCpf);
-  if (cpf && !/^\d{11}$/.test(cpf)) {
-    throw new ValidationError(
-      'CPF do tutor invalido. Informe 11 digitos numericos.',
+  if (partial) {
+    const hasAnyField = updatablePatientFields.some((field) =>
+      hasOwn(data, field),
     );
+    if (!hasAnyField) {
+      throw new ValidationError(
+        'Informe ao menos um campo para atualizar o paciente.',
+      );
+    }
   }
 
-  const weight = parseNumber(data.weight);
-  if (weight != null && weight <= 0) {
-    throw new ValidationError('Peso deve ser maior que zero.');
+  if (!partial || hasOwn(data, 'name')) {
+    if (!name) throw new ValidationError('Nome do paciente e obrigatorio.');
+  }
+  if (!partial || hasOwn(data, 'specie') || hasOwn(data, 'species')) {
+    if (!species) throw new ValidationError('Especie e obrigatoria.');
+  }
+  if (!partial || hasOwn(data, 'ownerName')) {
+    if (!ownerName)
+      throw new ValidationError('Tutor obrigatorio para criar paciente.');
   }
 
-  const status = normalizeStatus(data.status);
-  if (!['ativo', 'obito', 'transferido'].includes(status)) {
-    throw new ValidationError(
-      'Status invalido. Use ativo, obito ou transferido.',
-    );
+  if (!partial || hasOwn(data, 'ownerCpf')) {
+    const cpf = normalizeCpf(data.ownerCpf);
+    if (cpf && !/^\d{11}$/.test(cpf)) {
+      throw new ValidationError(
+        'CPF do tutor invalido. Informe 11 digitos numericos.',
+      );
+    }
+  }
+
+  if (!partial || hasOwn(data, 'weight')) {
+    const weight = parseNumber(data.weight);
+    if (weight != null && weight <= 0) {
+      throw new ValidationError('Peso deve ser maior que zero.');
+    }
+  }
+
+  if (!partial || hasOwn(data, 'status')) {
+    const status = normalizeStatus(data.status);
+    if (!['ativo', 'obito', 'transferido'].includes(status)) {
+      throw new ValidationError(
+        'Status invalido. Use ativo, obito ou transferido.',
+      );
+    }
   }
 }
 
-function normalizePatientInput(data = {}) {
+function normalizePatientInput(data = {}, options = {}) {
+  const partial = Boolean(options.partial);
   const ageValue = parseAge(data.age);
   const weightValue = parseNumber(data.weight);
   const riskValue = parseNumber(data.anestheticRiskScore);
   const birthDate = parseDate(data.birthDate);
+  const normalized = {};
 
-  const persistentProfile =
-    data.persistentProfile && typeof data.persistentProfile === 'object'
-      ? data.persistentProfile
+  if (!partial || hasOwn(data, 'name'))
+    normalized.name = (data.name || '').trim();
+  if (!partial || hasOwn(data, 'specie') || hasOwn(data, 'species')) {
+    normalized.specie = (data.specie || data.species || '').trim();
+  }
+  if (!partial || hasOwn(data, 'subcategory')) {
+    normalized.subcategory = data.subcategory ? data.subcategory.trim() : null;
+  }
+  if (!partial || hasOwn(data, 'breed'))
+    normalized.breed = data.breed ? data.breed.trim() : null;
+  if (!partial || hasOwn(data, 'sex'))
+    normalized.sex = data.sex ? data.sex.trim().toUpperCase() : null;
+  if (!partial || hasOwn(data, 'age')) normalized.age = ageValue;
+  if (!partial || hasOwn(data, 'birthDate')) normalized.birthDate = birthDate;
+  if (!partial || hasOwn(data, 'weight')) {
+    normalized.weight = Number.isFinite(weightValue) ? weightValue : null;
+  }
+  if (!partial || hasOwn(data, 'color'))
+    normalized.color = data.color ? data.color.trim() : null;
+  if (!partial || hasOwn(data, 'microchip')) {
+    normalized.microchip = data.microchip ? data.microchip.trim() : null;
+  }
+  if (!partial || hasOwn(data, 'photoUrl'))
+    normalized.photoUrl = data.photoUrl ? data.photoUrl.trim() : null;
+  if (!partial || hasOwn(data, 'status'))
+    normalized.status = normalizeStatus(data.status);
+  if (!partial || hasOwn(data, 'porte'))
+    normalized.porte = normalizePorte(data.porte);
+  if (!partial || hasOwn(data, 'ownerName'))
+    normalized.ownerName = (data.ownerName || '').trim();
+  if (!partial || hasOwn(data, 'ownerPhone')) {
+    normalized.ownerPhone = normalizePhone(data.ownerPhone);
+  }
+  if (!partial || hasOwn(data, 'ownerAltPhone')) {
+    normalized.ownerAltPhone = normalizePhone(data.ownerAltPhone);
+  }
+  if (!partial || hasOwn(data, 'ownerEmail')) {
+    normalized.ownerEmail = data.ownerEmail
+      ? data.ownerEmail.trim().toLowerCase()
       : null;
-
-  return {
-    name: (data.name || '').trim(),
-    specie: (data.specie || data.species || '').trim(),
-    subcategory: data.subcategory ? data.subcategory.trim() : null,
-    breed: data.breed ? data.breed.trim() : null,
-    sex: data.sex ? data.sex.trim().toUpperCase() : null,
-    age: ageValue,
-    birthDate,
-    weight: Number.isFinite(weightValue) ? weightValue : null,
-    color: data.color ? data.color.trim() : null,
-    microchip: data.microchip ? data.microchip.trim() : null,
-    photoUrl: data.photoUrl ? data.photoUrl.trim() : null,
-    status: normalizeStatus(data.status),
-    porte: normalizePorte(data.porte),
-    ownerName: (data.ownerName || '').trim(),
-    ownerPhone: normalizePhone(data.ownerPhone),
-    ownerAltPhone: normalizePhone(data.ownerAltPhone),
-    ownerEmail: data.ownerEmail ? data.ownerEmail.trim().toLowerCase() : null,
-    ownerCpf: normalizeCpf(data.ownerCpf),
-    ownerAddress: data.ownerAddress ? data.ownerAddress.trim() : null,
-    ownerNotes: data.ownerNotes ? data.ownerNotes.trim() : null,
-    emergencyFlag: Boolean(data.emergencyFlag),
-    responsibleVet: data.responsibleVet ? data.responsibleVet.trim() : null,
-    originClinic: data.originClinic ? data.originClinic.trim() : null,
-    anestheticRiskScore: Number.isFinite(riskValue)
+  }
+  if (!partial || hasOwn(data, 'ownerCpf'))
+    normalized.ownerCpf = normalizeCpf(data.ownerCpf);
+  if (!partial || hasOwn(data, 'ownerAddress')) {
+    normalized.ownerAddress = data.ownerAddress
+      ? data.ownerAddress.trim()
+      : null;
+  }
+  if (!partial || hasOwn(data, 'ownerNotes')) {
+    normalized.ownerNotes = data.ownerNotes ? data.ownerNotes.trim() : null;
+  }
+  if (!partial || hasOwn(data, 'emergencyFlag')) {
+    normalized.emergencyFlag = Boolean(data.emergencyFlag);
+  }
+  if (!partial || hasOwn(data, 'responsibleVet')) {
+    normalized.responsibleVet = data.responsibleVet
+      ? data.responsibleVet.trim()
+      : null;
+  }
+  if (!partial || hasOwn(data, 'originClinic')) {
+    normalized.originClinic = data.originClinic
+      ? data.originClinic.trim()
+      : null;
+  }
+  if (!partial || hasOwn(data, 'anestheticRiskScore')) {
+    normalized.anestheticRiskScore = Number.isFinite(riskValue)
       ? Math.max(0, Math.min(5, Math.trunc(riskValue)))
-      : null,
-    persistentProfile,
-  };
+      : null;
+  }
+  if (!partial || hasOwn(data, 'persistentProfile')) {
+    normalized.persistentProfile =
+      data.persistentProfile && typeof data.persistentProfile === 'object'
+        ? data.persistentProfile
+        : null;
+  }
+
+  return normalized;
 }
 
 async function createPatient(userId, clinicId, data) {
-  validatePatientInput(data, 'create');
+  validatePatientInput(data, { partial: false });
   const normalized = normalizePatientInput(data);
 
   return prisma.patient.create({
@@ -212,9 +314,14 @@ async function getPatientById(userId, patientId) {
   return patient ? serializePatient(patient) : null;
 }
 
-async function updatePatient(userId, patientId, data) {
-  validatePatientInput(data, 'update');
-  const normalized = normalizePatientInput(data);
+async function updatePatient(userId, patientId, data, options = {}) {
+  const partial = Boolean(options.partial);
+  validatePatientInput(data, { partial });
+  const normalized = normalizePatientInput(data, { partial });
+
+  if (!Object.keys(normalized).length) {
+    throw new ValidationError('Nenhum campo valido para atualizar.');
+  }
 
   return prisma.patient.updateMany({
     where: {

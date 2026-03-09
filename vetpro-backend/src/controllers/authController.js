@@ -6,8 +6,8 @@ const jwt = require('jsonwebtoken');
 const prisma = require('../lib/prisma');
 const logger = require('../utils/logger');
 const { refreshAccessToken } = require('../services/authService');
+const { getJwtSecret } = require('../config/jwtConfig');
 
-const { JWT_SECRET } = process.env;
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '15m';
 
 function isValidEmail(email = '') {
@@ -15,13 +15,17 @@ function isValidEmail(email = '') {
 }
 
 function signToken(user) {
+  const jwtSecret = getJwtSecret();
+  if (!jwtSecret) {
+    throw new Error('JWT_SECRET ausente');
+  }
   return jwt.sign(
     {
       userId: user.id,
       clinicId: user.clinicId,
       email: user.email,
     },
-    JWT_SECRET,
+    jwtSecret,
     { expiresIn: JWT_EXPIRES_IN },
   );
 }
@@ -93,7 +97,7 @@ async function register(req, res) {
         .json({ error: 'A senha deve ter no minimo 6 caracteres.' });
     }
 
-    if (!JWT_SECRET) {
+    if (!getJwtSecret()) {
       return res.status(500).json({
         error: 'Erro de configuracao do servidor. Tente novamente mais tarde.',
       });
@@ -134,8 +138,13 @@ async function register(req, res) {
     });
   } catch (err) {
     logger.error('register error:', err);
+    const details =
+      process.env.NODE_ENV === 'production'
+        ? undefined
+        : String(err?.message || 'Erro desconhecido');
     return res.status(500).json({
       error: 'Nao foi possivel concluir o cadastro. Tente novamente.',
+      ...(details ? { details } : {}),
     });
   }
 }
@@ -157,7 +166,7 @@ async function login(req, res) {
       return res.status(400).json({ error: 'Informe um e-mail valido.' });
     }
 
-    if (!JWT_SECRET) {
+    if (!getJwtSecret()) {
       return res.status(500).json({
         error: 'Erro de configuracao do servidor. Tente novamente mais tarde.',
       });

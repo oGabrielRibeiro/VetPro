@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const prisma = require('../lib/prisma');
+const { getJwtSecret } = require('../config/jwtConfig');
 
 async function authMiddleware(req, res, next) {
   let token;
@@ -7,9 +8,6 @@ async function authMiddleware(req, res, next) {
   const authHeader = req.headers.authorization;
   if (authHeader && typeof authHeader === 'string') {
     [, token] = authHeader.split(' ');
-  }
-  if (!token && req.query && typeof req.query.token === 'string') {
-    token = req.query.token.trim();
   }
 
   if (!token) {
@@ -20,13 +18,14 @@ async function authMiddleware(req, res, next) {
   }
 
   try {
-    if (!process.env.JWT_SECRET) {
+    const jwtSecret = getJwtSecret();
+    if (!jwtSecret) {
       return res.status(500).json({
         error: 'Erro de configuracao do servidor. Tente novamente mais tarde.',
       });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, jwtSecret);
 
     const user = await prisma.user.findUnique({
       where: { id: decoded.userId },

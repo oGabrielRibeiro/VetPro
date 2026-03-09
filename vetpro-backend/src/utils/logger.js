@@ -9,6 +9,59 @@ const path = require('path');
 // Importar DailyRotateFile separadamente
 const DailyRotateFile = require('winston-daily-rotate-file');
 
+const REDACTED = '[REDACTED]';
+const SENSITIVE_KEY_REGEX =
+  /(authorization|cookie|password|token|refresh|secret|api[_-]?key|access[_-]?key|private[_-]?key)/i;
+
+function maskSensitiveInString(value = '') {
+  return String(value || '')
+    .replace(
+      /(authorization\s*[:=]\s*)(bearer\s+)?[a-z0-9\-._~+/]+=*/gi,
+      `$1${REDACTED}`,
+    )
+    .replace(
+      /([?&](?:token|refresh|access_token|id_token)=)[^&\s]+/gi,
+      `$1${REDACTED}`,
+    );
+}
+
+function sanitizeValue(value, keyHint = '') {
+  if (value == null) return value;
+
+  if (SENSITIVE_KEY_REGEX.test(String(keyHint || ''))) {
+    return REDACTED;
+  }
+
+  if (Array.isArray(value)) {
+    return value.map((item) => sanitizeValue(item));
+  }
+
+  if (typeof value === 'string') {
+    return maskSensitiveInString(value);
+  }
+
+  if (value instanceof Error) {
+    return {
+      name: value.name,
+      message: maskSensitiveInString(value.message),
+      stack: maskSensitiveInString(value.stack || ''),
+    };
+  }
+
+  if (typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, item]) => [
+        key,
+        sanitizeValue(item, key),
+      ]),
+    );
+  }
+
+  return value;
+}
+
+const sanitizeLogFormat = winston.format((info) => sanitizeValue(info));
+
 // Configuração de rotação de arquivos
 const logDir = process.env.LOG_DIR || 'logs';
 
@@ -17,6 +70,7 @@ const logger = winston.createLogger({
   format: winston.format.combine(
     winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
     winston.format.errors({ stack: true }),
+    sanitizeLogFormat(),
     winston.format.json(),
   ),
   defaultMeta: { service: 'vetpro-backend' },
@@ -44,6 +98,7 @@ if (process.env.NODE_ENV !== 'production') {
   logger.add(
     new winston.transports.Console({
       format: winston.format.combine(
+        sanitizeLogFormat(),
         winston.format.colorize(),
         winston.format.simple(),
       ),

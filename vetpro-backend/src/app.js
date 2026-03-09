@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
+require('./config/loadEnv');
 const authMiddleware = require('./middlewares/authMiddleware');
 const patientRoutes = require('./routes/patientRoutes');
 const consultationRoutes = require('./routes/consultationRoutes');
@@ -13,25 +14,66 @@ const {
   authLimiter,
 } = require('./middlewares/rateLimitMiddleware');
 const cacheService = require('./services/cacheService');
-require('dotenv').config();
 
 const app = express();
 
-// Middlewares globais
-const corsOrigins = String(process.env.FRONTEND_URL || '')
-  .split(',')
-  .map((origin) => origin.trim())
-  .filter(Boolean);
+function withLoopbackAlias(origin) {
+  try {
+    const parsed = new URL(origin);
+    if (parsed.hostname === 'localhost') {
+      parsed.hostname = '127.0.0.1';
+      return parsed.toString().replace(/\/$/, '');
+    }
+    if (parsed.hostname === '127.0.0.1') {
+      parsed.hostname = 'localhost';
+      return parsed.toString().replace(/\/$/, '');
+    }
+    return null;
+  } catch (_) {
+    return null;
+  }
+}
 
+function buildAllowedOrigins() {
+  const configured = String(process.env.FRONTEND_URL || '')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+
+  const seed = configured.length > 0 ? configured : ['http://localhost:3000'];
+  const allowed = new Set();
+
+  for (const origin of seed) {
+    const normalized = origin.replace(/\/$/, '');
+    allowed.add(normalized);
+    const alias = withLoopbackAlias(normalized);
+    if (alias) {
+      allowed.add(alias);
+    }
+  }
+
+  // fallback explicito para ambiente local
+  allowed.add('http://localhost:3000');
+  allowed.add('http://127.0.0.1:3000');
+
+  return allowed;
+}
+
+const allowedOrigins = buildAllowedOrigins();
+
+// Middlewares globais
 app.use(
   cors({
-    origin:
-      corsOrigins.length > 0
-        ? corsOrigins
-        : ['http://localhost:3000', 'http://127.0.0.1:3000'],
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.has(origin)) return callback(null, true);
+      return callback(new Error('CORS origin nao permitida'));
+    },
     credentials: true,
+    optionsSuccessStatus: 204,
   }),
 );
+
 app.disable('x-powered-by');
 // aceitar uploads base64/JSON grandes (fotos, logos, assinaturas)
 app.use(express.json({ limit: '20mb' }));

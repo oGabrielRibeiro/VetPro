@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 /**
  * Script para substituir console.* pelo logger estruturado
  * Uso: node src/scripts/replace-console-with-logger.js
@@ -107,7 +108,7 @@ function processDirectory(dir, extensions = ['.js']) {
 
       if (processFile(filePath)) {
         console.log(`  ✅ ${path.relative(servicesDir, filePath)}`);
-        count++;
+        count += 1;
       }
     }
   }

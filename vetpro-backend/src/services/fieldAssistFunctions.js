@@ -190,7 +190,8 @@ function detectSpeakerFromText(phrase, fallbackSpeaker = 'Tutor') {
     tutorScore += 1;
   }
   if (/\?$/.test(String(phrase || '').trim())) tutorScore += 1;
-  if (/\b(fc|fr|trc|mucosa|ausculta|palpacao)\b/.test(normalized)) vetScore += 2;
+  if (/\b(fc|fr|trc|mucosa|ausculta|palpacao)\b/.test(normalized))
+    vetScore += 2;
   if (/\b(prescricao|receita|mg\/kg|sid|bid|tid)\b/.test(normalized))
     vetScore += 2;
 
@@ -333,13 +334,43 @@ function scoreFieldCandidate(phrase = '', field = '', speaker = 'Tutor') {
 
   const cues = {
     chiefComplaint: ['queixa', 'motivo', 'trouxe', 'principal', 'reclam'],
-    anamnesis: ['desde', 'historico', 'evolucao', 'comecou', 'piorou', 'melhorou'],
-    physicalExam: ['exame', 'palpacao', 'ausculta', 'mucosa', 'temperatura', 'fc', 'fr'],
+    anamnesis: [
+      'desde',
+      'historico',
+      'evolucao',
+      'comecou',
+      'piorou',
+      'melhorou',
+    ],
+    physicalExam: [
+      'exame',
+      'palpacao',
+      'ausculta',
+      'mucosa',
+      'temperatura',
+      'fc',
+      'fr',
+    ],
     diagnosis: ['diagnostico', 'suspeita', 'hipotese', 'compativel'],
     treatment: ['tratamento', 'conduta', 'oriento', 'recomendo', 'iniciar'],
-    medications: ['prescrevo', 'prescricao', 'medicacao', 'receita', 'mg/kg', 'sid', 'bid', 'tid'],
+    medications: [
+      'prescrevo',
+      'prescricao',
+      'medicacao',
+      'receita',
+      'mg/kg',
+      'sid',
+      'bid',
+      'tid',
+    ],
     returnRecommendation: ['retorno', 'reavaliar', 'voltar', 'revisao'],
-    examDetails: ['hemograma', 'ultrassom', 'radiografia', 'exame complementar', 'solicito exame'],
+    examDetails: [
+      'hemograma',
+      'ultrassom',
+      'radiografia',
+      'exame complementar',
+      'solicito exame',
+    ],
     procedures: ['coleta', 'curativo', 'procedimento', 'drenagem', 'sutura'],
   };
 
@@ -350,7 +381,11 @@ function scoreFieldCandidate(phrase = '', field = '', speaker = 'Tutor') {
 
   if (speaker === 'Tutor') {
     if (field === 'chiefComplaint' || field === 'anamnesis') score += 1;
-    if (field === 'physicalExam' || field === 'diagnosis' || field === 'treatment')
+    if (
+      field === 'physicalExam' ||
+      field === 'diagnosis' ||
+      field === 'treatment'
+    )
       score -= 1;
   }
   if (speaker === 'Medico') {
@@ -382,7 +417,7 @@ function parseClinicalFieldsFromSegments(
   options = {},
 ) {
   try {
-    void options;
+    const skipUnifiedBrain = Boolean(options?.skipUnifiedBrain);
     const allText =
       (Array.isArray(sourceText) ? sourceText.join(' ') : sourceText) || '';
     const baseSegments = Array.isArray(segments) ? segments : [];
@@ -393,7 +428,10 @@ function parseClinicalFieldsFromSegments(
     const normalizedSegments = parsedSegments
       .map((seg) => ({
         stamp: seg?.stamp || '00:00',
-        speaker: detectSpeakerFromText(seg?.text || '', seg?.speaker || 'Tutor'),
+        speaker: detectSpeakerFromText(
+          seg?.text || '',
+          seg?.speaker || 'Tutor',
+        ),
         text: String(seg?.text || '').trim(),
       }))
       .filter((seg) => seg.text);
@@ -428,12 +466,12 @@ function parseClinicalFieldsFromSegments(
         if (best && best.score >= 2) {
           buckets[best.field].push(phrase);
         } else if (speaker === 'Tutor') {
-          if (buckets.chiefComplaint.length < 2) buckets.chiefComplaint.push(phrase);
+          if (buckets.chiefComplaint.length < 2)
+            buckets.chiefComplaint.push(phrase);
           else buckets.anamnesis.push(phrase);
-        } else {
-          if (buckets.physicalExam.length < 2) buckets.physicalExam.push(phrase);
-          else buckets.treatment.push(phrase);
-        }
+        } else if (buckets.physicalExam.length < 2)
+          buckets.physicalExam.push(phrase);
+        else buckets.treatment.push(phrase);
       }
     }
 
@@ -469,12 +507,17 @@ function parseClinicalFieldsFromSegments(
     const speakerTotal = speakerStats.Tutor + speakerStats.Medico || 1;
     const speakerDiff = Math.abs(speakerStats.Tutor - speakerStats.Medico);
     const roleReliability = Number(
-      Math.min(1, (speakerDiff + Math.min(speakerStats.Tutor, speakerStats.Medico)) / speakerTotal).toFixed(2),
+      Math.min(
+        1,
+        (speakerDiff + Math.min(speakerStats.Tutor, speakerStats.Medico)) /
+          speakerTotal,
+      ).toFixed(2),
     );
 
     const context = {
       tutorContent: tutorText || '',
       medicoContent: medicoText || '',
+      skipUnifiedBrain,
       roleReliability: {
         score: roleReliability,
         reliable: roleReliability >= 0.45,
@@ -1047,6 +1090,7 @@ ${combinedText}`;
         const indefinidoMatch = line.match(/^\[INDEFINIDO\]:\s*(.*)/i);
 
         if (vetMatch) {
+          const [, vetText = ''] = vetMatch;
           if (currentText && currentSpeaker) {
             segments.push({
               speaker: currentSpeaker,
@@ -1054,8 +1098,9 @@ ${combinedText}`;
             });
           }
           currentSpeaker = 'Medico';
-          currentText = vetMatch[1];
+          currentText = vetText;
         } else if (tutorMatch) {
+          const [, tutorText = ''] = tutorMatch;
           if (currentText && currentSpeaker) {
             segments.push({
               speaker: currentSpeaker,
@@ -1063,8 +1108,9 @@ ${combinedText}`;
             });
           }
           currentSpeaker = 'Tutor';
-          currentText = tutorMatch[1];
+          currentText = tutorText;
         } else if (indefinidoMatch) {
+          const [, indefinidoText = ''] = indefinidoMatch;
           if (currentText && currentSpeaker) {
             segments.push({
               speaker: currentSpeaker,
@@ -1072,9 +1118,9 @@ ${combinedText}`;
             });
           }
           currentSpeaker = 'Tutor';
-          currentText = indefinidoMatch[1];
+          currentText = indefinidoText;
         } else if (line.trim()) {
-          currentText += ' ' + line;
+          currentText += ` ${line}`;
         }
       }
 
@@ -1085,7 +1131,7 @@ ${combinedText}`;
 
     return {
       fields: mappedFields,
-      segments: segments,
+      segments,
       raw: parsed, // Mantém o resultado original para debug
     };
   } catch (error) {

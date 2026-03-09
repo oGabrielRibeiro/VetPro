@@ -1,11 +1,41 @@
 const express = require('express');
 const passport = require('passport');
 const jwt = require('jsonwebtoken');
+const { randomUUID } = require('crypto');
 const oauthService = require('../services/oauthService');
 const authService = require('../services/authService');
 const logger = require('../utils/logger');
 
-const { generateTokens } = authService;
+const { generateTokenPair } = authService;
+
+const OAUTH_CODE_TTL_MS = 5 * 60 * 1000;
+const oauthCodeStore = new Map();
+
+function createOauthCode(payload) {
+  const now = Date.now();
+  for (const [storedCode, stored] of oauthCodeStore.entries()) {
+    if (now > Number(stored?.expiresAt || 0)) {
+      oauthCodeStore.delete(storedCode);
+    }
+  }
+
+  const code = randomUUID().replace(/-/g, '');
+  oauthCodeStore.set(code, {
+    payload,
+    expiresAt: now + OAUTH_CODE_TTL_MS,
+  });
+  return code;
+}
+
+function consumeOauthCode(code = '') {
+  const key = String(code || '').trim();
+  if (!key) return null;
+  const stored = oauthCodeStore.get(key);
+  if (!stored) return null;
+  oauthCodeStore.delete(key);
+  if (Date.now() > Number(stored.expiresAt || 0)) return null;
+  return stored.payload || null;
+}
 
 const router = express.Router();
 
@@ -41,17 +71,26 @@ router.get(
         const tempToken = jwt.sign({ tempUser: user }, process.env.JWT_SECRET, {
           expiresIn: '15m',
         });
+        const code = createOauthCode({
+          type: 'complete-register',
+          token: tempToken,
+        });
         return res.redirect(
-          `${process.env.FRONTEND_URL}/oauth/complete-register?token=${tempToken}`,
+          `${process.env.FRONTEND_URL}/oauth/complete-register?code=${code}`,
         );
       }
 
       // Gera tokens
-      const tokens = generateTokens(user);
+      const tokens = generateTokenPair(user);
+      const code = createOauthCode({
+        type: 'auth',
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
+      });
 
-      // Redireciona com tokens
+      // Redireciona sem token em query (somente code de uso unico)
       return res.redirect(
-        `${process.env.FRONTEND_URL}/oauth/callback?token=${tokens.accessToken}&refresh=${tokens.refreshToken}`,
+        `${process.env.FRONTEND_URL}/oauth/callback?code=${code}`,
       );
     } catch (error) {
       logger.error('OAuth callback error', { error: error.message });
@@ -61,6 +100,26 @@ router.get(
     }
   },
 );
+
+// Troca code por payload de auth/registro (uso unico)
+router.post('/exchange-code', async (req, res) => {
+  try {
+    const code = String(req.body?.code || '').trim();
+    if (!code) {
+      return res.status(400).json({ error: 'Code e obrigatorio.' });
+    }
+
+    const payload = consumeOauthCode(code);
+    if (!payload) {
+      return res.status(400).json({ error: 'Code invalido ou expirado.' });
+    }
+
+    return res.json(payload);
+  } catch (error) {
+    logger.error('OAuth exchange-code error', { error: error.message });
+    return res.status(500).json({ error: 'Erro ao trocar code OAuth.' });
+  }
+});
 
 // Completar registro (para novos usuários)
 router.post('/complete-register', async (req, res) => {
@@ -82,7 +141,7 @@ router.post('/complete-register', async (req, res) => {
     });
 
     // Gera tokens
-    const tokens = generateTokens(user);
+    const tokens = generateTokenPair(user);
 
     return res.json({
       user: {

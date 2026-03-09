@@ -8,11 +8,12 @@ import AppIcon from "./components/AppIcon";
 import SpeciesIcon from "./components/SpeciesIcon";
 import PatientForm from "./components/PatientForm";
 import { ToastProvider } from "./components/Toast";
-import api, { buildApiUrl } from "./services/api";
+import api from "./services/api";
 import { addToQueue } from "./services/offlineQueue";
 import { getQueue, clearQueue } from "./services/offlineQueue";
 import { toUserFriendlyError } from "./utils/errorMessages";
 import { sanitizeConsultationNotesForDisplay } from "./utils/consultationNotes";
+import { openApiBlobInNewTab } from "./utils/blobDownloads";
 import {
   buildReturnConsultationInitialData,
   resolveConsultationContext,
@@ -517,7 +518,7 @@ const MainApp = () => {
     setCurrentView(fieldMode || isMobile ? "new-consultation-field" : "new-consultation-quick");
   };
 
-  const handleGeneratePrescription = (consultation) => {
+  const handleGeneratePrescription = async (consultation) => {
     if (
       consultation?.consultationType === "retorno" &&
       (!consultation?.medications ||
@@ -529,13 +530,13 @@ const MainApp = () => {
       return;
     }
 
-    const token = localStorage.getItem("token");
-    window.open(
-      buildApiUrl(`/consultations/${consultation.id}/prescription`, {
-        token,
-      }),
-      "_blank",
-    );
+    try {
+      await openApiBlobInNewTab(`/consultations/${consultation.id}/prescription`);
+    } catch (error) {
+      showActionError(
+        toUserFriendlyError(error, "Nao foi possivel gerar a receita agora."),
+      );
+    }
   };
 
   const isMobileTabActive = (tabId) => {

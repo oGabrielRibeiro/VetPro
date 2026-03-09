@@ -1,9 +1,6 @@
 /* eslint-disable no-use-before-define */
 /* Fixed version of fieldAssistFunctions.js - CORRECTED VERSION */
 
-const fs = require('fs');
-const path = require('path');
-
 const logger = require('../utils/logger');
 
 function normalizeText(value = '') {

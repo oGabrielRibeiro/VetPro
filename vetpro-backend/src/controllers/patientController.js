@@ -57,6 +57,7 @@ async function update(req, res) {
       req.user.id,
       req.params.id,
       req.body,
+      { partial: req.method === 'PATCH' },
     );
     websocketService.notifyPatientUpdate(req.user.clinicId, patient, 'updated');
     return res.json({ message: 'Paciente atualizado' });

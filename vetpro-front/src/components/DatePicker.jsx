@@ -52,9 +52,9 @@ const DatePicker = forwardRef(({
 
   const darkClasses = "dark:bg-dark-800 dark:text-white";
 
-  // Gera anos para o select (5 anos atrás até o ano atual ou próximo)
+  // Gera 100 anos (ano atual até 99 anos atrás)
   const currentYear = new Date().getFullYear();
-  const years = Array.from({ length: 10 }, (_, i) => currentYear - 5 + i);
+  const years = Array.from({ length: 100 }, (_, i) => currentYear - i);
 
   // Gera meses
   const months = [
@@ -114,7 +114,6 @@ const DatePicker = forwardRef(({
         onChange(newDate);
       }
     }
-    setIsOpen(false);
   };
 
   return (
@@ -155,7 +154,7 @@ const DatePicker = forwardRef(({
 
         {/* Dropdown do calendário */}
         {isOpen && (
-          <div className="absolute z-50 left-2 right-2 sm:relative sm:left-auto sm:right-auto mt-1 sm:mt-0 sm:w-72 w-[calc(100vw-1rem)] max-w-[280px] bg-white dark:bg-dark-800 border border-gray-200 dark:border-dark-700 rounded-lg shadow-lg p-2 sm:p-3">
+          <div className="absolute z-50 left-0 right-0 mt-1 w-full sm:w-80 max-w-[calc(100vw-1rem)] bg-white dark:bg-dark-800 border border-gray-200 dark:border-dark-700 rounded-lg shadow-lg p-2 sm:p-3">
             <div className="grid grid-cols-3 gap-1 sm:gap-2">
               {/* Dia */}
               <div>
@@ -215,7 +214,6 @@ const DatePicker = forwardRef(({
                 type="button"
                 onClick={() => {
                   onChange(today);
-                  setIsOpen(false);
                 }}
                 className="flex-1 text-xs text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 font-medium"
               >
@@ -225,11 +223,17 @@ const DatePicker = forwardRef(({
                 type="button"
                 onClick={() => {
                   onChange("");
-                  setIsOpen(false);
                 }}
                 className="flex-1 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 font-medium"
               >
                 Limpar
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsOpen(false)}
+                className="flex-1 text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-semibold"
+              >
+                Confirmar
               </button>
             </div>
           </div>

@@ -1533,20 +1533,14 @@ function ensureDraftShape(
 }
 
 // Inferência simples de campos especificos a partir do contexto
-function inferSpecificFieldValueFromContext(
-  key,
-  sourceText = '',
-  chiefComplaint = '',
-) {
+function inferSpecificFieldValueFromContext(key, sourceText = '') {
   const labels = SPECIFIC_FIELD_LABELS[key] || [];
   const value =
     extractByLabels(
       sourceText,
       labels,
       Object.values(SPECIFIC_FIELD_LABELS).flat(),
-    ) ||
-    extractByKeywords(sourceText, labels) ||
-    firstSentence(chiefComplaint || sourceText, 140);
+    ) || extractByKeywords(sourceText, labels);
   return normalizeSpecificValueByKey(key, value);
 }
 

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
 import api from "../services/api";
 import { toUserFriendlyError } from "../utils/errorMessages";
 
@@ -12,14 +12,49 @@ export const AuthProvider = ({ children }) => {
 
   const clearError = () => setError(null);
 
-  const logout = (message = null) => {
+  const resolveUserWithPreviews = useCallback((baseUser = {}, localProfile = null) => {
+    const merged =
+      localProfile && localProfile.id === baseUser?.id
+        ? { ...baseUser, ...localProfile }
+        : baseUser;
+
+    return {
+      ...merged,
+      profilePhotoPreview:
+        merged.profilePhoto || merged.profilePhotoPreview || null,
+      signaturePreview: merged.signature || merged.signaturePreview || null,
+      clinicLogoPreview: merged.clinic?.logoUrl || merged.clinicLogoPreview || null,
+    };
+  }, []);
+
+  const establishSession = useCallback(async (token, refreshToken = null) => {
+    if (!token) {
+      throw new Error("Token de sessao invalido.");
+    }
+
+    localStorage.setItem("token", token);
+    if (refreshToken) {
+      localStorage.setItem("refreshToken", refreshToken);
+    }
+
+    const me = await api.get("/auth/me");
+    const localProfileRaw = localStorage.getItem("vetpro_profile");
+    const localProfile = localProfileRaw ? JSON.parse(localProfileRaw) : null;
+    const withPreviews = resolveUserWithPreviews(me.data, localProfile);
+    localStorage.setItem("vetpro_profile", JSON.stringify({ id: withPreviews.id }));
+    setUser(withPreviews);
+    return withPreviews;
+  }, [resolveUserWithPreviews]);
+
+  const logout = useCallback((message = null) => {
     localStorage.removeItem("token");
+    localStorage.removeItem("refreshToken");
     localStorage.removeItem("vetpro_profile");
     setUser(null);
     if (typeof message === "string" && message.trim()) {
       setError(message);
     }
-  };
+  }, []);
 
   useEffect(() => {
     const onAuthExpired = (event) => {
@@ -31,43 +66,72 @@ export const AuthProvider = ({ children }) => {
 
     window.addEventListener("vetpro:auth-expired", onAuthExpired);
     return () => window.removeEventListener("vetpro:auth-expired", onAuthExpired);
-  }, []);
+  }, [logout]);
 
   useEffect(() => {
     const checkSession = async () => {
-      const token = localStorage.getItem("token");
-
-      if (!token) {
-        setLoading(false);
-        return;
-      }
-
       try {
+        const path = window.location.pathname || "";
+        const params = new URLSearchParams(window.location.search || "");
+        const isOauthPath =
+          path === "/oauth/callback" || path === "/oauth/complete-register";
+        const oauthCode = params.get("code");
+
+        if (isOauthPath && oauthCode) {
+          const exchange = await api.post("/oauth/exchange-code", { code: oauthCode });
+          const payload = exchange?.data || {};
+
+          if (payload.type === "auth") {
+            await establishSession(payload.accessToken, payload.refreshToken || null);
+            window.history.replaceState({}, "", "/");
+            setLoading(false);
+            return;
+          }
+
+          if (payload.type === "complete-register" && payload.token) {
+            const complete = await api.post("/oauth/complete-register", {
+              token: payload.token,
+              clinicName: "Clinica VetPro",
+            });
+            await establishSession(
+              complete?.data?.accessToken || complete?.data?.token,
+              complete?.data?.refreshToken || null,
+            );
+            window.history.replaceState({}, "", "/");
+            setLoading(false);
+            return;
+          }
+
+          throw new Error("Payload OAuth invalido.");
+        }
+
+        const token = localStorage.getItem("token");
+        if (!token) {
+          setLoading(false);
+          return;
+        }
+
         const response = await api.get("/auth/me");
         const localProfileRaw = localStorage.getItem("vetpro_profile");
         const localProfile = localProfileRaw ? JSON.parse(localProfileRaw) : null;
-        const merged =
-          localProfile && localProfile.id === response.data?.id
-            ? { ...response.data, ...localProfile }
-            : response.data;
-        const withPreviews = {
-          ...merged,
-          profilePhotoPreview: merged.profilePhoto || merged.profilePhotoPreview || null,
-          signaturePreview: merged.signature || merged.signaturePreview || null,
-          clinicLogoPreview:
-            merged.clinic?.logoUrl || merged.clinicLogoPreview || null,
-        };
+        const withPreviews = resolveUserWithPreviews(response.data, localProfile);
         setUser(withPreviews);
-      } catch {
+      } catch (err) {
         localStorage.removeItem("token");
+        localStorage.removeItem("refreshToken");
         setUser(null);
+        const path = window.location.pathname || "";
+        if (path === "/oauth/callback" || path === "/oauth/complete-register") {
+          setError(toUserFriendlyError(err, "Falha ao concluir login com Google."));
+          window.history.replaceState({}, "", "/?error=oauth_failed");
+        }
       } finally {
         setLoading(false);
       }
     };
 
     checkSession();
-  }, []);
+  }, [establishSession, resolveUserWithPreviews]);
 
   const login = async (email, password) => {
     try {
@@ -81,23 +145,7 @@ export const AuthProvider = ({ children }) => {
       });
 
       const token = response.data?.token || response.data?.data?.token;
-      if (!token) {
-        throw new Error("Resposta de login invalida");
-      }
-
-      localStorage.setItem("token", token);
-
-      const me = await api.get("/auth/me");
-      const merged = me.data;
-      // reset any cached profile to avoid contaminar outro usuario
-      localStorage.setItem("vetpro_profile", JSON.stringify({ id: merged.id }));
-      const withPreviews = {
-        ...merged,
-        profilePhotoPreview: merged.profilePhoto || null,
-        signaturePreview: merged.signature || null,
-        clinicLogoPreview: merged.clinic?.logoUrl || null,
-      };
-      setUser(withPreviews);
+      const withPreviews = await establishSession(token);
       return withPreviews;
     } catch (err) {
       setError(toUserFriendlyError(err, "Não foi possível fazer login."));
@@ -123,22 +171,7 @@ export const AuthProvider = ({ children }) => {
       });
 
       const token = response.data?.token || response.data?.data?.token;
-      if (!token) {
-        throw new Error("Resposta de cadastro invalida");
-      }
-
-      localStorage.setItem("token", token);
-
-      const me = await api.get("/auth/me");
-      const merged = me.data;
-      localStorage.setItem("vetpro_profile", JSON.stringify({ id: merged.id }));
-      const withPreviews = {
-        ...merged,
-        profilePhotoPreview: merged.profilePhoto || null,
-        signaturePreview: merged.signature || null,
-        clinicLogoPreview: merged.clinic?.logoUrl || null,
-      };
-      setUser(withPreviews);
+      const withPreviews = await establishSession(token);
       return withPreviews;
     } catch (err) {
       setError(toUserFriendlyError(err, "Não foi possível criar sua conta."));

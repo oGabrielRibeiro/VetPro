@@ -287,7 +287,9 @@ describe('API - Pacientes', () => {
     it('deve atualizar paciente', async () => {
       const updateData = {
         name: 'Rex Updated',
+        specie: 'cao',
         weight: 25,
+        ownerName: 'Joao',
       };
 
       prisma.patient.updateMany.mockResolvedValue({ count: 1 });
@@ -297,7 +299,29 @@ describe('API - Pacientes', () => {
         .send(updateData)
         .expect('Content-Type', /json/);
 
-      expect([200, 400, 404, 500]).toContain(response.status);
+      expect(response.status).toBe(200);
+    });
+
+    it('deve falhar no PUT sem campos obrigatorios', async () => {
+      const response = await request(app)
+        .put('/api/patients/patient-1')
+        .send({ name: 'Rex sem especie' })
+        .expect('Content-Type', /json/);
+
+      expect(response.status).toBe(400);
+    });
+  });
+
+  describe('PATCH /api/patients/:id', () => {
+    it('deve atualizar parcialmente o paciente', async () => {
+      prisma.patient.updateMany.mockResolvedValue({ count: 1 });
+
+      const response = await request(app)
+        .patch('/api/patients/patient-1')
+        .send({ weight: 26.5 })
+        .expect('Content-Type', /json/);
+
+      expect(response.status).toBe(200);
     });
   });
 

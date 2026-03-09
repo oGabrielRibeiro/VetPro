@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
-import api, { buildApiUrl } from "../services/api";
+import api from "../services/api";
 import { useAuth } from "../contexts/AuthContext";
 import BeforeAfterSlider from "../components/BeforeAfterSlider";
 import AppIcon from "./AppIcon";
 import LoadingDot from "./LoadingDot";
+import { downloadApiBlob, openApiBlobInNewTab } from "../utils/blobDownloads";
 import {
   parsePorteDataFromNotes,
   sanitizeConsultationNotesForDisplay,
@@ -163,12 +164,31 @@ const ConsultationPreview = ({
     }
   };
 
-  const handleDownloadConsultationPDF = () => {
-    const token = localStorage.getItem("token");
-    window.open(
-      buildApiUrl(`/consultations/${consultation.id}/pdf`, { token }),
-      "_blank",
-    );
+  const handleDownloadConsultationPDF = async () => {
+    try {
+      await openApiBlobInNewTab(`/consultations/${consultation.id}/pdf`);
+    } catch (error) {
+      console.error("Erro ao abrir PDF:", error);
+    }
+  };
+
+  const handlePreviewFile = async (fileId) => {
+    try {
+      await openApiBlobInNewTab(`/consultations/files/${fileId}/view`);
+    } catch (error) {
+      console.error("Erro ao visualizar arquivo:", error);
+    }
+  };
+
+  const handleDownloadFile = async (file) => {
+    try {
+      await downloadApiBlob(
+        `/consultations/files/${file.id}/view`,
+        file.originalName || "arquivo",
+      );
+    } catch (error) {
+      console.error("Erro ao baixar arquivo:", error);
+    }
   };
 
   return (
@@ -566,27 +586,26 @@ const ConsultationPreview = ({
                             </span>
 
                             <div className="flex items-center gap-4 sm:gap-3 self-end sm:self-auto">
-                              <a
-                                href={buildApiUrl(`/consultations/files/${file.id}/view`, {
-                                  token: localStorage.getItem("token"),
-                                })}
-                                target="_blank"
-                                rel="noreferrer"
+                              <button
+                                type="button"
                                 className="text-blue-600 hover:text-blue-700 text-sm sm:text-xs font-semibold"
-                                onClick={(e) => e.stopPropagation()}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handlePreviewFile(file.id);
+                                }}
                               >
                                 Visualizar
-                              </a>
-                              <a
-                                href={buildApiUrl(`/consultations/files/${file.id}/view`, {
-                                  token: localStorage.getItem("token"),
-                                })}
-                                download={file.originalName}
+                              </button>
+                              <button
+                                type="button"
                                 className="text-indigo-600 hover:text-indigo-700 text-sm sm:text-xs font-semibold"
-                                onClick={(e) => e.stopPropagation()}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDownloadFile(file);
+                                }}
                               >
                                 Baixar
-                              </a>
+                              </button>
                             </div>
                           </div>
                         ))}

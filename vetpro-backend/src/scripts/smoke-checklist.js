@@ -1,7 +1,19 @@
-// Console replaced by logger
+const path = require('path');
+const { spawn } = require('child_process');
 const logger = require('../utils/logger');
 
 const BASE_URL = process.env.API_BASE_URL || 'http://localhost:5000/api';
+const HEALTH_URL = BASE_URL.endsWith('/api')
+  ? `${BASE_URL.slice(0, -4)}/health`
+  : `${BASE_URL}/health`;
+
+function printInfo(message) {
+  process.stdout.write(`${message}\n`);
+}
+
+function printError(message) {
+  process.stderr.write(`${message}\n`);
+}
 
 function randomEmail() {
   const nonce = Date.now();
@@ -12,8 +24,8 @@ function randomName() {
   return `Smoke Vet ${Date.now()}`;
 }
 
-async function request(path, options = {}) {
-  const url = `${BASE_URL}${path}`;
+async function request(endpoint, options = {}) {
+  const url = `${BASE_URL}${endpoint}`;
   const response = await fetch(url, options);
 
   let data = null;
@@ -25,7 +37,7 @@ async function request(path, options = {}) {
   }
 
   if (!response.ok) {
-    const error = new Error(`HTTP ${response.status} - ${path}`);
+    const error = new Error(`HTTP ${response.status} - ${endpoint}`);
     error.status = response.status;
     error.data = data;
     throw error;
@@ -40,14 +52,97 @@ function authHeaders(token) {
   };
 }
 
+async function wait(ms) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+
+async function isApiUp() {
+  try {
+    const response = await fetch(HEALTH_URL, { method: 'GET' });
+    return response.ok;
+  } catch (_) {
+    return false;
+  }
+}
+
+async function tryStopManagedServer(child) {
+  if (!child) return;
+  try {
+    child.kill('SIGTERM');
+  } catch (_) {
+    // noop
+  }
+  try {
+    await wait(300);
+  } catch (_) {
+    // noop
+  }
+  if (!child.killed) {
+    try {
+      child.kill('SIGKILL');
+    } catch (_) {
+      // noop
+    }
+  }
+}
+
+async function ensureApiRunning() {
+  if (await isApiUp()) {
+    return null;
+  }
+
+  if (process.env.API_BASE_URL) {
+    throw new Error(
+      `API indisponivel em ${BASE_URL}. Ajuste API_BASE_URL ou inicie a API.`,
+    );
+  }
+
+  const backendRoot = path.resolve(__dirname, '..', '..');
+  const child = spawn('node', ['src/server.js'], {
+    cwd: backendRoot,
+    stdio: 'ignore',
+  });
+
+  const maxAttempts = 15;
+  let attempts = 0;
+  await new Promise((resolve, reject) => {
+    const timer = setInterval(async () => {
+      attempts += 1;
+      if (await isApiUp()) {
+        clearInterval(timer);
+        resolve();
+        return;
+      }
+      if (attempts >= maxAttempts) {
+        clearInterval(timer);
+        reject(new Error('API nao respondeu apos iniciar servidor local.'));
+      }
+    }, 1000);
+  }).catch(async (error) => {
+    await tryStopManagedServer(child);
+    throw error;
+  });
+
+  return child;
+}
+
 async function run() {
   const checks = [];
   const registerEmail = randomEmail();
   const password = '123456';
+  let managedServer = null;
 
   logger.info(`Base URL: ${BASE_URL}`);
+  printInfo(`Base URL: ${BASE_URL}`);
 
   try {
+    managedServer = await ensureApiRunning();
+    if (managedServer) {
+      checks.push('managed_server_start');
+    }
+
     const registerPayload = {
       name: randomName(),
       email: registerEmail,
@@ -194,16 +289,25 @@ async function run() {
     checks.push('list_consultations');
 
     logger.info('\nSMOKE CHECKLIST OK');
+    printInfo('SMOKE CHECKLIST OK');
     checks.forEach((item, idx) => {
       logger.info(`${idx + 1}. ${item}`);
+      printInfo(`${idx + 1}. ${item}`);
     });
   } catch (error) {
     logger.error('\nSMOKE CHECKLIST FALHOU');
     logger.error(error.message);
+    printError('SMOKE CHECKLIST FALHOU');
+    printError(error.message);
     if (error.data) {
       logger.error('Detalhes:', JSON.stringify(error.data, null, 2));
+      printError(`Detalhes: ${JSON.stringify(error.data)}`);
     }
     process.exit(1);
+  } finally {
+    if (managedServer) {
+      await tryStopManagedServer(managedServer);
+    }
   }
 }
 

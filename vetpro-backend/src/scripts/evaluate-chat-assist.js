@@ -1,4 +1,5 @@
 // Console replaced by logger
+/* eslint-disable no-console */
 const fs = require('fs');
 const path = require('path');
 const logger = require('../utils/logger');

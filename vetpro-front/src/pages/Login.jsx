@@ -72,11 +72,11 @@ const Login = () => {
               VetPro Platform
             </p>
             <h1 className="shell-title mt-2 text-4xl font-black text-gray-900 dark:text-white leading-tight">
-              Prontuario veterinario com padrao SaaS
+              Da conversa ao prontuario em minutos
             </h1>
             <p className="mt-3 text-sm text-gray-600 dark:text-gray-300 max-w-lg">
-              Operacao clinica, atendimento em campo e inteligencia de dados em uma
-              experiencia unica para desktop e mobile.
+              Audio inteligente, agenda integrada e relatorios em tempo real para
+              acelerar atendimentos na clinica e no campo.
             </p>
           </div>
 
@@ -106,7 +106,7 @@ const Login = () => {
             <div className="mx-auto mb-2 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-white/20 overflow-hidden">
               {!loginLogoError ? (
                 <img
-                  src="/logo192.png"
+                  src="/icon.svg"
                   alt="Logo VetPro"
                   className="h-9 w-9 object-contain"
                   onError={() => setLoginLogoError(true)}
@@ -119,7 +119,7 @@ const Login = () => {
             </div>
             <h2 className="shell-title text-2xl font-extrabold text-white">VetPro</h2>
             <p className="mt-1 text-xs text-teal-100">
-              Plataforma profissional de prontuarios veterinarios
+              Plataforma comercial para operacao veterinaria completa
             </p>
           </div>
 

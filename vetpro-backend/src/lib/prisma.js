@@ -1,4 +1,4 @@
-require('dotenv').config();
+require('../config/loadEnv');
 const { PrismaClient } = require('@prisma/client');
 
 const globalForPrisma = global;

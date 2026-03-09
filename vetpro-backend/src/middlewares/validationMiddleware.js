@@ -1,10 +1,12 @@
 const { z } = require('zod');
 
-// Validação para criação de paciente
+// Validação base de paciente
 // Campos mais flexíveis para manter compatibilidade retroativa
-const createPatientSchema = z.object({
+const patientBaseSchema = z.object({
   name: z.string().optional(),
   specie: z.string().optional(),
+  // Alias usado no frontend em alguns fluxos
+  species: z.string().optional(),
   subcategory: z.string().optional(),
   breed: z.string().optional(),
   sex: z.string().optional(),
@@ -25,8 +27,25 @@ const createPatientSchema = z.object({
   ownerNotes: z.string().optional(),
 });
 
+// Validação para criação de paciente
+const createPatientSchema = patientBaseSchema;
+
 // Validação para atualização de paciente
-const updatePatientSchema = createPatientSchema.partial();
+const updatePatientSchema = patientBaseSchema.partial();
+
+// Validação para substituição completa (PUT)
+const replacePatientSchema = patientBaseSchema
+  .extend({
+    name: z.string().min(1, 'Nome do paciente e obrigatorio.'),
+    ownerName: z.string().min(1, 'Tutor obrigatorio para criar paciente.'),
+  })
+  .refine(
+    (data) => String(data.specie || data.species || '').trim().length > 0,
+    {
+      path: ['specie'],
+      message: 'Especie e obrigatoria.',
+    },
+  );
 
 // Validação para criação de consulta
 const createConsultationSchema = z.object({
@@ -96,6 +115,7 @@ module.exports = {
   validate,
   createPatientSchema,
   updatePatientSchema,
+  replacePatientSchema,
   createConsultationSchema,
   createUserSchema,
   loginSchema,

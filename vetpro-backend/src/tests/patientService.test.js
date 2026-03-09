@@ -123,7 +123,7 @@ describe('patientService', () => {
   });
 
   describe('updatePatient', () => {
-    it('deve atualizar um paciente', async () => {
+    it('deve atualizar um paciente via PUT (substituicao completa)', async () => {
       const updateData = {
         name: 'Rex Atualizado',
         specie: 'cao',
@@ -143,12 +143,36 @@ describe('patientService', () => {
       expect(result.count).toBe(1);
     });
 
-    it('deve lancar erro quando especie ausente na atualizacao', async () => {
+    it('deve lancar erro no PUT quando especie ausente', async () => {
       const updateData = { name: 'Rex Atualizado' };
 
       await expect(
         patientService.updatePatient('user123', '1', updateData),
       ).rejects.toThrow('Especie e obrigatoria.');
+    });
+
+    it('deve permitir PATCH parcial com apenas um campo', async () => {
+      prisma.patient.updateMany.mockResolvedValue({ count: 1 });
+
+      const result = await patientService.updatePatient(
+        'user123',
+        '1',
+        { weight: 31.4 },
+        { partial: true },
+      );
+
+      expect(result.count).toBe(1);
+      expect(prisma.patient.updateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ weight: 31.4 }),
+        }),
+      );
+    });
+
+    it('deve lancar erro no PATCH sem campos validos', async () => {
+      await expect(
+        patientService.updatePatient('user123', '1', {}, { partial: true }),
+      ).rejects.toThrow('Informe ao menos um campo para atualizar o paciente.');
     });
   });
 

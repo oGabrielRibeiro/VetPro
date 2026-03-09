@@ -236,12 +236,38 @@ function isNotInformed(value = "") {
   return normalized === "nao informado" || normalized === "não informado";
 }
 
+const SPECIFIC_FIELD_SEMANTIC_REGEX = {
+  farmName: /\b(haras|fazenda|sitio|sítio|propriedade)\b/,
+  productionSystem: /\b(extensivo|intensivo|semi|confin|leite|corte|esporte|trabalho)\b/,
+  animalFunction: /\b(esporte|trabalho|leite|corte|reproduc)\b/,
+  batch: /\b(lote|grupo|piquete|baia)\b/,
+  animalId: /\b(brinco|chip|id|registro|nome)\b/,
+  bodyConditionScore: /\b([1-5](?:[.,][0-9])?|ecc|escore)\b/,
+  reproductiveStatus: /\b(prenhe|gest|lact|seca|anestro|parto)\b/,
+  daysInMilk: /\b(\d{1,3}\s*dias?|del)\b/,
+  parity: /\b(partos?|paridade)\b/,
+  herdVaccination: /\b(vacin|raiva|brucel|clostrid|rebanho)\b/,
+  herdDeworming: /\b(vermif|iverm|rebanho)\b/,
+  forage: /\b(volumoso|pasto|silagem|feno|capim)\b/,
+  concentrate: /\b(concentrado|racao|ração|milho|farelo)\b/,
+  waterIntake: /\b(agua|água|ingest|consumo|litro)\b/,
+  mineralSupplementation: /\b(sal mineral|mineral|suplement)\b/,
+  hoofStatus: /\b(casco|locomoc|claudic)\b/,
+  rumenMotility: /\b(rumen|ruminal|motilidade|contrac|timpan)\b/,
+  fecesAndUrine: /\b(fezes|urina|diarre|disur)\b/,
+  milkProduction: /\b(leite|litro|ordenha|produc)\b/,
+  historicalDiseases: /\b(historic|sanitar|mastite|metrite|aie|mormo)\b/,
+  propertyAndManagement: /\b(propriedade|manejo|fazenda|haras|rotina)\b/,
+  contactAnimals: /\b(contact|contato|lote|rebanho|animais)\b/,
+  animalIdentificationDetails: /\b(nome|pelagem|idade|brinco|chip|raca|raça)\b/,
+  neonateAndReproduction: /\b(neonato|umbigo|brix|colostro|insemin|parto|distoc)\b/,
+  previousTreatmentHistory: /\b(tratamento|hidrat|ringer|antibiot|anti[- ]?inflamat|medic)\b/,
+  physicalExamDetailed: /\b(exame|mucosa|fc|fr|temperatura|tpc|desidrat)\b/,
+  requestedExamPanel: /\b(exame|hemograma|bioquim|ultrassom|coleta|painel)\b/,
+};
+
 function sanitizeSpecificFields(source = {}) {
   if (!source || typeof source !== "object") return {};
-  const hasClinicalSignal = (normalized = "") =>
-    /\b(febre|dor|exame|diagnost|suspeita|tratamento|conduta|medic|vacina|vermifug|casco|ruminal|fezes|urina|apetite|mucosa|fc|fr)\b/.test(
-      normalized,
-    );
 
   const cleaned = Object.entries(source).reduce((acc, [key, value]) => {
     const text = String(value || "").trim();
@@ -252,8 +278,10 @@ function sanitizeSpecificFields(source = {}) {
         normalized,
       )
     ) {
-      if (!hasClinicalSignal(normalized)) return acc;
+      return acc;
     }
+    const semanticMatcher = SPECIFIC_FIELD_SEMANTIC_REGEX[key];
+    if (semanticMatcher && !semanticMatcher.test(normalized)) return acc;
     acc[key] = text;
     return acc;
   }, {});
@@ -271,7 +299,7 @@ function sanitizeSpecificFields(source = {}) {
   return values.reduce((acc, [key, value]) => {
     const token = normalizeWords(value);
     const meta = freq.get(token);
-    if (meta && meta.count > 2 && meta.keys.indexOf(key) > 1) return acc;
+    if (meta && meta.count > 1 && meta.keys.indexOf(key) > 0) return acc;
     acc[key] = value;
     return acc;
   }, {});
@@ -619,11 +647,14 @@ const QuickConsultation = ({ patient, onSave, onBack, initialData = null }) => {
       const match = raw.match(regex);
       return match?.[1] ? String(match[1]).replace(/\s+/g, " ").trim() : "";
     };
+    const usedSentences = new Set();
     const pickSentence = (tokens = []) => {
       const normalizedTokens = tokens.map((token) => normalizeText(token));
       for (const sentence of sentences) {
         const source = normalizeText(sentence);
+        if (usedSentences.has(source)) continue;
         if (normalizedTokens.some((token) => token && source.includes(token))) {
+          usedSentences.add(source);
           return sentence.trim();
         }
       }
@@ -1407,12 +1438,13 @@ const QuickConsultation = ({ patient, onSave, onBack, initialData = null }) => {
       ...fallbackSpecificFields,
       ...incomingSpecificFields,
     };
+    const cleanedSpecificFields = sanitizeSpecificFields(mergedSpecificFields);
 
-    if (Object.keys(mergedSpecificFields).length > 0) {
+    if (Object.keys(cleanedSpecificFields).length > 0) {
       if (targetIsLargeAnimal) {
         setLargeAnimalData((prev) => {
           const next = { ...prev };
-          Object.entries(mergedSpecificFields).forEach(([key, value]) => {
+          Object.entries(cleanedSpecificFields).forEach(([key, value]) => {
             if (!(key in next)) return;
             const text = String(value || "").trim();
             if (!text || isNotInformedValue(text)) return;
@@ -1429,7 +1461,7 @@ const QuickConsultation = ({ patient, onSave, onBack, initialData = null }) => {
       } else {
         setSmallAnimalData((prev) => {
           const next = { ...prev };
-          Object.entries(mergedSpecificFields).forEach(([key, value]) => {
+          Object.entries(cleanedSpecificFields).forEach(([key, value]) => {
             if (!(key in next)) return;
             const text = String(value || "").trim();
             if (!text || isNotInformedValue(text)) return;
