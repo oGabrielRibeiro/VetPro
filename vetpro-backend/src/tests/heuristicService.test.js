@@ -1,6 +1,8 @@
 const {
   splitDialogueByRole,
   runUnifiedClinicalBrain,
+  buildHeuristicDraft,
+  SPECIFIC_FIELDS_BY_PORTE,
 } = require('../services/heuristicService');
 
 describe('heuristicService', () => {
@@ -39,5 +41,67 @@ describe('heuristicService', () => {
     );
     expect(unified.parsed?.diagnosis).toMatch(/gastrite|diagnostico/i);
     expect(unified.parsed?.treatment).toMatch(/tratamento|fluidoterapia/i);
+  });
+
+  it('deve evitar sobrepreenchimento de ficha de grande porte com frase repetida sem semantica', () => {
+    const result = buildHeuristicDraft(
+      [
+        {
+          role: 'user',
+          content: [
+            'Tutor: Certo, Ricardo, ele ta com febre alta, 39.',
+            'Vet: Diagnostico presuntivo de processo infeccioso.',
+            'Tutor: Finalidade zootecnica: esporte.',
+            'Tutor: Lote: lote 7.',
+          ].join('\n'),
+        },
+      ],
+      'nova',
+      { species: 'Equino', porte: 'grande' },
+      { porte: 'grande', specificFieldKeys: SPECIFIC_FIELDS_BY_PORTE.grande },
+    );
+
+    const specific = result?.draft?.specificFields || {};
+
+    expect(specific.animalFunction).toMatch(/esporte/i);
+    expect(specific.batch).toMatch(/lote 7/i);
+    expect(specific.productionSystem).toBe('');
+    expect(specific.herdVaccination).toBe('');
+    expect(specific.forage).toBe('');
+
+    const repeatedPhraseCount = Object.values(specific).filter((value) =>
+      /certo,\s*ricardo,\s*ele ta com febre alta/i.test(String(value || '')),
+    ).length;
+    expect(repeatedPhraseCount).toBe(0);
+  });
+
+  it('deve preencher campos especificos de grande porte quando houver evidencia explicita no texto', () => {
+    const result = buildHeuristicDraft(
+      [
+        {
+          role: 'user',
+          content: [
+            'Tutor: Propriedade: Haras Santo Antonio.',
+            'Tutor: Sistema de producao: semi-intensivo.',
+            'Tutor: Vacinacao do rebanho: em dia.',
+            'Tutor: Vermifugacao do rebanho: ivermectina ha 60 dias.',
+            'Tutor: Volumoso: silagem de milho.',
+            'Tutor: Consumo de agua: reduzido nas ultimas 24 horas.',
+          ].join('\n'),
+        },
+      ],
+      'nova',
+      { species: 'Equino', porte: 'grande' },
+      { porte: 'grande', specificFieldKeys: SPECIFIC_FIELDS_BY_PORTE.grande },
+    );
+
+    const specific = result?.draft?.specificFields || {};
+
+    expect(specific.farmName).toMatch(/haras|santo antonio/i);
+    expect(specific.productionSystem).toMatch(/semi-intensivo/i);
+    expect(specific.herdVaccination).toMatch(/em dia/i);
+    expect(specific.herdDeworming).toMatch(/ivermectina|60 dias/i);
+    expect(specific.forage).toMatch(/silagem/i);
+    expect(specific.waterIntake).toMatch(/reduzido|24 horas/i);
   });
 });

@@ -60,6 +60,9 @@ function buildAllowedOrigins() {
 }
 
 const allowedOrigins = buildAllowedOrigins();
+const swaggerEnabled =
+  process.env.NODE_ENV !== 'production' ||
+  process.env.ENABLE_SWAGGER_DOCS === 'true';
 
 // Middlewares globais
 app.use(
@@ -125,6 +128,9 @@ app.use(
 
 // Swagger UI - servir specification JSON
 app.get('/api-docs.json', (req, res) => {
+  if (!swaggerEnabled) {
+    return res.status(404).json({ error: 'Not found' });
+  }
   const specPath = path.join(__dirname, 'docs', 'openapi.json');
   if (fs.existsSync(specPath)) {
     return res.json(JSON.parse(fs.readFileSync(specPath, 'utf8')));
@@ -134,14 +140,21 @@ app.get('/api-docs.json', (req, res) => {
 
 // Swagger UI redirect
 app.get('/api-docs', (req, res) => {
+  if (!swaggerEnabled) {
+    return res.status(404).json({ error: 'Not found' });
+  }
   res.redirect('/api-docs.html');
 });
 
 // Servir Swagger UI estático
-app.use(
-  '/api-docs',
-  express.static(path.join(__dirname, '..', 'node_modules', 'swagger-ui-dist')),
-);
+if (swaggerEnabled) {
+  app.use(
+    '/api-docs',
+    express.static(
+      path.join(__dirname, '..', 'node_modules', 'swagger-ui-dist'),
+    ),
+  );
+}
 
 // Rota base
 app.get('/', (req, res) => {

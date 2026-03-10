@@ -20,6 +20,20 @@ Sistema completo para gestão de prontuários veterinários com suporte a múlti
   - Métricas chave (total de consultas, pacientes únicos, taxa de retorno)
 - **Perfil do veterinário** com upload de foto e assinatura digital
 -
+## Stack de build/teste
+
+- Build/dev: `Vite`
+- Testes: `Vitest` (ambiente `jsdom`)
+
+Comandos:
+
+```bash
+npm start
+npm run build
+npm run check:no-native-popups
+npm run test
+```
+
 ## Mobile + HTTPS (microfone no Chrome)
 
 Para liberar captura de audio em celular (IP da rede local), rode frontend e backend em HTTPS.
@@ -38,7 +52,7 @@ HTTPS_CERT_PATH=./certs/dev-cert.pem
 
 ### 2. Frontend HTTPS
 
-Crie `vetpro/.env.development.local`:
+Crie `vetpro-front/.env.development.local`:
 
 ```env
 HTTPS=true
@@ -63,4 +77,4 @@ Renomeie os arquivos gerados para:
 ### 4. Reinicie os dois projetos
 
 - Backend: `npm run dev` em `vetpro-backend`
-- Frontend: `npm start` em `vetpro`
+- Frontend: `npm start` em `vetpro-front`

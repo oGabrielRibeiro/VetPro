@@ -1,5 +1,5 @@
 // Console replaced by logger
-const fs = require('fs');
+const fs = require('fs/promises');
 const path = require('path');
 const consultationService = require('../services/consultationService');
 const pdfService = require('../services/pdfService');
@@ -137,11 +137,11 @@ async function generatePrescriptionPDF(req, res) {
       'consultations',
       'prescriptions',
     );
-    fs.mkdirSync(prescriptionsDir, { recursive: true });
+    await fs.mkdir(prescriptionsDir, { recursive: true });
 
     const filename = `prescription-${consultation.id}-${Date.now()}.pdf`;
     const fullPath = path.join(prescriptionsDir, filename);
-    fs.writeFileSync(fullPath, buffer);
+    await fs.writeFile(fullPath, buffer);
 
     let storedFile = null;
     try {

@@ -1,6 +1,6 @@
 // Console replaced by logger
-const bcrypt = require('bcrypt');
-const fs = require('fs');
+const bcrypt = require('bcryptjs');
+const fs = require('fs/promises');
 const path = require('path');
 const jwt = require('jsonwebtoken');
 const prisma = require('../lib/prisma');
@@ -315,6 +315,17 @@ function resolveLocalPath(filePath) {
   return path.resolve(process.cwd(), cleaned);
 }
 
+async function safeDeleteFile(filePath) {
+  if (!filePath) return;
+  try {
+    await fs.unlink(filePath);
+  } catch (err) {
+    if (err?.code !== 'ENOENT') {
+      throw err;
+    }
+  }
+}
+
 async function deleteAccount(req, res) {
   try {
     const userId = req.user?.id;
@@ -361,24 +372,26 @@ async function deleteAccount(req, res) {
       file.thumbnailPath,
     ]);
 
-    for (const filePath of filesToDelete) {
-      const resolved = resolveLocalPath(filePath);
-      if (!resolved) continue;
-      try {
-        if (fs.existsSync(resolved)) {
-          fs.unlinkSync(resolved);
+    await Promise.all(
+      filesToDelete.map(async (filePath) => {
+        const resolved = resolveLocalPath(filePath);
+        if (!resolved) return;
+        try {
+          await safeDeleteFile(resolved);
+        } catch (err) {
+          logger.warn(
+            'Falha ao remover arquivo:',
+            resolved,
+            err?.message || err,
+          );
         }
-      } catch (err) {
-        logger.warn('Falha ao remover arquivo:', resolved, err?.message || err);
-      }
-    }
+      }),
+    );
 
     if (shouldDeleteClinic && clinicLogoPath) {
       const resolvedLogo = resolveLocalPath(clinicLogoPath);
       try {
-        if (resolvedLogo && fs.existsSync(resolvedLogo)) {
-          fs.unlinkSync(resolvedLogo);
-        }
+        await safeDeleteFile(resolvedLogo);
       } catch (err) {
         logger.warn('Falha ao remover logo da clinica:', err?.message || err);
       }

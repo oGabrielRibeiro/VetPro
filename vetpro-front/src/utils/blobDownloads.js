@@ -28,13 +28,20 @@ export const fetchBlobUrlFromApi = async (path) => {
 };
 
 export const openApiBlobInNewTab = async (path) => {
-  const blobUrl = await fetchBlobUrlFromApi(path);
-  const win = window.open(blobUrl, "_blank", "noopener,noreferrer");
-  if (!win) {
-    URL.revokeObjectURL(blobUrl);
+  // Abre imediatamente para evitar bloqueio de popup em chamadas async.
+  const pendingTab = window.open("", "_blank", "noopener,noreferrer");
+  if (!pendingTab) {
     throw new Error("Nao foi possivel abrir nova aba.");
   }
-  revokeLater(blobUrl);
+
+  try {
+    const blobUrl = await fetchBlobUrlFromApi(path);
+    pendingTab.location.href = blobUrl;
+    revokeLater(blobUrl);
+  } catch (error) {
+    pendingTab.close();
+    throw error;
+  }
 };
 
 export const downloadApiBlob = async (path, fileName = "arquivo") => {
@@ -47,4 +54,3 @@ export const downloadApiBlob = async (path, fileName = "arquivo") => {
   link.remove();
   revokeLater(blobUrl);
 };
-

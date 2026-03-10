@@ -1,0 +1,59 @@
+{
+  "contexto_consulta": {
+    "tipo": "Retorno",
+    "data": "2026-03-10",
+    "paciente": "Apolo",
+    "especie": "Bovino",
+    "sexo": "Macho",
+    "idade_anos": 5,
+    "peso_kg": 480,
+    "tutor": "Ricardo Alves",
+    "propriedade": "Haras Santo Antônio",
+    "municipio": "Uberaba",
+    "uf": "MG",
+    "finalidade": "Reprodução e corte",
+    "sistema_producao": "Semi-intensivo",
+    "lote": "7",
+    "identificacao": {
+      "brinco": "1458",
+      "chip": "990000123456789",
+      "pelagem": "Castanha"
+    },
+    "escore_corporal": "2/5",
+    "estado_reprodutivo": "Reprodutor ativo"
+  },
+  "manejo_nutricao": {
+    "vacinacao": "Em dia",
+    "ultima_clostridiose_meses": 4,
+    "vermifugacao": "Ivermectina",
+    "vermifugacao_dias": 60,
+    "volumoso": "Silagem de milho",
+    "concentrado": "Ração proteica 1.5 kg/dia",
+    "agua": "Consumo reduzido 24h",
+    "mineral": "Sal mineral ad libitum"
+  },
+  "exame_fisico": {
+    "temperatura_c": 39.8,
+    "fc_bpm": 88,
+    "fr_irpm": 36,
+    "mucosas": "Discretamente congestas",
+    "tpc_seg": 3,
+    "desidratacao_percent": 6,
+    "dor_abdominal": "Leve a moderada"
+  },
+  "diagnostico": {
+    "principal": "Reticuloperitonite traumática",
+    "diferenciais": [
+      "Acidose ruminal subaguda",
+      "Peritonite inespecífica"
+    ],
+    "prognostico": "Reservado"
+  },
+  "tratamento": [
+    "Ringer lactato 20 L IV",
+    "Flunixin meglumine 1.1 mg/kg IV SID 3 dias",
+    "Oxitetraciclina 20 mg/kg IM q48h 3 doses",
+    "Imã ruminal dose única",
+    "Repouso e monitoramento temperatura 2x dia"
+  ]
+}

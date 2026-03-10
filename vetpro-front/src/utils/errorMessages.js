@@ -28,7 +28,27 @@ const phraseMap = [
   ["erro ao gerar pdf", "Nao foi possivel gerar o PDF agora. Tente novamente."],
   ["erro ao analisar conversa de campo", "Nao foi possivel analisar a conversa agora. Tente novamente."],
   ["jwt_secret", "Erro de configuracao do servidor. Tente novamente mais tarde."],
+  ["dados invalidos", "Existem campos invalidos. Revise os dados e tente novamente."],
+  ["id de paciente invalido", "Paciente invalido. Reabra o cadastro do paciente e tente novamente."],
 ];
+
+const fieldLabelMap = {
+  patientId: "Paciente",
+  consultationType: "Tipo de consulta",
+  chiefComplaint: "Queixa principal",
+  anamnesis: "Anamnese",
+  physicalExam: "Exame fisico",
+  diagnosis: "Diagnostico",
+  treatment: "Tratamento",
+  procedures: "Procedimentos",
+  medications: "Medicacao",
+  notes: "Observacoes",
+  returnRecommendation: "Recomendacao de retorno",
+  weight: "Peso",
+  temperature: "Temperatura",
+  heartRate: "Frequencia cardiaca",
+  respiratoryRate: "Frequencia respiratoria",
+};
 
 function mapByPhrase(rawMessage, fallback) {
   const normalized = normalizeMessage(rawMessage);
@@ -38,6 +58,30 @@ function mapByPhrase(rawMessage, fallback) {
     }
   }
   return fallback;
+}
+
+export function extractFirstValidationField(error) {
+  const details = error?.response?.data?.details;
+  if (!Array.isArray(details) || details.length === 0) return "";
+  return String(details[0]?.field || "").trim();
+}
+
+function buildValidationMessage(error, fallback) {
+  const details = error?.response?.data?.details;
+  if (!Array.isArray(details) || details.length === 0) {
+    return null;
+  }
+
+  const first = details[0] || {};
+  const rawField = String(first.field || "").trim();
+  const field = rawField.split(".")[0] || rawField;
+  const fieldLabel = fieldLabelMap[field] || field || "Campo";
+  const fieldMsg = String(first.message || "").trim();
+
+  if (!fieldMsg) return fallback;
+
+  // Exemplo: "Paciente: ID de paciente inválido"
+  return `${fieldLabel}: ${fieldMsg}`;
 }
 
 export function toUserFriendlyError(error, fallback = "Nao foi possivel concluir a operacao.") {
@@ -60,6 +104,11 @@ export function toUserFriendlyError(error, fallback = "Nao foi possivel concluir
 
   if (status === 401) {
     return mapByPhrase(apiMessage, "Sua sessao expirou. Faca login novamente.");
+  }
+  if (status === 400) {
+    const validationMessage = buildValidationMessage(error, fallback);
+    if (validationMessage) return mapByPhrase(validationMessage, validationMessage);
+    return mapByPhrase(apiMessage, fallback);
   }
   if (status === 403) {
     return "Voce nao tem permissao para esta acao.";

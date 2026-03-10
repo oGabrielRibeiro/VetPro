@@ -445,6 +445,68 @@ const SPECIFIC_FIELD_LABELS = {
   requestedExamPanel: ['exames complementares', 'exames solicitados'],
 };
 
+const SPECIFIC_FIELD_SEMANTIC_REGEX = {
+  vaccinationStatus: /\b(vacin|em dia|atrasad|protocolo)\b/,
+  vaccinationProtocol: /\b(protocolo|vacin|dose|reforco)\b/,
+  lastVaccines: /\b(vacina|dose|raiva|v\d+|últim|ultim)\b/,
+  dewormingStatus: /\b(vermif|iverm|albend|milbemic)\b/,
+  ectoparasiteControl: /\b(carrapato|pulga|ectoparasita|sarna)\b/,
+  diet: /\b(dieta|aliment|racao|ração|comida|pasto|silagem|feno)\b/,
+  rationBrand: /\b(racao|ração|marca|premium|super premium)\b/,
+  feedingFrequency: /\b(\d+\s*x|vezes|frequencia|refeic|aliment)\b/,
+  waterIntakeSmall: /\b(agua|água|ingest|consumo|bebe)\b/,
+  housing: /\b(ambiente|domic|apartamento|quintal|canil|baia|piquete)\b/,
+  lifestyle: /\b(estilo|sedent|ativo|passeio|atividade)\b/,
+  contactWithAnimals: /\b(contato|contact|animais|convive)\b/,
+  reproductiveStatusSmall: /\b(castrad|inteiro|cio|gest|prenhe)\b/,
+  preventiveCare: /\b(prevent|antiparasit|vacina|controle)\b/,
+  behavior: /\b(comport|agress|apatico|ansios|letarg)\b/,
+  allergyHistory: /\b(alerg|prurid|coce|dermat)\b/,
+  chronicDiseases: /\b(cronic|diabet|renal|cardiac|epilep)\b/,
+  currentSupplements: /\b(suplement|omega|vitamina|miner)\b/,
+  farmName: /\b(haras|fazenda|sitio|sítio|propriedade)\b/,
+  productionSystem:
+    /\b(extensivo|intensivo|semi|confin|leite|corte|esporte|trabalho)\b/,
+  animalFunction: /\b(esporte|trabalho|leite|corte|reproduc)\b/,
+  batch: /\b(lote|grupo|piquete|baia)\b/,
+  animalId: /\b(brinco|chip|id|registro|nome)\b/,
+  bodyConditionScore: /\b([1-5](?:[.,][0-9])?|ecc|escore)\b/,
+  reproductiveStatus: /\b(prenhe|gest|lact|seca|anestro|parto|reprodutor)\b/,
+  daysInMilk: /\b(\d{1,3}\s*dias?|del)\b/,
+  parity: /\b(partos?|paridade)\b/,
+  herdVaccination: /\b(vacin|raiva|brucel|clostrid|rebanho)\b/,
+  herdDeworming: /\b(vermif|ivermect|rebanho)/,
+  forage: /\b(volumoso|pasto|silagem|feno|capim)\b/,
+  concentrate: /\b(concentrado|racao|ração|milho|farelo)\b/,
+  waterIntake: /\b(agua|água|ingest|consumo|litro)\b/,
+  mineralSupplementation: /\b(sal mineral|mineral|suplement)\b/,
+  hoofStatus: /\b(casco|locomoc|claudic)\b/,
+  rumenMotility: /\b(rumen|ruminal|motilidade|contrac|timpan)\b/,
+  fecesAndUrine: /\b(fezes|urina|diarre|disur)\b/,
+  milkProduction: /\b(leite|litro|ordenha|produc)\b/,
+  historicalDiseases: /\b(historic|sanitar|mastite|metrite|aie|mormo)\b/,
+  propertyAndManagement: /\b(propriedade|manejo|fazenda|haras|rotina)\b/,
+  contactAnimals: /\b(contact|contato|lote|rebanho|animais)\b/,
+  animalIdentificationDetails: /\b(nome|pelagem|idade|brinco|chip|raca|raça)\b/,
+  neonateAndReproduction:
+    /\b(neonato|umbigo|brix|colostro|insemin|parto|distoc)\b/,
+  previousTreatmentHistory:
+    /\b(tratamento|hidrat|ringer|antibiot|anti[- ]?inflamat|medic)\b/,
+  physicalExamDetailed: /\b(exame|mucosa|fc|fr|temperatura|tpc|desidrat)\b/,
+  requestedExamPanel: /\b(exame|hemograma|bioquim|ultrassom|coleta|painel)\b/,
+};
+
+const CONVERSATIONAL_PREFIX_REGEX =
+  /^(?:certo|ok(?:ay)?|entendi|beleza|perfeito|isso|entao|então|ricardo|doutor|doutora|dr|dra)\b[\s,:-]*/i;
+
+function cleanSpecificFieldValue(value = '') {
+  const text = String(value || '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!text) return '';
+  return text.replace(CONVERSATIONAL_PREFIX_REGEX, '').trim();
+}
+
 function classifyPorteFromContext(
   patient = null,
   sourceText = '',
@@ -501,15 +563,80 @@ function resolveSpecificFieldKeys(recordProfile = null, porte = 'pequeno') {
 
 function sanitizeSpecificFields(raw = {}, allowedKeys = []) {
   const source = raw && typeof raw === 'object' ? raw : {};
-  return allowedKeys.reduce((acc, key) => {
-    const value = String(source[key] || '').trim();
-    acc[key] = value;
-    return acc;
-  }, {});
+  const cleanedByKey = {};
+  const valueFrequency = new Map();
+
+  for (const key of allowedKeys) {
+    const rawValue = source[key];
+    const value = cleanSpecificFieldValue(rawValue);
+    const normalizedValue = normalize(value).trim();
+    if (
+      !value ||
+      !normalizedValue ||
+      normalizedValue === 'nao informado' ||
+      normalizedValue === 'não informado'
+    ) {
+      cleanedByKey[key] = '';
+      continue;
+    }
+
+    if (value.length < 3 || value.length > 180) {
+      cleanedByKey[key] = '';
+      continue;
+    }
+
+    const normalizedValueForField = normalize(value);
+    if (
+      /^(certo|ok|entendi|beleza|perfeito|isso|entao|então|ricardo|doutor|doutora|dr|dra)\b/.test(
+        normalizedValueForField,
+      )
+    ) {
+      cleanedByKey[key] = '';
+      continue;
+    }
+
+    const semanticRegex = SPECIFIC_FIELD_SEMANTIC_REGEX[key];
+    if (
+      semanticRegex &&
+      !semanticRegex.test(normalizedValueForField) &&
+      normalizedValueForField.split(/\s+/g).length > 6
+    ) {
+      cleanedByKey[key] = '';
+      continue;
+    }
+
+    cleanedByKey[key] = value;
+    const freq = valueFrequency.get(normalizedValueForField) || 0;
+    valueFrequency.set(normalizedValueForField, freq + 1);
+  }
+
+  // Evita sobrepreenchimento com a mesma frase em vários campos.
+  const deduped = {};
+  const seenRepeated = new Set();
+  for (const key of allowedKeys) {
+    const value = cleanedByKey[key] || '';
+    if (!value) {
+      deduped[key] = '';
+      continue;
+    }
+    const normalizedValue = normalize(value);
+    const repeated = (valueFrequency.get(normalizedValue) || 0) > 1;
+    if (repeated && seenRepeated.has(normalizedValue)) {
+      deduped[key] = '';
+      continue;
+    }
+    if (repeated) {
+      seenRepeated.add(normalizedValue);
+    }
+    deduped[key] = value;
+  }
+
+  return deduped;
 }
 
 /* eslint-disable no-use-before-define */
 function extractSpecificFieldsHeuristic(sourceText = '', allowedKeys = []) {
+  const source = stripSpeakerTagsFromText(sourceText);
   const output = {};
   const stopLabels = Object.values(SPECIFIC_FIELD_LABELS).flat();
 
@@ -521,8 +648,8 @@ function extractSpecificFieldsHeuristic(sourceText = '', allowedKeys = []) {
     }
 
     const extracted =
-      extractByLabels(sourceText, labels, stopLabels) ||
-      extractByKeywords(sourceText, labels);
+      extractByLabels(source, labels, stopLabels) ||
+      extractByKeywords(source, labels);
     output[key] = normalizeSpecificValueByKey(key, extracted);
   }
 
@@ -624,18 +751,37 @@ function accentAgnosticPattern(value = '') {
     .join('');
 }
 
+function stripSpeakerTagsFromText(text = '') {
+  return String(text || '')
+    .replace(
+      /\b(?:tutor|vet|medico|médico|veterinario|veterinário)\s*[:|-]\s*/gi,
+      '\n',
+    )
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 function extractByLabels(sourceText, labels = [], stopLabels = []) {
-  const text = String(sourceText || '').trim();
+  const text = stripSpeakerTagsFromText(sourceText);
   if (!text || !labels.length) return '';
 
   const labelPattern = labels.map(accentAgnosticPattern).join('|');
+  const inlineRegex = new RegExp(
+    `(?:^|[\\n.;]\\s*)(?:${labelPattern})\\s*[:-]?\\s*([^\\n.;]+)`,
+    'i',
+  );
+  const inlineMatch = text.match(inlineRegex);
+  if (inlineMatch?.[1]) {
+    return inlineMatch[1].replace(/\s+/g, ' ').trim();
+  }
+
   const stopPattern = stopLabels.length
     ? stopLabels.map(accentAgnosticPattern).join('|')
     : null;
 
   const regex = stopPattern
     ? new RegExp(
-        `(?:^|\\b)(?:${labelPattern})\\s*[:-]?\\s*([\\s\\S]*?)(?=(?:\\b(?:${stopPattern})\\s*[:-]?)|$)`,
+        `(?:^|\\b)(?:${labelPattern})\\s*[:-]?\\s*([\\s\\S]*?)(?=(?:\\b(?:${stopPattern})\\s*[:-]?)|(?:\\b(?:tutor|vet|medico|médico|veterinario|veterinário)\\s*[:-])|$)`,
         'i',
       )
     : new RegExp(`(?:^|\\b)(?:${labelPattern})\\s*[:-]?\\s*([\\s\\S]*)`, 'i');
@@ -1541,7 +1687,7 @@ function inferSpecificFieldValueFromContext(key, sourceText = '') {
       labels,
       Object.values(SPECIFIC_FIELD_LABELS).flat(),
     ) || extractByKeywords(sourceText, labels);
-  return normalizeSpecificValueByKey(key, value);
+  return normalizeSpecificValueByKey(key, cleanSpecificFieldValue(value));
 }
 
 // eslint-disable-next-line no-unused-vars

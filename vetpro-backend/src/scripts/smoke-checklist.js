@@ -1,5 +1,7 @@
 const path = require('path');
 const { spawn } = require('child_process');
+const net = require('net');
+const fs = require('fs');
 const logger = require('../utils/logger');
 
 const BASE_URL = process.env.API_BASE_URL || 'http://localhost:5000/api';
@@ -56,6 +58,87 @@ async function wait(ms) {
   return new Promise((resolve) => {
     setTimeout(resolve, ms);
   });
+}
+
+async function canConnectTcp(host, port, timeoutMs = 1200) {
+  return new Promise((resolve) => {
+    const socket = new net.Socket();
+    let settled = false;
+
+    const finish = (ok) => {
+      if (settled) return;
+      settled = true;
+      try {
+        socket.destroy();
+      } catch (_) {
+        // noop
+      }
+      resolve(ok);
+    };
+
+    socket.setTimeout(timeoutMs);
+    socket.once('connect', () => finish(true));
+    socket.once('timeout', () => finish(false));
+    socket.once('error', () => finish(false));
+    socket.connect(Number(port), host);
+  });
+}
+
+async function runCommand(command, args, cwd) {
+  return new Promise((resolve) => {
+    const child = spawn(command, args, { cwd, stdio: 'ignore' });
+    child.once('error', () => resolve(false));
+    child.once('exit', (code) => resolve(code === 0));
+  });
+}
+
+async function ensureLocalInfra() {
+  if (process.env.API_BASE_URL) return false;
+
+  const root = path.resolve(__dirname, '..', '..', '..');
+  const composeFile = path.join(root, 'docker-compose.yml');
+  const hostRaw = String(process.env.POSTGRES_HOST || 'localhost').trim();
+  const host = /^postgres$/i.test(hostRaw) ? 'localhost' : hostRaw;
+  const port = Number(process.env.POSTGRES_PORT || '5432');
+
+  const dbUp = await canConnectTcp(host, port);
+  if (dbUp) return false;
+
+  if (!fs.existsSync(composeFile)) {
+    return false;
+  }
+
+  const dockerOk = await runCommand('docker', ['version'], root);
+  if (!dockerOk) {
+    printError(
+      'Docker indisponivel. Nao foi possivel auto-subir postgres/redis.',
+    );
+    return false;
+  }
+
+  printInfo(
+    'Infra local indisponivel. Tentando subir postgres/redis via docker compose...',
+  );
+  const composeOk = await runCommand(
+    'docker',
+    ['compose', 'up', '-d', 'postgres', 'redis'],
+    root,
+  );
+  if (!composeOk) {
+    printError('Falha ao executar docker compose para postgres/redis.');
+    return false;
+  }
+
+  for (let i = 0; i < 20; i += 1) {
+    // espera o banco ficar acessivel
+    // eslint-disable-next-line no-await-in-loop
+    const ready = await canConnectTcp(host, port);
+    if (ready) return true;
+    // eslint-disable-next-line no-await-in-loop
+    await wait(1000);
+  }
+
+  return false;
 }
 
 async function isApiUp() {
@@ -138,6 +221,9 @@ async function run() {
   printInfo(`Base URL: ${BASE_URL}`);
 
   try {
+    const infraStarted = await ensureLocalInfra();
+    if (infraStarted) checks.push('infra_postgres_redis');
+
     managedServer = await ensureApiRunning();
     if (managedServer) {
       checks.push('managed_server_start');

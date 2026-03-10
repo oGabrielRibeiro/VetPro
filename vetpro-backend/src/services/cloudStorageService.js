@@ -10,6 +10,23 @@ const {
   DeleteObjectCommand,
 } = require('@aws-sdk/client-s3');
 const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
+const fs = require('fs/promises');
+const path = require('path');
+
+const UPLOADS_BASE_DIR = path.join(__dirname, '../../uploads');
+
+async function ensureDirectoryExists(dirPath) {
+  await fs.mkdir(dirPath, { recursive: true });
+}
+
+async function fileExists(filePath) {
+  try {
+    await fs.access(filePath);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 class CloudStorageService {
   constructor() {
@@ -68,18 +85,13 @@ class CloudStorageService {
    * Upload local (fallback)
    */
   async uploadLocal(fileBuffer, filename, folder) {
-    const fs = require('fs');
-    const path = require('path');
-
-    const uploadDir = path.join(__dirname, '../../uploads', folder);
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
+    const uploadDir = path.join(UPLOADS_BASE_DIR, folder);
+    await ensureDirectoryExists(uploadDir);
 
     const key = `${folder}/${Date.now()}-${filename}`;
-    const filePath = path.join(__dirname, '../../uploads', key);
+    const filePath = path.join(UPLOADS_BASE_DIR, key);
 
-    fs.writeFileSync(filePath, fileBuffer);
+    await fs.writeFile(filePath, fileBuffer);
 
     return {
       url: `/uploads/${key}`,
@@ -143,12 +155,10 @@ class CloudStorageService {
     }
 
     // Delete local
-    const fs = require('fs');
-    const path = require('path');
-    const filePath = path.join(__dirname, '../../uploads', key);
+    const filePath = path.join(UPLOADS_BASE_DIR, key);
 
-    if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath);
+    if (await fileExists(filePath)) {
+      await fs.unlink(filePath);
     }
 
     return true;
@@ -160,18 +170,13 @@ class CloudStorageService {
   async move(sourceKey, destinationKey) {
     // Para S3, seria necessário copiar e depois deletar
     // Implementação simplificada para local
-    const fs = require('fs');
-    const path = require('path');
+    const sourcePath = path.join(UPLOADS_BASE_DIR, sourceKey);
+    const destPath = path.join(UPLOADS_BASE_DIR, destinationKey);
 
-    const sourcePath = path.join(__dirname, '../../uploads', sourceKey);
-    const destPath = path.join(__dirname, '../../uploads', destinationKey);
-
-    if (fs.existsSync(sourcePath)) {
+    if (await fileExists(sourcePath)) {
       const destDir = path.dirname(destPath);
-      if (!fs.existsSync(destDir)) {
-        fs.mkdirSync(destDir, { recursive: true });
-      }
-      fs.renameSync(sourcePath, destPath);
+      await ensureDirectoryExists(destDir);
+      await fs.rename(sourcePath, destPath);
       return { url: `/uploads/${destinationKey}`, key: destinationKey };
     }
 

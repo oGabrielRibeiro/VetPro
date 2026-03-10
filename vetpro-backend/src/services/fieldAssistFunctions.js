@@ -31,6 +31,209 @@ function normalizeText(value = '') {
     .toLowerCase();
 }
 
+function tokenizeText(value = '') {
+  return normalizeText(value)
+    .split(/[^a-z0-9]+/g)
+    .filter((token) => token.length >= 3);
+}
+
+function lexicalOverlapScore(a = '', b = '') {
+  const tokensA = new Set(tokenizeText(a));
+  const tokensB = new Set(tokenizeText(b));
+  if (!tokensA.size || !tokensB.size) return 0;
+  let hits = 0;
+  for (const token of tokensA) {
+    if (tokensB.has(token)) hits += 1;
+  }
+  return hits / Math.max(tokensA.size, tokensB.size);
+}
+
+function hasMinimumClinicalSignal(text = '') {
+  const normalized = normalizeText(text);
+  if (!normalized) return false;
+
+  const tokens = tokenizeText(normalized);
+  if (tokens.length < 8) return false;
+
+  const clinicalKeywords = [
+    'exame',
+    'diagnostico',
+    'tratamento',
+    'conduta',
+    'temperatura',
+    'mucosa',
+    'dor',
+    'vomito',
+    'diarreia',
+    'retorno',
+    'medicacao',
+    'prescricao',
+  ];
+
+  let hits = 0;
+  for (const keyword of clinicalKeywords) {
+    if (normalized.includes(keyword)) hits += 1;
+  }
+
+  return hits >= 2 || normalized.length >= 120;
+}
+
+function normalizeClinicalFieldText(value = '') {
+  const text = String(value || '').trim();
+  if (!text) return '';
+  if (/^nao informado na consulta$/i.test(normalizeText(text))) return '';
+  return text.replace(/\s+/g, ' ').trim();
+}
+
+function groundingScore(sourceText = '', candidateText = '') {
+  const source = normalizeClinicalFieldText(sourceText);
+  const candidate = normalizeClinicalFieldText(candidateText);
+  if (!source || !candidate) return 0;
+
+  const overlap = lexicalOverlapScore(source, candidate);
+  const candidateLength = candidate.length;
+  const hasClinicalSignal = hasMinimumClinicalSignal(candidate);
+
+  let score = overlap;
+  if (hasClinicalSignal) score += 0.05;
+  if (candidateLength > 260 && overlap < 0.25) score -= 0.1;
+  if (candidateLength < 12) score -= 0.05;
+
+  return Number(Math.max(0, Math.min(1, score)).toFixed(3));
+}
+
+function selectGroundedFieldValue(
+  sourceText = '',
+  primary = '',
+  fallback = '',
+) {
+  const primaryText = normalizeClinicalFieldText(primary);
+  const fallbackText = normalizeClinicalFieldText(fallback);
+
+  if (!primaryText && !fallbackText) return '';
+  if (!primaryText) return fallbackText;
+  if (!fallbackText) return primaryText;
+
+  const primaryScore = groundingScore(sourceText, primaryText);
+  const fallbackScore = groundingScore(sourceText, fallbackText);
+
+  if (fallbackScore > primaryScore + 0.06) return fallbackText;
+  if (primaryScore > fallbackScore + 0.06) return primaryText;
+
+  if (fallbackText.length < primaryText.length) return fallbackText;
+  return primaryText;
+}
+
+function stabilizeTreatmentText(selectedText = '', sourceText = '') {
+  const selected = normalizeClinicalFieldText(selectedText);
+  const source = normalizeText(sourceText || '');
+  const combined = `${normalizeText(selected)} ${source}`.trim();
+  if (!combined) return selected;
+
+  const rules = [
+    { regex: /\bhidrat|ringer|fluidoterap|soro\b/, label: 'Suporte hidrico' },
+    { regex: /\bdieta|aliment|manejo nutric/i, label: 'Ajuste nutricional' },
+    {
+      regex: /\bmonitor|temperatura|reavaliar|retorno\b/,
+      label: 'Monitoramento e retorno',
+    },
+    {
+      regex: /\banti[- ]?inflam|flunixin|meloxicam\b/,
+      label: 'Anti-inflamatorio',
+    },
+    {
+      regex: /\bantibiot|oxitetraciclina|penicil/i,
+      label: 'Antibioticoterapia',
+    },
+    {
+      regex: /\bexame|hemograma|cultura|copro|ultrassom\b/,
+      label: 'Exames complementares',
+    },
+  ];
+
+  const labels = [];
+  for (const rule of rules) {
+    if (rule.regex.test(combined)) labels.push(rule.label);
+  }
+
+  if (labels.length >= 2) {
+    return `Conduta: ${Array.from(new Set(labels)).join('; ')}.`;
+  }
+
+  return selected;
+}
+
+function stabilizeDiagnosisText(selectedText = '', sourceText = '') {
+  const selected = normalizeClinicalFieldText(selectedText);
+  const source = normalizeText(sourceText || '');
+  const combined = `${normalizeText(selected)} ${source}`.trim();
+  if (!combined) return selected;
+
+  const rules = [
+    {
+      regex: /\breticuloperiton|corpo estranho\b/,
+      label: 'Reticuloperitonite traumatica',
+    },
+    {
+      regex: /\bcolica|dor abdominal\b/,
+      label: 'Sindroma colica em avaliacao',
+    },
+    {
+      regex: /\bmastite|quarto mamario\b/,
+      label: 'Suspeita de mastite clinica',
+    },
+    {
+      regex: /\bgastroenter|enterop|diarre\b/,
+      label: 'Enteropatia aguda em avaliacao',
+    },
+    { regex: /\botite|conduto|orelha\b/, label: 'Otite externa em avaliacao' },
+    {
+      regex: /\bpododerm|casco|manc|claudic\b/,
+      label: 'Sindroma locomotora em avaliacao',
+    },
+  ];
+
+  for (const rule of rules) {
+    if (rule.regex.test(combined)) return rule.label;
+  }
+
+  return selected;
+}
+
+function stabilizePhysicalExamText(selectedText = '', sourceText = '') {
+  const selected = normalizeClinicalFieldText(selectedText);
+  const source = normalizeText(sourceText || '');
+  const combined = `${normalizeText(selected)} ${source}`.trim();
+  if (!combined) return selected;
+
+  const snippets = [];
+  if (
+    /\btemperatura\b.*\b\d{2}[.,]?\d?\b|\b\d{2}[.,]?\d?\s*graus?\b/.test(
+      combined,
+    )
+  ) {
+    snippets.push('Temperatura aferida no exame');
+  }
+  if (/\bfc\b|\bfrequencia cardiaca\b/.test(combined)) {
+    snippets.push('Frequencia cardiaca avaliada');
+  }
+  if (/\bfr\b|\bfrequencia respiratoria\b/.test(combined)) {
+    snippets.push('Frequencia respiratoria avaliada');
+  }
+  if (/\bmucosa|tpc|desidrat/.test(combined)) {
+    snippets.push('Perfusao e hidratacao avaliadas');
+  }
+  if (/\bdor abdominal|palpacao|motilidade|ausculta/.test(combined)) {
+    snippets.push('Achados semiologicos relevantes ao exame');
+  }
+
+  if (snippets.length >= 2) {
+    return `Exame fisico: ${Array.from(new Set(snippets)).join('; ')}.`;
+  }
+
+  return selected;
+}
+
 function normalizeSpeakerLabel(value = 'Tutor') {
   const raw = normalizeText(value).trim();
   if (
@@ -565,8 +768,10 @@ async function analyzeFieldConversation({
   segments,
   transcript,
 }) {
+  const transcriptFallback = normalizeTimestampedTranscript(transcript) || '';
   let finalTranscription = '';
   let finalSegments = [];
+  let usedTranscriptFallback = false;
 
   // Debug: log dos parâmetros recebidos
   logger.info('analyzeFieldConversation chamado', {
@@ -600,6 +805,7 @@ async function analyzeFieldConversation({
         formData.append('file', blob, filename);
         formData.append('model', 'whisper-1');
         formData.append('response_format', 'verbose_json');
+        formData.append('language', 'pt');
 
         const response = await fetch(
           'https://api.openai.com/v1/audio/transcriptions',
@@ -620,11 +826,48 @@ async function analyzeFieldConversation({
         }
 
         const data = await response.json();
-        finalTranscription = data.text || '';
+        const whisperText = String(data.text || '').trim();
+        finalTranscription = whisperText;
         logger.info('Transcricao Whisper concluida', {
-          transcriptionLength: finalTranscription.length,
+          transcriptionLength: whisperText.length,
           segmentsCount: data.segments ? data.segments.length : 0,
         });
+
+        if (transcriptFallback) {
+          const overlap = lexicalOverlapScore(whisperText, transcriptFallback);
+          const whisperHasSignal = hasMinimumClinicalSignal(whisperText);
+          const fallbackHasSignal =
+            hasMinimumClinicalSignal(transcriptFallback);
+
+          if (!whisperHasSignal && fallbackHasSignal) {
+            logger.warn(
+              'Whisper com baixo sinal clinico; usando transcricao fallback fornecida',
+              {
+                whisperLength: whisperText.length,
+                fallbackLength: transcriptFallback.length,
+                overlap: Number(overlap.toFixed(3)),
+              },
+            );
+            finalTranscription = transcriptFallback;
+            usedTranscriptFallback = true;
+          } else if (
+            whisperHasSignal &&
+            fallbackHasSignal &&
+            overlap < 0.2 &&
+            transcriptFallback.length > whisperText.length
+          ) {
+            logger.warn(
+              'Whisper e fallback com baixa aderencia; combinando fontes para preservar contexto clinico',
+              {
+                whisperLength: whisperText.length,
+                fallbackLength: transcriptFallback.length,
+                overlap: Number(overlap.toFixed(3)),
+              },
+            );
+            finalTranscription = `${whisperText}\n${transcriptFallback}`.trim();
+            usedTranscriptFallback = true;
+          }
+        }
 
         // Converte resultado do Whisper para formato interno
         if (data.duration && data.segments && data.segments.length > 0) {
@@ -634,11 +877,15 @@ async function analyzeFieldConversation({
             const seconds = Math.floor(startTime % 60);
             return {
               stamp: `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`,
-              speaker: 'Tutor',
+              speaker: detectSpeakerFromText((seg.text || '').trim(), 'Tutor'),
               text: (seg.text || '').trim(),
             };
           });
         } else {
+          finalSegments = buildSimpleSegments(finalTranscription);
+        }
+
+        if (usedTranscriptFallback) {
           finalSegments = buildSimpleSegments(finalTranscription);
         }
       } else {
@@ -671,7 +918,7 @@ async function analyzeFieldConversation({
 
   // Usa a transcrição fornecida diretamente na requisição como fallback
   if (!finalTranscription && finalSegments.length === 0) {
-    finalTranscription = normalizeTimestampedTranscript(transcript) || '';
+    finalTranscription = transcriptFallback;
   }
 
   const sourceTextFinal =
@@ -711,6 +958,40 @@ async function analyzeFieldConversation({
     // Combina campos - IA é mais detalhada, mas usa heurística como backup
     const aiFields = aiResult.fields || {};
     const heuristicFields = heuristicResult?.parsed || {};
+    const sourceForGrounding =
+      sourceTextFinal ||
+      combinedSegments.map((segment) => segment.text).join(' ');
+
+    const selectedTreatment = selectGroundedFieldValue(
+      sourceForGrounding,
+      aiFields.orientacoes_ao_tutor || aiFields.tratamento,
+      heuristicFields.treatment,
+    );
+    const selectedDiagnosis = selectGroundedFieldValue(
+      sourceForGrounding,
+      aiFields.diagnostico_presuntivo || aiFields.diagnostico_sugestivo,
+      heuristicFields.diagnosis,
+    );
+    const selectedPhysicalExam = selectGroundedFieldValue(
+      sourceForGrounding,
+      aiFields.achados_relevantes || aiFields.exame_fisico,
+      heuristicFields.physicalExam,
+    );
+    const selectedMedications = selectGroundedFieldValue(
+      sourceForGrounding,
+      aiFields.medicacoes_prescritas,
+      heuristicFields.medications,
+    );
+    const selectedExamDetails = selectGroundedFieldValue(
+      sourceForGrounding,
+      aiFields.exames_solicitados,
+      heuristicFields.examDetails,
+    );
+    const selectedReturnRecommendation = selectGroundedFieldValue(
+      sourceForGrounding,
+      aiFields.retorno || aiFields.recomendacoes,
+      heuristicFields.returnRecommendation,
+    );
 
     // Mapeia os novos campos da IA para o formato do frontend
     combinedParsed = {
@@ -743,11 +1024,10 @@ async function analyzeFieldConversation({
       uso_medicacao: aiFields.uso_medicacao || '',
 
       // Exame físico
-      physicalExam:
-        aiFields.achados_relevantes ||
-        aiFields.exame_fisico ||
-        heuristicFields.physicalExam ||
-        '',
+      physicalExam: stabilizePhysicalExamText(
+        selectedPhysicalExam,
+        sourceForGrounding,
+      ),
       estado_geral: aiFields.estado_geral || '',
       temperatura: aiFields.temperatura || '',
       frequencia_cardiaca: aiFields.frequencia_cardiaca || '',
@@ -756,27 +1036,14 @@ async function analyzeFieldConversation({
       hidratacao: aiFields.hidratacao || '',
 
       // Avaliação
-      diagnosis:
-        aiFields.diagnostico_presuntivo ||
-        aiFields.diagnostico_sugestivo ||
-        heuristicFields.diagnosis ||
-        '',
+      diagnosis: stabilizeDiagnosisText(selectedDiagnosis, sourceForGrounding),
       suspeitas_clinicas: aiFields.suspeitas_clinicas || '',
 
       // Plano
-      treatment:
-        aiFields.orientacoes_ao_tutor ||
-        aiFields.tratamento ||
-        heuristicFields.treatment ||
-        '',
-      medications:
-        aiFields.medicacoes_prescritas || heuristicFields.medications || '',
-      examDetails: aiFields.exames_solicitados || '',
-      returnRecommendation:
-        aiFields.retorno ||
-        aiFields.recomendacoes ||
-        heuristicFields.returnRecommendation ||
-        '',
+      treatment: stabilizeTreatmentText(selectedTreatment, sourceForGrounding),
+      medications: selectedMedications,
+      examDetails: selectedExamDetails,
+      returnRecommendation: selectedReturnRecommendation,
 
       // Transcrição organizada
       transcricao_organizada: aiFields.transcricao_organizada || '',

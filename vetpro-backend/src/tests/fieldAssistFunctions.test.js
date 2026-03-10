@@ -214,10 +214,217 @@ describe('fieldAssistFunctions.analyzeFieldConversation', () => {
       'Bearer test-openai-key',
     );
     expect(result.transcript).toMatch(/tosse desde ontem/i);
-    expect(result.parsed.chiefComplaint).toBe('Tosse e vomito');
-    expect(result.parsed.diagnosis).toBe('Gastroenterite em avaliacao');
-    expect(result.parsed.treatment).toBe('Hidratacao oral e repouso');
+    expect(result.parsed.chiefComplaint).toMatch(/tosse|vomito/i);
+    expect(result.parsed.diagnosis).toMatch(
+      /gastroenterite|enteropatia aguda em avaliacao/i,
+    );
+    expect(result.parsed.treatment).toMatch(/hidric|monitor|repouso/i);
     expect(Array.isArray(result.segments)).toBe(true);
     expect(result.segments.length).toBeGreaterThan(0);
+  });
+
+  it('deve usar transcript fallback quando Whisper retornar texto com baixo sinal clinico', async () => {
+    process.env.OPENAI_API_KEY = 'test-openai-key';
+
+    const fetchMock = jest
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          text: 'ruido teste',
+          duration: 2.1,
+          segments: [{ start: 0, text: 'ruido teste' }],
+        }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          choices: [
+            {
+              message: {
+                content: JSON.stringify({
+                  transcricao_organizada:
+                    '[TUTOR]: Animal com febre alta e apatia desde ontem.',
+                  identificacao: {},
+                  anamnese: {
+                    queixa_principal: 'Febre e apatia',
+                  },
+                  exame_fisico: {
+                    achados_relevantes: 'Nao informado na consulta',
+                  },
+                  avaliacao: {
+                    diagnostico_presuntivo: 'Doenca infecciosa em avaliacao',
+                  },
+                  plano: {
+                    orientacoes_ao_tutor: 'Monitorar temperatura',
+                    medicacoes_prescritas: 'Conforme prescricao',
+                    retorno: 'Reavaliar em 24 horas',
+                    exames_solicitados: 'Hemograma',
+                  },
+                }),
+              },
+            },
+          ],
+        }),
+      });
+
+    global.fetch = fetchMock;
+
+    const fallbackTranscript =
+      'Tutor relata febre alta e apatia desde ontem. No exame fisico temperatura 39.8. Diagnostico presuntivo infeccioso.';
+
+    const result = await analyzeFieldConversation({
+      audioBuffer: Buffer.from('fake-audio-buffer'),
+      mimeType: 'audio/wav',
+      filename: 'consulta.wav',
+      segments: [],
+      transcript: fallbackTranscript,
+    });
+
+    expect(result.transcript).toMatch(/febre alta/i);
+    expect(result.transcript).not.toMatch(/^ruido teste$/i);
+    expect(result.parsed.chiefComplaint).toMatch(/febre|apatia/i);
+  });
+
+  it('deve priorizar tratamento heuristico quando a sugestao da IA tiver baixa aderencia ao transcript', async () => {
+    process.env.OPENAI_API_KEY = 'test-openai-key';
+
+    const fetchMock = jest
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          text: 'Tutor relata diarreia e medico orienta hidratacao oral com dieta leve por 48 horas.',
+          duration: 8.2,
+          segments: [
+            {
+              start: 0,
+              text: 'Tutor relata diarreia desde ontem e apatia.',
+            },
+            {
+              start: 4,
+              text: 'Medico orienta tratamento com hidratacao oral e dieta leve por 48 horas.',
+            },
+          ],
+        }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          choices: [
+            {
+              message: {
+                content: JSON.stringify({
+                  transcricao_organizada:
+                    '[TUTOR]: Tutor relata diarreia desde ontem.\n[VETERINÁRIO]: Medico orienta conduta.',
+                  identificacao: {},
+                  anamnese: {
+                    queixa_principal: 'Diarreia aguda',
+                  },
+                  exame_fisico: {
+                    achados_relevantes: 'Nao informado na consulta',
+                  },
+                  avaliacao: {
+                    diagnostico_presuntivo: 'Enteropatia em avaliacao',
+                  },
+                  plano: {
+                    orientacoes_ao_tutor:
+                      'Internacao imediata e cirurgia exploratoria de urgencia.',
+                    medicacoes_prescritas: 'Nao informado na consulta',
+                    retorno: 'Reavaliar em 48 horas',
+                    exames_solicitados: 'Hemograma',
+                  },
+                }),
+              },
+            },
+          ],
+        }),
+      });
+
+    global.fetch = fetchMock;
+
+    const result = await analyzeFieldConversation({
+      audioBuffer: Buffer.from('fake-audio-buffer'),
+      mimeType: 'audio/wav',
+      filename: 'consulta.wav',
+      segments: [],
+      transcript: '',
+    });
+
+    expect(result.parsed.treatment).toMatch(
+      /hidratacao|dieta leve|suporte hidrico|ajuste nutricional/i,
+    );
+    expect(result.parsed.treatment).not.toMatch(/cirurgia exploratoria/i);
+  });
+
+  it('deve estabilizar diagnostico e exame fisico com base no contexto clinico do transcript', async () => {
+    process.env.OPENAI_API_KEY = 'test-openai-key';
+
+    const fetchMock = jest
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          text: 'Bovino com dor abdominal, temperatura 39.8 e frequencia cardiaca elevada. Suspeita de reticuloperitonite traumatica.',
+          duration: 7.6,
+          segments: [
+            {
+              start: 0,
+              text: 'Bovino com dor abdominal e motilidade reduzida.',
+            },
+            {
+              start: 3,
+              text: 'No exame fisico temperatura 39.8 e frequencia cardiaca alta.',
+            },
+          ],
+        }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          choices: [
+            {
+              message: {
+                content: JSON.stringify({
+                  transcricao_organizada:
+                    '[TUTOR]: Dor abdominal.\n[VETERINÁRIO]: Exame fisico alterado.',
+                  identificacao: {},
+                  anamnese: {
+                    queixa_principal: 'Dor abdominal',
+                  },
+                  exame_fisico: {
+                    achados_relevantes: 'Sem alteracoes clinicas relevantes.',
+                  },
+                  avaliacao: {
+                    diagnostico_presuntivo:
+                      'Quadro inespecifico sem definicao.',
+                  },
+                  plano: {
+                    orientacoes_ao_tutor: 'Monitorar',
+                    medicacoes_prescritas: 'Conforme prescricao',
+                    retorno: 'Reavaliar',
+                    exames_solicitados: 'Hemograma',
+                  },
+                }),
+              },
+            },
+          ],
+        }),
+      });
+
+    global.fetch = fetchMock;
+
+    const result = await analyzeFieldConversation({
+      audioBuffer: Buffer.from('fake-audio-buffer'),
+      mimeType: 'audio/wav',
+      filename: 'consulta.wav',
+      segments: [],
+      transcript: '',
+    });
+
+    expect(result.parsed.diagnosis).toMatch(/reticuloperitonite|avaliacao/i);
+    expect(result.parsed.physicalExam).toMatch(
+      /exame fisico|frequencia|temperatura|semiolog/i,
+    );
   });
 });

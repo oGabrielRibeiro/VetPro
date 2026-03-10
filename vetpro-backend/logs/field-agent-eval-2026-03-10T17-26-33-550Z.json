@@ -1,0 +1,82 @@
+{
+  "executedAt": "2026-03-10T17:26:33.549Z",
+  "datasetPath": "C:\\Cliente\\HSS\\VetPro\\dataset_treinamento_veterinario_apolo\\dataset_prontuario_apolo.json",
+  "wavPath": "C:\\Cliente\\HSS\\VetPro\\dataset_treinamento_veterinario_apolo\\vet_dialogo_treinamento_realista.wav",
+  "transcriptOnly": true,
+  "transcriptLength": 811,
+  "metrics": {
+    "diagnosisScore": 1,
+    "treatmentScore": 0.929,
+    "examScore": 0.5,
+    "globalScore": 0.81,
+    "specificCoverage": 1,
+    "checks": {
+      "hasDiagnosis": true,
+      "hasTreatmentEvidence": true,
+      "hasExamEvidence": true
+    },
+    "specificChecks": [
+      {
+        "key": "vacinacao",
+        "expected": "Em dia",
+        "predicted": "Em dia.",
+        "match": true
+      },
+      {
+        "key": "vermifugacao",
+        "expected": "Ivermectina",
+        "predicted": "Ivermectina.",
+        "match": true
+      },
+      {
+        "key": "temperatura",
+        "expected": "39.8",
+        "predicted": "39.8 graus",
+        "match": true
+      },
+      {
+        "key": "frequencia_cardiaca",
+        "expected": "88",
+        "predicted": "88 bpm",
+        "match": true
+      },
+      {
+        "key": "mucosas",
+        "expected": "Discretamente congestas",
+        "predicted": "Discretamente congestas, TPC 3 segundos",
+        "match": true
+      }
+    ]
+  },
+  "parsed": {
+    "nome_animal": "Apolo",
+    "especie": "bovino",
+    "raca": "Não informado na consulta",
+    "idade": "Não informado na consulta",
+    "sexo": "Não informado na consulta",
+    "peso": "Não informado na consulta",
+    "chiefComplaint": "Consumo reduzido de água nas últimas 24 horas.",
+    "anamnese": "Não informado na consulta",
+    "anamnesis": "Não informado na consulta",
+    "alimentacao": "Não informado na consulta",
+    "ambiente": "Sistema de produção semi-intensivo, propriedade Haras Santo Antônio.",
+    "vacinacao": "Em dia.",
+    "vermifugacao": "Ivermectina.",
+    "doencas_previas": "Não informado na consulta",
+    "uso_medicacao": "Não informado na consulta",
+    "physicalExam": "Dor abdominal leve a moderada",
+    "estado_geral": "Não informado na consulta",
+    "temperatura": "39.8 graus",
+    "frequencia_cardiaca": "88 bpm",
+    "frequencia_respiratoria": "36 irpm",
+    "mucosas": "Discretamente congestas, TPC 3 segundos",
+    "hidratacao": "Desidratação de 6 por cento",
+    "diagnosis": "Reticuloperitonite traumática",
+    "suspeitas_clinicas": "Reticuloperitonite traumática",
+    "treatment": "Repouso e monitoramento da temperatura 2 vezes ao dia.",
+    "medications": "Ringer lactato 20 L IV; Flunixin meglumine 1.1 mg/kg IV SID por 3 dias; Oxitetraciclina 20 mg/kg IM a cada 48 horas por 3 doses; Imã ruminal dose única.",
+    "examDetails": "Não informado na consulta",
+    "returnRecommendation": "Não informado na consulta",
+    "transcricao_organizada": "[TUTOR]: Nome do animal Apolo. Especie Bovino. Tutor Ricardo Alves. Propriedade Haras Santo Antônio. Sistema de producao Semi-intensivo. Lote 7. Escore corporal 2/5. Vacinacao Em dia. Vermifugacao Ivermectina. Consumo de agua Consumo reduzido 24h.\n[MÉDICO]: No exame fisico temperatura 39.8 graus. Frequencia cardiaca 88 bpm. Frequencia respiratoria 36 irpm. Mucosas Discretamente congestas. TPC 3 segundos. Desidratacao 6 por cento. Dor abdominal Leve a moderada. Diagnostico principal Reticuloperitonite traumática. Diagnosticos diferenciais Acidose ruminal subaguda, Peritonite inespecífica. Prognostico Reservado. Tratamento proposto Ringer lactato 20 L IV; Flunixin meglumine 1.1 mg/kg IV SID 3 dias; Oxitetraciclina 20 mg/kg IM q48h 3 doses; Imã ruminal dose única; Repouso e monitoramento temperatura 2x dia."
+  }
+}

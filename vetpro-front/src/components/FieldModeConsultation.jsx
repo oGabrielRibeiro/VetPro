@@ -3,7 +3,10 @@ import api from "../services/api";
 import FeedbackBanner from "./FeedbackBanner";
 import LoadingDot from "./LoadingDot";
 import FloatingFormActions from "./FloatingFormActions";
-import { toUserFriendlyError } from "../utils/errorMessages";
+import {
+  extractFirstValidationField,
+  toUserFriendlyError,
+} from "../utils/errorMessages";
 import {
   PORTE_NOTES_MARK_END,
   PORTE_NOTES_MARK_START,
@@ -234,6 +237,54 @@ const FieldModeConsultation = ({
 
   const showFeedback = (type, message) => {
     setFeedback({ type, message });
+  };
+
+  const focusFieldByValidation = (rawField = "") => {
+    const field = String(rawField || "").trim().replace(/^payload\./, "");
+    if (!field) return false;
+
+    if (field.startsWith("specificFields.")) {
+      scrollToStep("salvar");
+      return true;
+    }
+
+    const fieldMap = {
+      consultationType: "#fieldConsultationType",
+      chiefComplaint: "#fieldChiefComplaint",
+      anamnesis: "#fieldAnamnesis",
+      physicalExam: "#fieldPhysicalExam",
+      diagnosis: "#fieldDiagnosis",
+      treatment: "#fieldTreatment",
+      procedures: "#fieldProcedures",
+      medications: "#fieldMedications",
+      examDetails: "#fieldExamDetails",
+      notes: "#fieldNotes",
+      returnRecommendation: "#fieldReturnRecommendation",
+      weight: "#fieldWeight",
+      temperature: "#fieldTemperature",
+      heartRate: "#fieldHeartRate",
+      respiratoryRate: "#fieldRespiratoryRate",
+    };
+
+    const selector = fieldMap[field];
+    if (!selector) return false;
+    const target = document.querySelector(selector);
+    if (!target) return false;
+
+    scrollToStep("salvar");
+    target.scrollIntoView({ behavior: "smooth", block: "center" });
+    window.setTimeout(() => {
+      if (typeof target.focus === "function") target.focus();
+    }, 180);
+    return true;
+  };
+
+  const focusFirstValidationFieldFromError = (error) => {
+    const firstField = extractFirstValidationField(error);
+    const focused = focusFieldByValidation(firstField);
+    if (!focused) {
+      scrollToStep("salvar");
+    }
   };
 
   const scrollToStep = (step) => {
@@ -2178,6 +2229,7 @@ const FieldModeConsultation = ({
       }
     } catch (error) {
       console.error("Erro ao salvar consulta de campo:", error);
+      focusFirstValidationFieldFromError(error);
       showFeedback(
         "error",
         toUserFriendlyError(
@@ -2288,6 +2340,7 @@ const FieldModeConsultation = ({
             Tipo de consulta
           </label>
           <select
+            id="fieldConsultationType"
             value={consultationType}
             onChange={(event) => setConsultationType(event.target.value)}
             className="h-11 sm:h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm"
@@ -2639,6 +2692,7 @@ const FieldModeConsultation = ({
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700">Peso (kg)</label>
             <input
+              id="fieldWeight"
               type="number"
               value={weight}
               onChange={(e) => setWeight(e.target.value)}
@@ -2648,6 +2702,7 @@ const FieldModeConsultation = ({
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700">Temperatura (C)</label>
             <input
+              id="fieldTemperature"
               type="number"
               value={temperature}
               onChange={(e) => setTemperature(e.target.value)}
@@ -2657,6 +2712,7 @@ const FieldModeConsultation = ({
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700">Frequencia cardiaca</label>
             <input
+              id="fieldHeartRate"
               type="number"
               value={heartRate}
               onChange={(e) => setHeartRate(e.target.value)}
@@ -2666,6 +2722,7 @@ const FieldModeConsultation = ({
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700">Frequencia respiratoria</label>
             <input
+              id="fieldRespiratoryRate"
               type="number"
               value={respiratoryRate}
               onChange={(e) => setRespiratoryRate(e.target.value)}

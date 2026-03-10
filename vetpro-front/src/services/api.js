@@ -32,7 +32,8 @@ function normalizeEnvBaseUrl(envBase) {
 }
 
 function resolveApiBaseUrl() {
-  const envBase = process.env.REACT_APP_API_BASE_URL;
+  const envBase =
+    import.meta.env.VITE_API_BASE_URL || import.meta.env.REACT_APP_API_BASE_URL;
   if (envBase && String(envBase).trim()) {
     return normalizeEnvBaseUrl(envBase);
   }
@@ -75,11 +76,57 @@ const api = axios.create({
   },
 });
 
+let isRefreshingToken = false;
+let authExpiredDispatched = false;
+let queuedRequests = [];
+
+const flushQueuedRequests = (error, nextToken = null) => {
+  queuedRequests.forEach(({ resolve, reject }) => {
+    if (error) {
+      reject(error);
+      return;
+    }
+    resolve(nextToken);
+  });
+  queuedRequests = [];
+};
+
+const markSessionExpired = (error) => {
+  localStorage.removeItem("token");
+  localStorage.removeItem("refreshToken");
+
+  if (authExpiredDispatched) return;
+  authExpiredDispatched = true;
+
+  if (typeof window !== "undefined") {
+    const code = error?.response?.data?.code;
+    window.dispatchEvent(
+      new CustomEvent("vetpro:auth-expired", {
+        detail: {
+          code: code || "TOKEN_INVALID",
+          message: toUserFriendlyError(
+            error,
+            "Sua sessao expirou. Faca login novamente.",
+          ),
+        },
+      }),
+    );
+  }
+};
+
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem("token");
+  const normalizedToken = String(token || "").trim();
 
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+  if (
+    normalizedToken &&
+    normalizedToken !== "undefined" &&
+    normalizedToken !== "null"
+  ) {
+    config.headers.Authorization = `Bearer ${normalizedToken}`;
+    authExpiredDispatched = false;
+  } else if (token) {
+    localStorage.removeItem("token");
   }
 
   return config;
@@ -87,28 +134,76 @@ api.interceptors.request.use((config) => {
 
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error) => {
     const status = error?.response?.status;
-    const code = error?.response?.data?.code;
+    const originalRequest = error?.config || {};
 
-    if (status === 401) {
-      localStorage.removeItem("token");
-      if (typeof window !== "undefined") {
-        window.dispatchEvent(
-          new CustomEvent("vetpro:auth-expired", {
-            detail: {
-              code: code || "TOKEN_INVALID",
-              message: toUserFriendlyError(
-                error,
-                "Sua sessao expirou. Faca login novamente.",
-              ),
-            },
-          }),
-        );
-      }
+    if (status !== 401) {
+      return Promise.reject(error);
     }
 
-    return Promise.reject(error);
+    // Evita loop em endpoints de auth.
+    const isAuthEndpoint = String(originalRequest?.url || "").includes("/auth/");
+    if (isAuthEndpoint) {
+      markSessionExpired(error);
+      return Promise.reject(error);
+    }
+
+    // Tentativa de refresh de token, quando disponível.
+    const refreshToken = localStorage.getItem("refreshToken");
+    if (!refreshToken) {
+      markSessionExpired(error);
+      return Promise.reject(error);
+    }
+
+    if (originalRequest._retry) {
+      markSessionExpired(error);
+      return Promise.reject(error);
+    }
+
+    if (isRefreshingToken) {
+      return new Promise((resolve, reject) => {
+        queuedRequests.push({ resolve, reject });
+      })
+        .then((nextToken) => {
+          originalRequest.headers.Authorization = `Bearer ${nextToken}`;
+          return api(originalRequest);
+        })
+        .catch((queuedError) => Promise.reject(queuedError));
+    }
+
+    originalRequest._retry = true;
+    isRefreshingToken = true;
+
+    try {
+      const refreshResponse = await axios.post(
+        `${resolveApiOrigin()}/api/auth/refresh`,
+        { refreshToken },
+        { headers: { "Content-Type": "application/json" } },
+      );
+
+      const nextToken =
+        refreshResponse?.data?.token ||
+        refreshResponse?.data?.data?.token ||
+        refreshResponse?.data?.accessToken ||
+        "";
+
+      if (!nextToken) {
+        throw new Error("Refresh token sem access token.");
+      }
+
+      localStorage.setItem("token", nextToken);
+      flushQueuedRequests(null, nextToken);
+
+      originalRequest.headers.Authorization = `Bearer ${nextToken}`;
+      return api(originalRequest);
+    } catch (refreshError) {
+      flushQueuedRequests(refreshError, null);
+      markSessionExpired(refreshError);
+      return Promise.reject(refreshError);
+    } finally {
+      isRefreshingToken = false;
+    }
   },
 );
 

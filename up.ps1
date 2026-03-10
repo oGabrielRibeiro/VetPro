@@ -3,6 +3,7 @@
 $ErrorActionPreference = "Stop"
 $ProjectRoot = $PSScriptRoot
 $EnvFilePath = Join-Path $ProjectRoot ".env"
+$FrontendPackageJsonPath = Join-Path $ProjectRoot "vetpro-front\package.json"
 
 function Assert-LastExitCode {
   param(
@@ -105,7 +106,7 @@ function Validate-EnvFile {
     return
   }
 
-  $requiredKeys = @("DATABASE_URL", "JWT_SECRET")
+  $requiredKeys = @("JWT_SECRET")
   $missing = @()
   foreach ($key in $requiredKeys) {
     $value = Read-EnvValue -FilePath $EnvFilePath -Key $key
@@ -120,10 +121,66 @@ function Validate-EnvFile {
     Write-Host "O compose pode suprir parte disso, mas valide se houver falha de auth/db." -ForegroundColor Yellow
   }
 
+  $databaseUrl = Read-EnvValue -FilePath $EnvFilePath -Key "DATABASE_URL"
+  $postgresUser = Read-EnvValue -FilePath $EnvFilePath -Key "POSTGRES_USER"
+  $postgresPassword = Read-EnvValue -FilePath $EnvFilePath -Key "POSTGRES_PASSWORD"
+  $postgresDb = Read-EnvValue -FilePath $EnvFilePath -Key "POSTGRES_DB"
+
+  $hasDatabaseUrl = -not [string]::IsNullOrWhiteSpace($databaseUrl)
+  $hasPostgresTriplet = (
+    -not [string]::IsNullOrWhiteSpace($postgresUser) -and
+    -not [string]::IsNullOrWhiteSpace($postgresPassword) -and
+    -not [string]::IsNullOrWhiteSpace($postgresDb)
+  )
+
+  if (-not $hasDatabaseUrl -and -not $hasPostgresTriplet) {
+    Write-Host "Aviso: defina DATABASE_URL ou POSTGRES_USER/POSTGRES_PASSWORD/POSTGRES_DB no .env para evitar falhas de banco." -ForegroundColor Yellow
+  }
+
   $optionalOpenAi = Read-EnvValue -FilePath $EnvFilePath -Key "OPENAI_API_KEY"
   if ([string]::IsNullOrWhiteSpace($optionalOpenAi)) {
     Write-Host "Aviso: OPENAI_API_KEY ausente no .env. Recursos de IA podem ficar limitados." -ForegroundColor Yellow
   }
+
+  $viteApiBase = Read-EnvValue -FilePath $EnvFilePath -Key "VITE_API_BASE_URL"
+  $legacyApiBase = Read-EnvValue -FilePath $EnvFilePath -Key "REACT_APP_API_BASE_URL"
+  if ([string]::IsNullOrWhiteSpace($viteApiBase) -and -not [string]::IsNullOrWhiteSpace($legacyApiBase)) {
+    Write-Host "Aviso: encontrado apenas REACT_APP_API_BASE_URL. Prefira VITE_API_BASE_URL para o frontend atual." -ForegroundColor Yellow
+  }
+}
+
+function Show-FrontendStackStatus {
+  if (-not (Test-Path $FrontendPackageJsonPath)) {
+    Write-Host "Aviso: package.json do frontend nao encontrado em $FrontendPackageJsonPath." -ForegroundColor Yellow
+    return
+  }
+
+  try {
+    $pkg = Get-Content -Path $FrontendPackageJsonPath -Raw | ConvertFrom-Json
+  } catch {
+    Write-Host "Aviso: nao foi possivel ler package.json do frontend para validar stack." -ForegroundColor Yellow
+    return
+  }
+
+  $hasViteDep = $false
+  if ($pkg.devDependencies -and $pkg.devDependencies.PSObject.Properties.Name -contains "vite") {
+    $hasViteDep = $true
+  }
+
+  $hasViteScript = $false
+  if ($pkg.scripts -and $pkg.scripts.PSObject.Properties.Name -contains "dev") {
+    $devScript = [string]$pkg.scripts.dev
+    if ($devScript -match "\bvite\b") {
+      $hasViteScript = $true
+    }
+  }
+
+  if ($hasViteDep -and $hasViteScript) {
+    Write-Host "Frontend stack: Vite detectado (OK)." -ForegroundColor Green
+    return
+  }
+
+  Write-Host "Aviso: stack Vite nao detectada completamente no frontend (revise package.json)." -ForegroundColor Yellow
 }
 
 function Wait-HttpReady {
@@ -201,6 +258,7 @@ if (-not (Test-CommandAvailable -Name "docker")) {
 }
 
 Show-NodeVersionStatus
+Show-FrontendStackStatus
 Validate-EnvFile
 Start-DockerDesktopIfNeeded
 

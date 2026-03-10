@@ -5,7 +5,10 @@ import FeedbackBanner from "./FeedbackBanner";
 import LoadingDot from "./LoadingDot";
 import FloatingFormActions from "./FloatingFormActions";
 import ConfirmDialog from "./ConfirmDialog";
-import { toUserFriendlyError } from "../utils/errorMessages";
+import {
+  extractFirstValidationField,
+  toUserFriendlyError,
+} from "../utils/errorMessages";
 import {
   PORTE_NOTES_MARK_END,
   PORTE_NOTES_MARK_START,
@@ -405,6 +408,53 @@ const QuickConsultation = ({ patient, onSave, onBack, initialData = null }) => {
 
   const showFeedback = (type, message) => {
     setFeedback({ type, message });
+  };
+
+  const focusFieldByValidation = (rawField = "") => {
+    const field = String(rawField || "").trim().replace(/^payload\./, "");
+    if (!field) return false;
+
+    if (field.startsWith("specificFields.")) {
+      scrollToSection("porte-section");
+      return true;
+    }
+
+    const fieldMap = {
+      consultationType: "#consultationType",
+      chiefComplaint: "#chiefComplaint",
+      anamnesis: "#anamnesis",
+      physicalExam: "#physicalExam",
+      diagnosis: "#diagnosis",
+      treatment: "#treatment",
+      procedures: "#procedureDetails",
+      medications: "#medicationDetails",
+      examDetails: "#examDetails",
+      notes: "#notes",
+      returnRecommendation: "#returnRecommendation",
+      weight: "#weight",
+      temperature: "#temperature",
+      heartRate: "#heartRate",
+      respiratoryRate: "#respiratoryRate",
+    };
+
+    const selector = fieldMap[field];
+    if (!selector) return false;
+    const target = document.querySelector(selector);
+    if (!target) return false;
+
+    target.scrollIntoView({ behavior: "smooth", block: "center" });
+    window.setTimeout(() => {
+      if (typeof target.focus === "function") target.focus();
+    }, 180);
+    return true;
+  };
+
+  const focusFirstValidationFieldFromError = (error) => {
+    const firstField = extractFirstValidationField(error);
+    const focused = focusFieldByValidation(firstField);
+    if (!focused) {
+      scrollToSection("clinical-section");
+    }
   };
 
   const scrollToSection = (sectionId) => {
@@ -2654,6 +2704,7 @@ const QuickConsultation = ({ patient, onSave, onBack, initialData = null }) => {
       onBack?.();
     } catch (error) {
       console.error("Erro ao salvar consulta/receita:", error);
+      focusFirstValidationFieldFromError(error);
       showFeedback(
         "error",
         toUserFriendlyError(
@@ -2700,7 +2751,8 @@ const QuickConsultation = ({ patient, onSave, onBack, initialData = null }) => {
         <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-2">
           <label className="text-xs font-semibold text-gray-700 flex flex-col">
             Tipo de consulta
-            <select
+          <select
+              id="consultationType"
               value={consultationType}
               onChange={(e) => setConsultationType(e.target.value)}
               className="mt-1 h-11 sm:h-10 rounded-lg border border-emerald-200 bg-white px-3 text-sm"
@@ -3001,6 +3053,7 @@ const QuickConsultation = ({ patient, onSave, onBack, initialData = null }) => {
               Peso (kg)
             </label>
             <input
+              id="weight"
               type="number"
               value={weight}
               onChange={(e) => setWeight(e.target.value)}
@@ -3012,6 +3065,7 @@ const QuickConsultation = ({ patient, onSave, onBack, initialData = null }) => {
               Temperatura (C)
             </label>
             <input
+              id="temperature"
               type="number"
               value={temperature}
               onChange={(e) => setTemperature(e.target.value)}
@@ -3023,6 +3077,7 @@ const QuickConsultation = ({ patient, onSave, onBack, initialData = null }) => {
               Frequencia cardiaca
             </label>
             <input
+              id="heartRate"
               type="number"
               value={heartRate}
               onChange={(e) => setHeartRate(e.target.value)}
@@ -3034,6 +3089,7 @@ const QuickConsultation = ({ patient, onSave, onBack, initialData = null }) => {
               Frequencia respiratoria
             </label>
             <input
+              id="respiratoryRate"
               type="number"
               value={respiratoryRate}
               onChange={(e) => setRespiratoryRate(e.target.value)}
@@ -3266,7 +3322,7 @@ const QuickConsultation = ({ patient, onSave, onBack, initialData = null }) => {
           )}
         </div>
 
-        <FloatingFormActions maxWidthClass="max-w-4xl">
+        <FloatingFormActions maxWidthClass="max-w-4xl" mobileSticky>
           <div className="sm:hidden space-y-2">
             <div className="grid grid-cols-2 gap-2">
               <button
