@@ -1,0 +1,74 @@
+{
+  "global": {
+    "herdDeworming": [
+      "controle parasitario do rebanho",
+      "anti helmintico coletivo",
+      "desverminacao coletiva"
+    ],
+    "herdVaccination": [
+      "imunizacao do rebanho",
+      "vacinas do lote"
+    ],
+    "bodyConditionScore": [
+      "ecc",
+      "escore corporal"
+    ],
+    "daysInMilk": [
+      "del"
+    ],
+    "parity": [
+      "paridade",
+      "numero de crias"
+    ]
+  },
+  "byPorte": {
+    "grande": {
+      "forage": [
+        "forragem",
+        "capineira"
+      ],
+      "concentrate": [
+        "farelado",
+        "nucleo concentrado"
+      ],
+      "rumenMotility": [
+        "movimentos ruminais"
+      ]
+    },
+    "pequeno": {
+      "diet": [
+        "plano alimentar"
+      ],
+      "ectoparasiteControl": [
+        "controle de carrapatos"
+      ]
+    }
+  },
+  "bySpecies": {
+    "equino": {
+      "hoofStatus": [
+        "aprumo",
+        "ranilha"
+      ]
+    },
+    "bovino": {
+      "rumenMotility": [
+        "ruminacao",
+        "atonia ruminal"
+      ],
+      "milkProduction": [
+        "producao diaria de leite"
+      ]
+    },
+    "canino": {
+      "lifestyle": [
+        "enriquecimento ambiental"
+      ]
+    },
+    "felino": {
+      "lifestyle": [
+        "acesso a janelas"
+      ]
+    }
+  }
+}

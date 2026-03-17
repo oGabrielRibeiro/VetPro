@@ -20,7 +20,7 @@ export const Skeleton = ({ className = '', variant = 'rect' }) => {
 // Skeleton paraCard de paciente
 export const PatientCardSkeleton = () => {
   return (
-    <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 animate-pulse">
+    <div className="vp-card vp-card--flat p-4 animate-pulse">
       <div className="flex items-center gap-3">
         <Skeleton variant="circle" className="h-12 w-12" />
         <div className="flex-1 space-y-2">
@@ -55,7 +55,7 @@ export const PatientListSkeleton = ({ count = 6 }) => {
 // Skeleton para card de consulta
 export const ConsultationCardSkeleton = () => {
   return (
-    <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 animate-pulse">
+    <div className="vp-card vp-card--flat p-4 animate-pulse">
       <div className="flex justify-between items-start mb-3">
         <div className="space-y-2">
           <Skeleton className="h-5 w-32" />
@@ -90,7 +90,7 @@ export const ConsultationListSkeleton = ({ count = 4 }) => {
 // Skeleton para card de agendamento
 export const AppointmentCardSkeleton = () => {
   return (
-    <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 animate-pulse">
+    <div className="vp-card vp-card--flat p-4 animate-pulse">
       <div className="flex gap-4">
         <div className="space-y-2 text-center">
           <Skeleton className="h-8 w-12" />
@@ -109,7 +109,7 @@ export const AppointmentCardSkeleton = () => {
 // Skeleton para dashboard stats
 export const StatsCardSkeleton = () => {
   return (
-    <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 animate-pulse">
+    <div className="vp-card vp-card--flat p-4 animate-pulse">
       <div className="flex items-center gap-3">
         <Skeleton variant="circle" className="h-10 w-10" />
         <div className="flex-1">

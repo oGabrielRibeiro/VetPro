@@ -1,0 +1,11 @@
+{
+  "version": "2026-03-11",
+  "notes": "Baseline inicial para regressao do campo com transcricao simulada.",
+  "thresholds": {
+    "minRuns": 8,
+    "minAvgGlobalScore": 0.45,
+    "minDiagnosisConsistency": 0.55,
+    "minTreatmentConsistency": 0.55,
+    "minExamConsistency": 0.55
+  }
+}

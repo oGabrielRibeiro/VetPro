@@ -2,6 +2,20 @@
 
 Sistema de prontuarios veterinarios com frontend, backend e Postgres.
 
+## Status de Release 1.0 (resumo rapido)
+- [x] UI/UX consolidado (tokens, acessibilidade, mobile, checklist por tela).
+- [x] Fluxo de release documentado + changelog central.
+- [x] Dependencias criticas revisadas + registro de riscos.
+- [ ] Validacao clinica final com amostra real multi-especie (audio/IA).
+- [ ] Treinamento do time para registrar mudancas no `CHANGELOG.md` a cada PR.
+- [ ] Execucao do roteiro de uso real (login -> paciente -> consulta -> receita/PDF).
+
+Documentos de apoio:
+- UI/UX: `docs/UIUX-VALIDACAO.md`
+- Design system: `vetpro-front/UI-DESIGN-SYSTEM.md`
+- Release: `RELEASE.md`
+- Riscos: `SECURITY-RISK-REGISTER.md`
+
 **Subir com Docker**
 1. Copie `.env.example` para `.env` e ajuste as variaveis se necessario.
 2. Suba os containers:
@@ -13,6 +27,11 @@ docker compose up --build -d
 Ou use o script:
 ```powershell
 .\up.ps1
+```
+
+Modo desenvolvimento (backend/infra em Docker + frontend local):
+```powershell
+.\up.ps1 -Mode dev
 ```
 
 3. Acesse:
@@ -42,7 +61,7 @@ npm run infra:status
 npm run infra:down
 ```
 
-Observacao: `up.ps1` continua disponivel como atalho com validacoes adicionais de bootstrap.
+Observacao: `dev.ps1` continua disponivel como atalho de compatibilidade e redireciona para `up.ps1 -Mode dev`.
 
 **Rodar em outras maquinas**
 - Por padrao, o frontend detecta automaticamente o host atual e usa `:5000/api`.

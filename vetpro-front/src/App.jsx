@@ -26,6 +26,7 @@ const Consultations = lazy(() => import("./pages/Consultations"));
 const Appointments = lazy(() => import("./pages/Appointments"));
 const Reports = lazy(() => import("./pages/Reports"));
 const Profile = lazy(() => import("./pages/Profile"));
+const UIPlayground = lazy(() => import("./pages/UIPlayground"));
 const QuickConsultation = lazy(() => import("./components/QuickConsultation"));
 const FieldModeConsultation = lazy(() =>
   import("./components/FieldModeConsultation"),
@@ -33,6 +34,9 @@ const FieldModeConsultation = lazy(() =>
 const ConsultationPreview = lazy(() =>
   import("./components/ConsultationPreview"),
 );
+const About = lazy(() => import("./pages/About.jsx"));
+
+const IS_DEV = Boolean(import.meta.env.DEV);
 
 const MOBILE_NAV_ITEMS = [
   { id: "dashboard", icon: "dashboard", label: "Inicio" },
@@ -40,6 +44,7 @@ const MOBILE_NAV_ITEMS = [
   { id: "appointments", icon: "appointments", label: "Agenda" },
   { id: "consultations", icon: "consultations", label: "Pront." },
   { id: "reports", icon: "reports", label: "Relat." },
+  ...(IS_DEV ? [{ id: "ui-playground", icon: "reports", label: "Lab" }] : []),
   { id: "profile", icon: "profile", label: "Perfil" },
   { id: "logout", icon: "logout", label: "Sair" },
 ];
@@ -55,6 +60,7 @@ const MainApp = () => {
   const [patients, setPatients] = useState([]);
   const [consultations, setConsultations] = useState([]);
   const [appointments, setAppointments] = useState([]);
+  const [isDataLoading, setIsDataLoading] = useState(false);
 
   // Estados para edicao
   const [editingPatient, setEditingPatient] = useState(null);
@@ -124,9 +130,13 @@ const MainApp = () => {
       consultation.numeroProntuario ||
       consultation.id,
     date: consultation.date || consultation.createdAt,
-    template:
-      consultation.template ||
-      (consultation.consultationType === "retorno" ? "return" : "general"),
+    template: (() => {
+      const type = consultation.consultationType;
+      if (consultation.template) return consultation.template;
+      if (!type || type === "nova") return "general";
+      if (type === "retorno") return "return";
+      return type;
+    })(),
     clinicalAssessment:
       consultation.clinicalAssessment || consultation.physicalExam || "",
     observations: sanitizeConsultationNotesForDisplay(
@@ -196,9 +206,16 @@ const MainApp = () => {
 
   useEffect(() => {
     if (!isAuthenticated) return;
-    fetchPatients();
-    fetchConsultations();
-    fetchAppointments();
+    let active = true;
+    setIsDataLoading(true);
+    Promise.all([fetchPatients(), fetchConsultations(), fetchAppointments()]).finally(
+      () => {
+        if (active) setIsDataLoading(false);
+      },
+    );
+    return () => {
+      active = false;
+    };
   }, [isAuthenticated, fetchAppointments, fetchConsultations, fetchPatients]);
 
   // Detectar mobile
@@ -303,6 +320,17 @@ const MainApp = () => {
     return () =>
       window.removeEventListener("vetpro:auth-expired", handleAuthExpired);
   }, []);
+
+  useEffect(() => {
+    if (!showPatientPicker) return undefined;
+    const onKeyDown = (event) => {
+      if (event.key === "Escape") {
+        setShowPatientPicker(false);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [showPatientPicker]);
 
   // Funcoes de manipulacao de dados
   const handleAddConsultation = async (consultationData) => {
@@ -555,7 +583,7 @@ const MainApp = () => {
   const currentViewTitle = () => {
     switch (currentView) {
       case "dashboard":
-        return "Dashboard";
+        return "Visao Geral";
       case "patients":
         return "Pacientes";
       case "appointments":
@@ -569,6 +597,8 @@ const MainApp = () => {
         return "Relatórios";
       case "profile":
         return "Meu Perfil";
+      case "ui-playground":
+        return "Laboratorio UI";
       default:
         return "VetPro";
     }
@@ -591,8 +621,10 @@ const MainApp = () => {
         return "Desempenho clinico e produtividade";
       case "profile":
         return "Configuracoes da conta e identidade da clinica";
+      case "ui-playground":
+        return "Area interna para validar componentes e padroes visuais";
       default:
-        return "Workspace veterinario";
+        return "Central veterinaria";
     }
   };
 
@@ -637,6 +669,14 @@ const MainApp = () => {
             patients={patients}
             consultations={consultations}
             appointments={appointments}
+            isLoading={isDataLoading}
+            errorMessage={dataError}
+            onRetry={() => {
+              setDataError("");
+              fetchPatients();
+              fetchConsultations();
+              fetchAppointments();
+            }}
             onViewConsultations={(patient) => {
               setCurrentConsultationPatient(patient);
               setCurrentView("patient-consultations");
@@ -656,6 +696,12 @@ const MainApp = () => {
         return (
           <Patients
             patients={patients}
+            isLoading={isDataLoading}
+            errorMessage={dataError}
+            onRetry={() => {
+              setDataError("");
+              fetchPatients();
+            }}
             onEditPatient={(patient) => {
               setEditingPatient(patient);
               setCurrentView("add-patient");
@@ -763,6 +809,13 @@ const MainApp = () => {
           <Consultations
             consultations={consultations}
             patients={patients}
+            isLoading={isDataLoading}
+            errorMessage={dataError}
+            onRetry={() => {
+              setDataError("");
+              fetchConsultations();
+              fetchPatients();
+            }}
             onNewConsultation={() => handleGoToNewConsultation(true)}
             onViewConsultation={handleViewConsultation}
             onViewPatientConsultations={(patient) => {
@@ -777,6 +830,13 @@ const MainApp = () => {
           <Appointments
             appointments={appointments}
             patients={patients}
+            isLoading={isDataLoading}
+            errorMessage={dataError}
+            onRetry={() => {
+              setDataError("");
+              fetchAppointments();
+              fetchPatients();
+            }}
             onNewAppointment={() => setCurrentView("new-appointment")}
             onEditAppointment={(appointment) => {
               setEditingAppointment(appointment);
@@ -789,11 +849,11 @@ const MainApp = () => {
       case "new-appointment":
         return (
           <div className="max-w-2xl mx-auto">
-            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-800 dark:text-white mb-4 sm:mb-6">
+            <h1 className="vp-h1 text-gray-800 dark:text-white mb-4 sm:mb-6">
               {editingAppointment ? "Editar Agendamento" : "Novo Agendamento"}
             </h1>
 
-            <div className="bg-white dark:bg-dark-800 rounded-xl border border-gray-200 dark:border-dark-700 shadow-sm p-4 sm:p-6">
+            <div className="vp-card p-4 sm:p-6">
               <form
                 onSubmit={async (e) => {
                   e.preventDefault();
@@ -835,7 +895,7 @@ const MainApp = () => {
                       name="patientId"
                       required
                       defaultValue={editingAppointment?.patientId || ""}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-dark-600 bg-white dark:bg-dark-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
+                      className="vp-input-field text-sm"
                     >
                       <option value="">Selecione...</option>
                       {patients.map((patient) => (
@@ -859,7 +919,7 @@ const MainApp = () => {
                           ? String(editingAppointment.date).split("T")[0]
                           : ""
                       }
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-dark-600 bg-white dark:bg-dark-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
+                      className="vp-input-field text-sm"
                     />
                   </div>
 
@@ -872,7 +932,7 @@ const MainApp = () => {
                       type="time"
                       required
                       defaultValue={editingAppointment?.time || ""}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-dark-600 bg-white dark:bg-dark-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
+                      className="vp-input-field text-sm"
                     />
                   </div>
 
@@ -886,7 +946,7 @@ const MainApp = () => {
                       required
                       defaultValue={editingAppointment?.reason || ""}
                       placeholder="Ex: retorno, revisao, vacinacao"
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-dark-600 bg-white dark:bg-dark-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
+                      className="vp-input-field text-sm"
                     />
                   </div>
 
@@ -897,7 +957,7 @@ const MainApp = () => {
                     <select
                       name="type"
                       defaultValue={editingAppointment?.type || "consulta"}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-dark-600 bg-white dark:bg-dark-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
+                      className="vp-input-field text-sm"
                     >
                       <option value="consulta">Consulta</option>
                       <option value="retorno">Retorno</option>
@@ -936,6 +996,13 @@ const MainApp = () => {
             consultations={consultations}
             patients={patients}
             dateRange={dateRange}
+            isLoading={isDataLoading}
+            errorMessage={dataError}
+            onRetry={() => {
+              fetchPatients();
+              fetchConsultations();
+              fetchAppointments();
+            }}
             onDateRangeChange={(type, value) =>
               setDateRange((prev) => ({ ...prev, [type]: value }))
             }
@@ -1011,6 +1078,8 @@ const MainApp = () => {
             onDeleteAccount={handleDeleteAccount}
           />
         );
+      case "ui-playground":
+        return <UIPlayground onBack={() => setCurrentView("dashboard")} />;
 
       case "patient-consultations":
         if (!currentConsultationPatient) {
@@ -1040,10 +1109,10 @@ const MainApp = () => {
                 />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-800 dark:text-white">
+                <h1 className="vp-h1 text-gray-800 dark:text-white">
                   {currentConsultationPatient.name}
                 </h1>
-                <p className="text-gray-600 dark:text-gray-400">
+                <p className="vp-subtitle text-gray-600 dark:text-gray-400">
                   {currentConsultationPatient.ownerName}
                 </p>
                 <div className="mt-2 flex flex-wrap gap-2">
@@ -1069,11 +1138,11 @@ const MainApp = () => {
                   .map((consultation) => (
                     <div
                       key={consultation.id}
-                      className="bg-white dark:bg-dark-800 rounded-xl border border-gray-200 dark:border-dark-700 shadow-sm"
+                      className="vp-card"
                     >
                       <div className="border-b border-gray-200 dark:border-dark-700 bg-gray-50 dark:bg-dark-900 px-4 py-3 flex flex-col sm:flex-row sm:justify-between sm:items-center">
                         <div>
-                          <h2 className="font-bold text-lg text-gray-800 dark:text-white">
+                          <h2 className="vp-h2 text-gray-800 dark:text-white">
                             Consulta em{" "}
                             {new Date(
                               consultation.createdAt,
@@ -1117,7 +1186,7 @@ const MainApp = () => {
 
                       <div className="p-4 space-y-3">
                         <div>
-                          <h3 className="font-bold text-gray-800 dark:text-white text-sm mb-1">
+                          <h3 className="vp-h3 text-gray-800 dark:text-white mb-1">
                             Queixa Principal
                           </h3>
                           <p className="text-gray-700 dark:text-gray-300 text-sm">
@@ -1128,14 +1197,14 @@ const MainApp = () => {
                     </div>
                   ))
               ) : (
-                <div className="bg-white dark:bg-dark-800 rounded-xl border border-dashed border-gray-300 dark:border-dark-600 p-8 text-center">
+                <div className="vp-card vp-card--dashed p-8 text-center">
                   <div className="mx-auto mb-3 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-gray-100 dark:bg-dark-700 text-gray-700 dark:text-gray-300">
                     <AppIcon name="consultations" />
                   </div>
-                  <h3 className="text-lg font-bold text-gray-800 dark:text-white mb-2">
+                  <h3 className="vp-h2 text-gray-800 dark:text-white mb-2">
                     Nenhum prontuario registrado
                   </h3>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                  <p className="vp-subtitle text-gray-500 dark:text-gray-400 mb-4">
                     Este paciente ainda não possui consultas registradas no
                     sistema.
                   </p>
@@ -1207,6 +1276,7 @@ const MainApp = () => {
           currentView={currentView}
           setCurrentView={setCurrentView}
           onLogout={logout}
+          showUiLab={IS_DEV}
         />
       )}
 
@@ -1220,7 +1290,7 @@ const MainApp = () => {
               </span>
               <div className="leading-tight min-w-0">
                 <p className="text-[11px] uppercase tracking-[0.12em] text-gray-500 dark:text-gray-400">
-                  VetPro Workspace
+                  Central VetPro
                 </p>
                 <p className="shell-title text-sm font-bold text-gray-900 dark:text-white truncate">
                   {currentViewTitle()}
@@ -1258,8 +1328,8 @@ const MainApp = () => {
 
       {/* Main Content */}
       <div
-        className={`flex-1 overflow-auto px-2 sm:px-3 pb-[8.2rem] md:px-6 md:pb-6 ${
-          isMobile ? "pt-24" : "pt-5"
+        className={`flex-1 overflow-auto px-2 sm:px-3 md:px-6 md:pb-6 ${
+          isMobile ? "vp-mobile-content" : "pt-5"
         }`}
       >
         <div className="mx-auto w-full max-w-[1280px] subtle-enter">
@@ -1267,7 +1337,7 @@ const MainApp = () => {
             <div className="sticky top-3 z-30 mb-4 shell-surface rounded-2xl border border-gray-200/80 dark:border-dark-700/70 px-4 py-3 flex items-center justify-between gap-3">
               <div className="leading-tight">
                 <p className="text-[11px] uppercase tracking-[0.12em] text-gray-500 dark:text-gray-400">
-                  VetPro Workspace
+                  Central VetPro
                 </p>
                 <p className="shell-title text-lg font-extrabold text-gray-900 dark:text-white">
                   {currentViewTitle()}
@@ -1334,18 +1404,25 @@ const MainApp = () => {
 
       {showPatientPicker && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-md rounded-2xl bg-white dark:bg-dark-800 p-5 shadow-xl">
-            <h2 className="text-lg font-bold text-gray-800 dark:text-white">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="patient-picker-title"
+            aria-describedby="patient-picker-description"
+            className="w-full max-w-md rounded-2xl bg-white dark:bg-dark-800 p-5 shadow-xl"
+          >
+            <h2 id="patient-picker-title" className="text-lg font-bold text-gray-800 dark:text-white">
               Escolher paciente
             </h2>
-            <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+            <p id="patient-picker-description" className="mt-1 text-sm text-gray-600 dark:text-gray-400">
               Selecione o paciente para iniciar a consulta.
             </p>
 
             <select
+              aria-label="Paciente para nova consulta"
               value={selectedConsultationPatientId}
               onChange={(e) => setSelectedConsultationPatientId(e.target.value)}
-              className="mt-4 w-full rounded-lg border border-gray-300 dark:border-dark-600 px-3 py-2.5 text-sm bg-white dark:bg-dark-800 text-gray-900 dark:text-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500"
+              className="vp-input-field text-sm mt-4"
             >
               {patients.map((patient) => (
                 <option key={patient.id} value={patient.id}>
@@ -1377,10 +1454,16 @@ const MainApp = () => {
       {/* Mobile Bottom Navigation */}
       {isMobile && (
         <nav className="fixed bottom-0 left-0 right-0 z-40 px-3 pb-[max(0.45rem,env(safe-area-inset-bottom))]">
-          <div className="shell-surface rounded-2xl border border-gray-200/80 dark:border-dark-700/70 grid grid-cols-7">
+          <div
+            className={`shell-surface rounded-2xl border border-gray-200/80 dark:border-dark-700/70 grid ${
+              MOBILE_NAV_ITEMS.length > 7 ? "grid-cols-8" : "grid-cols-7"
+            }`}
+          >
             {MOBILE_NAV_ITEMS.map((item) => (
               <button
                 key={item.id}
+                aria-current={isMobileTabActive(item.id) ? "page" : undefined}
+                aria-label={item.label}
                 onClick={() => {
                   if (item.id === "logout") {
                     logout();
@@ -1390,7 +1473,7 @@ const MainApp = () => {
                     item.id === "consultations" ? "consultations" : item.id,
                   );
                 }}
-                className={`py-2.5 flex flex-col items-center space-y-1 ${
+                className={`min-h-[56px] py-2.5 flex flex-col items-center justify-center space-y-1 ${
                   isMobileTabActive(item.id)
                     ? "text-emerald-600 dark:text-emerald-400 font-semibold"
                     : "text-gray-500 dark:text-gray-400"

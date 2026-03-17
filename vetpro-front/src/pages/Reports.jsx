@@ -1,17 +1,49 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo } from "react";
 import {
   filterConsultationsByDate,
   formatDateBR,
   generateMonthlyData,
 } from "../utils";
 import AppIcon from "../components/AppIcon";
+import { VpButton } from "../components/ui";
 
 const EmptyState = ({ icon, text }) => (
-  <div className="rounded-2xl border border-dashed border-gray-300 dark:border-dark-600 p-5 text-center">
+  <div className="vp-card vp-card--dashed p-5 text-center">
     <div className="mx-auto mb-2 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-gray-100 dark:bg-dark-700 text-gray-700 dark:text-gray-300">
       <AppIcon name={icon} />
     </div>
     <p className="text-sm text-gray-500 dark:text-gray-400">{text}</p>
+  </div>
+);
+
+const ReportsSkeleton = () => (
+  <div className="space-y-4">
+    <section className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      {Array.from({ length: 4 }).map((_, index) => (
+        <article
+          key={`report-stat-skeleton-${index}`}
+          className="vp-card vp-card--flat p-3.5 animate-pulse"
+        >
+          <div className="h-3 w-20 rounded bg-gray-200 dark:bg-dark-700" />
+          <div className="mt-3 h-7 w-12 rounded bg-gray-200 dark:bg-dark-700" />
+        </article>
+      ))}
+    </section>
+    <section className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+      {Array.from({ length: 3 }).map((_, index) => (
+        <div
+          key={`report-panel-skeleton-${index}`}
+          className="vp-card vp-card--flat p-4 animate-pulse space-y-3"
+        >
+          <div className="h-4 w-32 rounded bg-gray-200 dark:bg-dark-700" />
+          <div className="space-y-2">
+            {Array.from({ length: 4 }).map((__, rowIndex) => (
+              <div key={`report-row-${index}-${rowIndex}`} className="h-3 w-full rounded bg-gray-200 dark:bg-dark-700" />
+            ))}
+          </div>
+        </div>
+      ))}
+    </section>
   </div>
 );
 
@@ -57,29 +89,23 @@ const Reports = ({
   onDateRangeChange,
   onResetDateRange,
   onBack,
+  isLoading = false,
+  errorMessage = "",
+  onRetry,
 }) => {
-  const [reportData, setReportData] = useState({
-    monthlyConsultations: [],
-    speciesDistribution: [],
-    templateDistribution: [],
-  });
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState(null);
-
-  useEffect(() => {
-    if (consultations.length === 0) {
-      setReportData({
-        monthlyConsultations: [],
-        speciesDistribution: [],
-        templateDistribution: [],
-      });
-      return;
-    }
-
-    setIsLoading(true);
-    setError(null);
-
+  const reportResult = useMemo(() => {
     try {
+      if (!consultations.length) {
+        return {
+          reportData: {
+            monthlyConsultations: [],
+            speciesDistribution: [],
+            templateDistribution: [],
+          },
+          generationError: "",
+        };
+      }
+
       const filteredConsultations = filterConsultationsByDate(
         consultations,
         dateRange.startDate,
@@ -152,20 +178,30 @@ const Reports = ({
         }),
       );
 
-      setReportData({
-        monthlyConsultations,
-        speciesDistribution,
-        templateDistribution,
-      });
+      return {
+        reportData: {
+          monthlyConsultations,
+          speciesDistribution,
+          templateDistribution,
+        },
+        generationError: "",
+      };
     } catch (err) {
       console.error("Erro ao gerar relatorios:", err);
-      setError(
-        "Erro ao gerar relatorios. Verifique o periodo selecionado e tente novamente.",
-      );
-    } finally {
-      setIsLoading(false);
+      return {
+        reportData: {
+          monthlyConsultations: [],
+          speciesDistribution: [],
+          templateDistribution: [],
+        },
+        generationError:
+          "Nao foi possivel gerar os relatorios. Revise o periodo ou restaure o intervalo padrao e tente novamente.",
+      };
     }
   }, [consultations, patients, dateRange]);
+
+  const reportData = reportResult.reportData;
+  const resolvedError = errorMessage || reportResult.generationError;
 
   const filteredConsultations = useMemo(
     () =>
@@ -205,26 +241,28 @@ const Reports = ({
     <div className="w-full max-w-7xl mx-auto space-y-3 sm:space-y-4 subtle-enter">
       {onBack && (
         <div className="flex justify-end">
-          <button
+          <VpButton
             onClick={onBack}
-            className="inline-flex items-center gap-1 rounded-lg border border-gray-200 dark:border-dark-600 bg-white/70 dark:bg-dark-800/60 px-2.5 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-300"
+            variant="neutral"
+            size="sm"
+            icon={<AppIcon name="back" className="h-3.5 w-3.5" />}
+            className="text-xs"
           >
-            <AppIcon name="back" className="h-3.5 w-3.5" />
             Voltar
-          </button>
+          </VpButton>
         </div>
       )}
 
       <section className="shell-surface rounded-3xl border border-gray-200/80 dark:border-dark-700/70 p-3 sm:p-5 lg:p-6">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-gray-500 dark:text-gray-400">
-              Business Intelligence
+            <p className="vp-overline">
+              Inteligencia de Negocio
             </p>
-            <h1 className="shell-title mt-1 text-xl sm:text-3xl font-extrabold text-gray-900 dark:text-white">
+            <h1 className="vp-h1 mt-1">
               Relatorios e desempenho
             </h1>
-            <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
+            <p className="vp-subtitle mt-1">
               Analise o periodo, acompanhe retorno e identifique tendencias clinicas.
             </p>
           </div>
@@ -234,39 +272,41 @@ const Reports = ({
               type="date"
               value={dateRange.startDate}
               onChange={(e) => onDateRangeChange("startDate", e.target.value)}
-              className="h-11 sm:h-10 rounded-xl border border-gray-300 dark:border-dark-600 bg-white dark:bg-dark-800 px-3 text-sm"
+              className="vp-input-field text-sm h-11 sm:h-10"
             />
             <input
               type="date"
               value={dateRange.endDate}
               onChange={(e) => onDateRangeChange("endDate", e.target.value)}
-              className="h-11 sm:h-10 rounded-xl border border-gray-300 dark:border-dark-600 bg-white dark:bg-dark-800 px-3 text-sm"
+              className="vp-input-field text-sm h-11 sm:h-10"
             />
           </div>
         </div>
 
         <div className="mt-3 flex justify-end">
-          <button onClick={onResetDateRange} className="btn btn-neutral btn-sm">
+          <VpButton onClick={onResetDateRange} variant="neutral" size="sm">
             Restaurar padrao
-          </button>
+          </VpButton>
         </div>
       </section>
 
-      {error && (
-        <div className="rounded-2xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 px-4 py-3 text-sm text-red-700 dark:text-red-300">
-          {error}
+      {resolvedError && (
+        <div className="rounded-2xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 px-4 py-3 text-sm text-red-700 dark:text-red-300 subtle-fade">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <span>{resolvedError}</span>
+            {onRetry && (
+              <VpButton type="button" onClick={onRetry} variant="danger" size="sm">
+                Tentar novamente
+              </VpButton>
+            )}
+          </div>
         </div>
       )}
 
       {isLoading ? (
-        <section className="shell-surface rounded-3xl border border-gray-200/80 dark:border-dark-700/70 p-8 text-center">
-          <div className="mx-auto mb-3 animate-spin rounded-full h-10 w-10 border-b-2 border-emerald-600"></div>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            Carregando relatorios...
-          </p>
-        </section>
+        <ReportsSkeleton />
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-4 subtle-fade">
           <section className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             <article className="rounded-2xl border border-gray-200/80 dark:border-dark-700/70 bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/25 dark:to-teal-900/20 p-3.5">
               <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-emerald-700 dark:text-emerald-300">

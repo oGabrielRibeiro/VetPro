@@ -116,6 +116,7 @@ model Consultation {
   medications          String? // medicações prescritas
   notes                String? // observações gerais
   returnRecommendation String?
+  customFormData       Json?   // dados de formularios especificos (anestesia, medicacao, etc.)
 
   // CONTROLE CLÍNICO
   vaccinationUpToDate Boolean?
@@ -125,8 +126,29 @@ model Consultation {
   veterinarianCrmv String?
 
   files ConsultationFile[]
+  consentSignatures ConsentSignature[]
 
   @@unique([userId, numeroProntuario])
+}
+
+model ConsentSignature {
+  id                String   @id @default(uuid())
+  type              String
+  dataUrl           String
+  capturedAt        DateTime @default(now())
+  capturedByUserId  String
+  capturedByName    String?
+  clinicId          String
+  patientId         String
+  ip               String?
+  userAgent         String?
+
+  consultationId String
+  consultation   Consultation @relation(fields: [consultationId], references: [id], onDelete: Cascade)
+
+  @@index([consultationId])
+  @@index([clinicId])
+  @@index([patientId])
 }
 
 model ConsultationFile {

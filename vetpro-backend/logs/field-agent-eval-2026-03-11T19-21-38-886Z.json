@@ -1,0 +1,134 @@
+{
+  "executedAt": "2026-03-11T19:21:38.885Z",
+  "datasetPath": "C:\\Cliente\\HSS\\VetPro\\dataset_treinamento_veterinario_apolo\\dataset_prontuario_apolo.json",
+  "wavPath": "C:\\Cliente\\HSS\\VetPro\\dataset_treinamento_veterinario_apolo\\vet_dialogo_treinamento_realista.wav",
+  "transcriptOnly": false,
+  "simulateAsr": false,
+  "runs": [
+    {
+      "run": 1,
+      "transcriptLength": 2873,
+      "metrics": {
+        "diagnosisScore": 0.5,
+        "treatmentScore": 0.071,
+        "examScore": 0.5,
+        "globalScore": 0.357,
+        "specificCoverage": 0.8,
+        "checks": {
+          "hasDiagnosis": false,
+          "hasTreatmentEvidence": false,
+          "hasExamEvidence": false
+        },
+        "specificChecks": [
+          {
+            "key": "vacinacao",
+            "expected": "Em dia",
+            "predicted": "vacinação do rebanho em dia com última clostridiose há 4 meses",
+            "match": true
+          },
+          {
+            "key": "vermifugacao",
+            "expected": "Ivermectina",
+            "predicted": "vermifugação há 60 dias com ivermectina",
+            "match": true
+          },
+          {
+            "key": "temperatura",
+            "expected": "39.8",
+            "predicted": "39,8 graus Celsius",
+            "match": false
+          },
+          {
+            "key": "frequencia_cardiaca",
+            "expected": "88",
+            "predicted": "88 batimentos por minuto",
+            "match": true
+          },
+          {
+            "key": "mucosas",
+            "expected": "Discretamente congestas",
+            "predicted": "discretamente congestas",
+            "match": true
+          }
+        ]
+      }
+    }
+  ],
+  "simulatedSummary": null,
+  "metrics": {
+    "diagnosisScore": 0.5,
+    "treatmentScore": 0.071,
+    "examScore": 0.5,
+    "globalScore": 0.357,
+    "specificCoverage": 0.8,
+    "checks": {
+      "hasDiagnosis": false,
+      "hasTreatmentEvidence": false,
+      "hasExamEvidence": false
+    },
+    "specificChecks": [
+      {
+        "key": "vacinacao",
+        "expected": "Em dia",
+        "predicted": "vacinação do rebanho em dia com última clostridiose há 4 meses",
+        "match": true
+      },
+      {
+        "key": "vermifugacao",
+        "expected": "Ivermectina",
+        "predicted": "vermifugação há 60 dias com ivermectina",
+        "match": true
+      },
+      {
+        "key": "temperatura",
+        "expected": "39.8",
+        "predicted": "39,8 graus Celsius",
+        "match": false
+      },
+      {
+        "key": "frequencia_cardiaca",
+        "expected": "88",
+        "predicted": "88 batimentos por minuto",
+        "match": true
+      },
+      {
+        "key": "mucosas",
+        "expected": "Discretamente congestas",
+        "predicted": "discretamente congestas",
+        "match": true
+      }
+    ]
+  },
+  "parsed": {
+    "nome_animal": "Apolo",
+    "especie": "bovino",
+    "raca": "Não informado na consulta",
+    "idade": "5 anos",
+    "sexo": "macho",
+    "peso": "480 quilos",
+    "chiefComplaint": "Queixa principal febre alta apatia e queda de apetite há 2 dias com pioda progressiva. Sinais associados redução de fumeação e dor abdominal leve",
+    "anamnese": "Queixa principal febre alta apatia e queda de apetite há 2 dias com pioda progressiva. Dias em lactação não se aplica e número de partos não se aplica",
+    "anamnesis": "Queixa principal febre alta apatia e queda de apetite há 2 dias com pioda progressiva. Dias em lactação não se aplica e número de partos não se aplica",
+    "alimentacao": "ração proteica 1,5 quilo por dia",
+    "ambiente": "piquete rotacionado, sombra parcial e coxo coberto",
+    "vacinacao": "vacinação do rebanho em dia com última clostridiose há 4 meses",
+    "vermifugacao": "vermifugação há 60 dias com ivermectina",
+    "doencas_previas": "Não informado na consulta",
+    "uso_medicacao": "Não informado na consulta",
+    "physicalExam": "Motilidade fúmea 1 contração a cada 2 minutos considerada reduzida. Dor abdominal leve a moderada palpação",
+    "estado_geral": "Não informado na consulta",
+    "temperatura": "39,8 graus Celsius",
+    "frequencia_cardiaca": "88 batimentos por minuto",
+    "frequencia_respiratoria": "36 movimentos por minuto",
+    "mucosas": "discretamente congestas",
+    "hidratacao": "desidratação estimada em 6%",
+    "diagnosis": "Diagnóstico principal suspeita clínica de retículo peritonite traumática. Diagnósticos diferenciais acidosicúmina ou subaguda peritonite inespecífica",
+    "suspeitas_clinicas": "suspeita clínica de retículo peritonite traumática",
+    "treatment": "Hoje é 10 de março de 2026 e estamos fazendo o retorno do atendimento do seu animal. Vou monitorar o apoio e retorno em 48 horas se necessário",
+    "medications": "Motilidade fúmea 1 contração a cada 2 minutos considerada reduzida. Flúnex inmedum 1,1 mg/kg intravenoso SID por 3 dias",
+    "examDetails": "Hemograma completo fibrinogênio plasmático proteína total e ultrassonografia abdominal",
+    "returnRecommendation": "O animal é o apolo bovino macho 5 anos com peso aproximado de 480 quilos, correto. Queixa principal febre alta apatia e queda de apetite há 2 dias com pioda progressiva",
+    "transcricao_organizada": "[VETERINÁRIO]: Bom dia, Ricardo. Hoje é 10 de março de 2026 e estamos fazendo o retorno do atendimento do seu animal. Vamos confirmar os dados do paciente para o prontuário. O animal é o Apolo, bovino macho, 5 anos, com peso aproximado de 480 quilos, correto? [TUTOR]: Bom dia, doutor. Isso mesmo. O Apolo é um bovino macho de 5 anos e pesa cerca de 480 quilos. Vou registrar a identificação completa. Animal Apolo, brinco 1458, chip 9900123456789, pelagem castanha. Doutor Ricardo Alves da propriedade Adas Santo Antônio localizada em Ubedaba, Minas Gerais. [VETERINÁRIO]: Correto. Eu sou Ricardo Alves, responsável pelo Adas Santo Antônio em Ubedaba, Minas Gerais. Finalidade zootécnica: reprodução e códote. Sistema de produção: semi-intensivo. Animal pertencente ao lote 7. Escode codopodal 2 de 5 e estado reprodutivo: reprodutor ativo. Dias em lactação: não se aplica e número de partos: não se aplica. Vacinação do rebanho em dia com última clostridiose há 4 meses. Vermifugação há 60 dias com ivermectina. Volumoso: silagem de milho. Concentrado: ração proteica 1,5 quilo por dia. Suplementação mineral: sal mineral ad libidum. Consumo de água reduzido nas últimas 24 horas. Manejo da propriedade com piquete rotacionado, sombra parcial e coxo coberto. Contactantes: bovinos dos lotes 6 e 7. Estódico sanitário recente com 3 animais do lote apresentando quadro semelhante na última semana. Queixa principal: febre alta, apatia e queda de apetite há 2 dias com pioda progressiva. Sinais associados: redução de fumeação e dor abdominal leve. Exposição de risco: mudança de lote e estresse por transporte recente. Exame de campo: claudicação leve no membro posterior direito. Motilidade fúmea: 1 contração a cada 2 minutos, considerada reduzida. Febre: ressecada, miúda, sem alterações visíveis.",
+    "porte": "grande"
+  }
+}

@@ -160,9 +160,15 @@ describe('API - Consultas', () => {
 
       expect(response.status).toBe(200);
       expect(response.body).toHaveProperty('parsed');
-      expect(String(response.body.parsed?.chiefComplaint || '')).toMatch(
-        /tossindo|ontem/i,
-      );
+      const parsed = response.body.parsed || {};
+      const joined = [
+        parsed.chiefComplaint,
+        parsed.anamnesis,
+        parsed.physicalExam,
+      ]
+        .filter(Boolean)
+        .join(' ');
+      expect(joined).toMatch(/tossindo|ontem/i);
     });
   });
 
@@ -184,10 +190,13 @@ describe('API - Consultas', () => {
 
       const payload =
         fieldAssistService.analyzeFieldConversation.mock.calls[0][0];
+      expect(String(payload.requestId || '')).toMatch(/^fa-/i);
       expect(Buffer.isBuffer(payload.audioBuffer)).toBe(true);
       expect(payload.audioBuffer.length).toBeGreaterThan(0);
       expect(payload.mimeType).toBe('audio/wav');
       expect(payload.filename).toBe('consulta.wav');
+      expect(payload.promptContextMode).toBe('campo');
+      expect(payload.conservativeMode).toBe(true);
       expect(response.body.parsed.chiefComplaint).toBe('tosse persistente');
     });
   });

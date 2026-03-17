@@ -19,7 +19,7 @@ Sistema completo para gestão de prontuários veterinários com suporte a múlti
   - Distribuição por tipo de consulta (Geral, Retorno, Vacinação)
   - Métricas chave (total de consultas, pacientes únicos, taxa de retorno)
 - **Perfil do veterinário** com upload de foto e assinatura digital
--
+
 ## Stack de build/teste
 
 - Build/dev: `Vite`
@@ -28,11 +28,15 @@ Sistema completo para gestão de prontuários veterinários com suporte a múlti
 Comandos:
 
 ```bash
-npm start
+npm run dev
 npm run build
 npm run check:no-native-popups
 npm run test
 ```
+
+## Design System
+
+Tokens e componentes base: `UI-DESIGN-SYSTEM.md`
 
 ## Mobile + HTTPS (microfone no Chrome)
 
@@ -77,4 +81,4 @@ Renomeie os arquivos gerados para:
 ### 4. Reinicie os dois projetos
 
 - Backend: `npm run dev` em `vetpro-backend`
-- Frontend: `npm start` em `vetpro-front`
+- Frontend: `npm run dev` em `vetpro-front`

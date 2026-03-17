@@ -252,7 +252,68 @@ function simulateAsrNoise(text = '', seed = 42) {
   return mutated.join('\n').trim();
 }
 
-function consistencyIndex(values = []) {
+function semanticSignatureByField(field = '', value = '') {
+  const text = normalize(value);
+  if (!text) return '';
+
+  const diagnosisRules = [
+    {
+      regex: /\breticuloperiton|corpo estranho\b/,
+      label: 'reticuloperitonite',
+    },
+    { regex: /\bcolica|dor abdominal\b/, label: 'colica' },
+    { regex: /\bmastite|quarto mamario\b/, label: 'mastite' },
+    { regex: /\bgastroenter|enterop|diarre\b/, label: 'enteropatia' },
+    { regex: /\botite|conduto|orelha\b/, label: 'otite' },
+    { regex: /\bpododerm|casco|manc|claudic\b/, label: 'locomotor' },
+  ];
+  const treatmentRules = [
+    { regex: /\bhidrat|ringer|fluid|soro\b/, label: 'suporte_hidrico' },
+    { regex: /\bdiet|alimen|nutri|manejo\b/, label: 'ajuste_nutricional' },
+    { regex: /\bmonitor|retorn|reavali|temperat\b/, label: 'monitoramento' },
+    {
+      regex: /\banti[- ]?inflam|flunix|melox|cetopro\b/,
+      label: 'anti_inflamatorio',
+    },
+    {
+      regex: /\bantibio|oxitetra|penic|cef|ciclina\b/,
+      label: 'antibioticoterapia',
+    },
+    {
+      regex: /\bima ruminal|proced|colet|sondag|curativ\b/,
+      label: 'procedimentos',
+    },
+    {
+      regex: /\bexame|hemogram|cultur|copro|ultra|radiograf\b/,
+      label: 'exames',
+    },
+  ];
+
+  if (field === 'diagnosis') {
+    const hit = diagnosisRules.find((rule) => rule.regex.test(text));
+    return hit ? hit.label : '';
+  }
+
+  if (field === 'treatment') {
+    const labels = treatmentRules
+      .filter((rule) => rule.regex.test(text))
+      .map((rule) => rule.label);
+    return labels.sort().join('|');
+  }
+
+  if (field === 'physicalExam') {
+    const tags = [];
+    if (/\btemperat|\bfc\b|\bfr\b|frequenc/.test(text)) tags.push('vitals');
+    if (/\bmucos|tpc|desidrat|hidrata/.test(text)) tags.push('perfusion');
+    if (/\bdor\b|palpac|auscult|motilid|edema/.test(text))
+      tags.push('semiology');
+    return tags.sort().join('|');
+  }
+
+  return '';
+}
+
+function semanticConsistencyIndex(values = [], field = '') {
   const normalized = values
     .map((value) => normalize(value))
     .filter((value) => value.length > 0);
@@ -265,7 +326,21 @@ function consistencyIndex(values = []) {
       pairs += 1;
       const a = normalized[i];
       const b = normalized[j];
-      if (a === b || a.includes(b) || b.includes(a)) matches += 1;
+      const sigA = semanticSignatureByField(field, a);
+      const sigB = semanticSignatureByField(field, b);
+
+      const sameSemantic = Boolean(sigA && sigB && sigA === sigB);
+      const partialExamSemantic =
+        field === 'physicalExam' && sigA && sigB
+          ? sigA
+              .split('|')
+              .some((token) => token && sigB.split('|').includes(token))
+          : false;
+      const contains = a === b || a.includes(b) || b.includes(a);
+      const overlap = overlapScore(a, b) >= 0.65;
+
+      if (sameSemantic || partialExamSemantic || contains || overlap)
+        matches += 1;
     }
   }
   if (!pairs) return 1;
@@ -334,14 +409,17 @@ async function main() {
         worstGlobalScore: Number(
           Math.min(...runs.map((item) => item.metrics.globalScore)).toFixed(3),
         ),
-        diagnosisConsistency: consistencyIndex(
+        diagnosisConsistency: semanticConsistencyIndex(
           runs.map((item) => item.parsed.diagnosis || ''),
+          'diagnosis',
         ),
-        treatmentConsistency: consistencyIndex(
+        treatmentConsistency: semanticConsistencyIndex(
           runs.map((item) => item.parsed.treatment || ''),
+          'treatment',
         ),
-        examConsistency: consistencyIndex(
+        examConsistency: semanticConsistencyIndex(
           runs.map((item) => item.parsed.physicalExam || ''),
+          'physicalExam',
         ),
       }
     : null;

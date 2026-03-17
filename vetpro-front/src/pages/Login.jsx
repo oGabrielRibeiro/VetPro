@@ -16,6 +16,17 @@ const Login = () => {
     if (authLoading) return "Processando...";
     return isRegisterMode ? "Criar conta" : "Entrar";
   }, [authLoading, isRegisterMode]);
+  const activeError = formError || error || "";
+  const isConnectionError = useMemo(() => {
+    const source = String(activeError || "").toLowerCase();
+    return (
+      source.includes("sem conexao") ||
+      source.includes("servidor") ||
+      source.includes("cors") ||
+      source.includes("network") ||
+      source.includes("err_failed")
+    );
+  }, [activeError]);
 
   const validate = () => {
     const normalizedEmail = String(email || "").trim();
@@ -65,42 +76,7 @@ const Login = () => {
 
   return (
     <div className="app-shell-bg min-h-screen flex items-center justify-center p-3 sm:p-4">
-      <div className="w-full max-w-[980px] grid grid-cols-1 lg:grid-cols-[1.05fr_0.95fr] gap-4 subtle-enter">
-        <section className="hidden lg:flex shell-surface rounded-3xl border border-gray-200/80 dark:border-dark-700/70 p-8 flex-col gap-8">
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-gray-500 dark:text-gray-400">
-              VetPro Platform
-            </p>
-            <h1 className="shell-title mt-2 text-4xl font-black text-gray-900 dark:text-white leading-tight">
-              Da conversa ao prontuario em minutos
-            </h1>
-            <p className="mt-3 text-sm text-gray-600 dark:text-gray-300 max-w-lg">
-              Audio inteligente, agenda integrada e relatorios em tempo real para
-              acelerar atendimentos na clinica e no campo.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-3 gap-3 max-w-xl">
-            {[
-              { label: "Modo campo", icon: "consultations" },
-              { label: "Agenda", icon: "appointments" },
-              { label: "Relatorios", icon: "reports" },
-            ].map((item) => (
-              <div
-                key={item.label}
-                className="interactive-card rounded-2xl border border-gray-200 dark:border-dark-700 bg-white/80 dark:bg-dark-800/70 p-3 text-center"
-              >
-                <span className="mx-auto mb-2 inline-flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300">
-                  <AppIcon name={item.icon} />
-                </span>
-                <p className="text-xs font-semibold text-gray-700 dark:text-gray-300">
-                  {item.label}
-                </p>
-              </div>
-            ))}
-          </div>
-        </section>
-
+      <div className="w-full max-w-[520px] subtle-enter">
         <section className="shell-surface rounded-3xl border border-gray-200/80 dark:border-dark-700/70 overflow-hidden">
           <div className="bg-gradient-to-r from-teal-600 to-blue-700 px-5 py-6 text-center">
             <div className="mx-auto mb-2 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-white/20 overflow-hidden">
@@ -117,21 +93,20 @@ const Login = () => {
                 </span>
               )}
             </div>
-            <h2 className="shell-title text-2xl font-extrabold text-white">VetPro</h2>
-            <p className="mt-1 text-xs text-teal-100">
+            <h2 className="vp-h2 text-white">VetPro</h2>
+            <p className="vp-helper mt-1 text-teal-100">
               Plataforma comercial para operacao veterinaria completa
             </p>
           </div>
 
           <div className="p-5 sm:p-6">
-            <div className="mb-5 grid grid-cols-2 rounded-xl border border-gray-200 dark:border-dark-700 bg-gray-50 dark:bg-dark-900 p-1">
+
+            <div className="mb-5 vp-segment">
               <button
                 type="button"
                 onClick={() => toggleMode(false)}
-                className={`h-10 rounded-lg text-sm font-semibold transition ${
-                  !isRegisterMode
-                    ? "bg-white dark:bg-dark-800 text-emerald-700 dark:text-emerald-300 shadow-sm"
-                    : "text-gray-600 dark:text-gray-400"
+                className={`vp-segment-btn transition ${
+                  !isRegisterMode ? "is-active" : ""
                 }`}
               >
                 Entrar
@@ -139,29 +114,38 @@ const Login = () => {
               <button
                 type="button"
                 onClick={() => toggleMode(true)}
-                className={`h-10 rounded-lg text-sm font-semibold transition ${
-                  isRegisterMode
-                    ? "bg-white dark:bg-dark-800 text-emerald-700 dark:text-emerald-300 shadow-sm"
-                    : "text-gray-600 dark:text-gray-400"
+                className={`vp-segment-btn transition ${
+                  isRegisterMode ? "is-active" : ""
                 }`}
               >
                 Criar conta
               </button>
             </div>
 
-            {(formError || error) && (
-              <div className="mb-4 rounded-xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 px-3 py-2.5 text-sm text-red-700 dark:text-red-300">
-                {formError || error}
+            {activeError && (
+              <div className="mb-3 vp-alert-error">
+                {activeError}
+              </div>
+            )}
+            {isConnectionError && (
+              <div className="mb-4 vp-alert-info">
+                <p className="font-semibold">Conexao com backend indisponivel.</p>
+                <ol className="vp-tip-list list-decimal">
+                  <li>Verifique se backend esta ativo na porta `5000`.</li>
+                  <li>Confirme se frontend esta em `http://127.0.0.1:3000`.</li>
+                  <li>Valide CORS e variaveis `VITE_API_BASE_URL`/`.env`.</li>
+                </ol>
               </div>
             )}
 
             <form onSubmit={handleSubmit} className="space-y-4">
               {isRegisterMode && (
                 <div>
-                  <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                  <label htmlFor="loginName" className="vp-label">
                     Nome completo
                   </label>
                   <input
+                    id="loginName"
                     type="text"
                     value={name}
                     onChange={(e) => {
@@ -169,17 +153,18 @@ const Login = () => {
                       if (formError) setFormError("");
                     }}
                     required
-                    className="h-11 sm:h-10 w-full rounded-xl border border-gray-300 dark:border-dark-600 bg-white dark:bg-dark-800 px-3 text-sm"
+                    className="vp-input"
                     placeholder="Dr(a). Joao Silva"
                   />
                 </div>
               )}
 
               <div>
-                <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                <label htmlFor="loginEmail" className="vp-label">
                   E-mail
                 </label>
                 <input
+                  id="loginEmail"
                   type="email"
                   value={email}
                   onChange={(e) => {
@@ -187,16 +172,17 @@ const Login = () => {
                     if (formError) setFormError("");
                   }}
                   required
-                  className="h-11 sm:h-10 w-full rounded-xl border border-gray-300 dark:border-dark-600 bg-white dark:bg-dark-800 px-3 text-sm"
+                  className="vp-input"
                   placeholder="seu@email.com"
                 />
               </div>
 
               <div>
-                <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                <label htmlFor="loginPassword" className="vp-label">
                   Senha
                 </label>
                 <input
+                  id="loginPassword"
                   type="password"
                   value={password}
                   onChange={(e) => {
@@ -205,9 +191,14 @@ const Login = () => {
                   }}
                   required
                   minLength={6}
-                  className="h-11 sm:h-10 w-full rounded-xl border border-gray-300 dark:border-dark-600 bg-white dark:bg-dark-800 px-3 text-sm"
+                  className="vp-input"
                   placeholder="••••••••"
                 />
+                {!isRegisterMode && (
+                  <p className="vp-helper mt-1 text-gray-500 dark:text-gray-400">
+                    Dica: use sua conta comercial da clinica para acessar dados compartilhados.
+                  </p>
+                )}
               </div>
 
               <button

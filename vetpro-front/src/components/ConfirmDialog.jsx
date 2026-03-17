@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useId, useRef } from "react";
 
 const ConfirmDialog = ({
   isOpen = false,
@@ -12,6 +12,24 @@ const ConfirmDialog = ({
   onCancel,
   onConfirm,
 }) => {
+  const titleId = useId();
+  const messageId = useId();
+  const cancelButtonRef = useRef(null);
+
+  useEffect(() => {
+    if (!isOpen) return undefined;
+
+    const onKeyDown = (event) => {
+      if (event.key === "Escape" && !loading) {
+        onCancel?.();
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    cancelButtonRef.current?.focus();
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [isOpen, loading, onCancel]);
+
   if (!isOpen) return null;
 
   const confirmClass =
@@ -21,12 +39,18 @@ const ConfirmDialog = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4">
-      <div className="w-full max-w-md rounded-2xl border border-gray-200 dark:border-dark-600 bg-white dark:bg-dark-800 p-4 shadow-xl">
-        <h3 className="text-base font-bold text-gray-900 dark:text-white">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        aria-describedby={message ? messageId : undefined}
+        className="vp-card w-full max-w-md p-4 shadow-xl"
+      >
+        <h3 id={titleId} className="text-base font-bold text-gray-900 dark:text-white">
           {title}
         </h3>
         {message && (
-          <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
+          <p id={messageId} className="mt-1 text-sm text-gray-600 dark:text-gray-300">
             {message}
           </p>
         )}
@@ -37,6 +61,7 @@ const ConfirmDialog = ({
         )}
         <div className="mt-4 grid grid-cols-2 gap-2">
           <button
+            ref={cancelButtonRef}
             type="button"
             onClick={onCancel}
             className="btn btn-neutral btn-sm btn-block"

@@ -45,7 +45,8 @@
     "start": "npm run dev",
     "build": "npm run check-node && vite build",
     "preview": "npm run check-node && vite preview --host 0.0.0.0 --port 3000",
-    "test": "npm run check:no-native-popups && vitest run --environment jsdom --globals"
+    "test": "npm run check:no-native-popups && vitest run --environment jsdom --globals",
+    "css:audit": "npm run check-node && node scripts/css-usage-audit.js"
   },
   "browserslist": {
     "production": [

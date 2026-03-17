@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import api from "../services/api";
 import { useAuth } from "../contexts/AuthContext";
 import BeforeAfterSlider from "../components/BeforeAfterSlider";
+import FeedbackBanner from "./FeedbackBanner";
 import AppIcon from "./AppIcon";
 import LoadingDot from "./LoadingDot";
 import { downloadApiBlob, openApiBlobInNewTab } from "../utils/blobDownloads";
@@ -73,28 +74,40 @@ const ConsultationPreview = ({
   const [uploading, setUploading] = useState(false);
   const [compareMode, setCompareMode] = useState(false);
   const [selectedCompareFiles, setSelectedCompareFiles] = useState([]);
+  const [feedback, setFeedback] = useState(null);
+  const dialogTitleId = useId();
+
+  const showFeedback = (type, message) => {
+    setFeedback({ type, message });
+  };
+
+  const fetchFiles = async () => {
+    if (!consultation?.id) return;
+    try {
+      setLoadingFiles(true);
+      const response = await api.get(`/consultations/${consultation.id}/files`);
+      setFiles(response.data);
+    } catch (err) {
+      console.error("Erro ao buscar exames:", err);
+      showFeedback("error", "Nao foi possivel carregar os anexos. Tente atualizar a lista.");
+    } finally {
+      setLoadingFiles(false);
+    }
+  };
 
   useEffect(() => {
-    if (!consultation?.id) return;
-
-    const fetchFiles = async () => {
-      try {
-        setLoadingFiles(true);
-
-        const response = await api.get(
-          `/consultations/${consultation.id}/files`,
-        );
-
-        setFiles(response.data);
-      } catch (err) {
-        console.error("Erro ao buscar exames:", err);
-      } finally {
-        setLoadingFiles(false);
-      }
-    };
-
     fetchFiles();
   }, [consultation?.id]);
+
+  useEffect(() => {
+    const onKeyDown = (event) => {
+      if (event.key === "Escape") {
+        onClose?.();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [onClose]);
 
   if (!consultation) return null;
   const patientData = patient || consultation.patient || {};
@@ -151,14 +164,12 @@ const ConsultationPreview = ({
           "Content-Type": "multipart/form-data",
         },
       });
-
-      // Atualizar lista após upload
-      const response = await api.get(`/consultations/${consultation.id}/files`);
-
-      setFiles(response.data);
+      await fetchFiles();
       setSelectedFile(null);
+      showFeedback("success", "Arquivo anexado com sucesso.");
     } catch (err) {
       console.error("Erro ao enviar exame:", err);
+      showFeedback("error", "Nao foi possivel anexar o arquivo. Verifique formato e tamanho e tente novamente.");
     } finally {
       setUploading(false);
     }
@@ -167,8 +178,13 @@ const ConsultationPreview = ({
   const handleDownloadConsultationPDF = async () => {
     try {
       await openApiBlobInNewTab(`/consultations/${consultation.id}/pdf`);
+      showFeedback("success", "PDF aberto em nova aba.");
     } catch (error) {
       console.error("Erro ao abrir PDF:", error);
+      showFeedback(
+        "error",
+        "Nao foi possivel abrir o PDF. Verifique bloqueio de popup no navegador e tente novamente.",
+      );
     }
   };
 
@@ -177,6 +193,7 @@ const ConsultationPreview = ({
       await openApiBlobInNewTab(`/consultations/files/${fileId}/view`);
     } catch (error) {
       console.error("Erro ao visualizar arquivo:", error);
+      showFeedback("error", "Nao foi possivel abrir o arquivo para visualizacao. Tente baixar o anexo.");
     }
   };
 
@@ -186,19 +203,33 @@ const ConsultationPreview = ({
         `/consultations/files/${file.id}/view`,
         file.originalName || "arquivo",
       );
+      showFeedback("success", "Download iniciado com sucesso.");
     } catch (error) {
       console.error("Erro ao baixar arquivo:", error);
+      showFeedback("error", "Nao foi possivel baixar o arquivo. Tente novamente em instantes.");
     }
   };
 
   return (
     <div className="fixed inset-0 z-50 bg-black/55 p-0 sm:p-4">
-      <div className="mx-auto h-[100dvh] w-full overflow-y-auto bg-white rounded-none sm:h-auto sm:max-h-[92vh] sm:max-w-4xl sm:rounded-xl">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={dialogTitleId}
+        className="mx-auto h-[100dvh] w-full overflow-y-auto bg-white rounded-none sm:h-auto sm:max-h-[92vh] sm:max-w-4xl sm:rounded-xl"
+      >
+        <div className="px-4 pt-4 sm:px-6">
+          <FeedbackBanner
+            type={feedback?.type || "info"}
+            message={feedback?.message || ""}
+            onClose={() => setFeedback(null)}
+          />
+        </div>
         {/* Cabeçalho da ficha */}
         <div className="border-b border-gray-300 p-4 sm:p-6">
           <div className="flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-start">
             <div>
-              <h1 className="text-xl sm:text-2xl font-bold text-gray-800">
+              <h1 id={dialogTitleId} className="text-xl sm:text-2xl font-bold text-gray-800">
                 PRONTUÁRIO CLÍNICO VETERINÁRIO
               </h1>
               <p className="text-sm sm:text-base text-gray-600 mt-1">
@@ -492,7 +523,7 @@ const ConsultationPreview = ({
         <div className="flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-center mb-4">
           <h2 className="text-xl sm:text-lg font-bold text-gray-800 flex items-center gap-2">
             <AppIcon name="paperclip" className="h-5 w-5" />
-            Exames Anexados
+            Anexos de exames
           </h2>
 
           <button
@@ -502,13 +533,13 @@ const ConsultationPreview = ({
             }}
             className="btn btn-primary btn-md btn-block sm:w-auto"
           >
-            {compareMode ? "Cancelar Comparação" : "Comparar Lado a Lado"}
+            {compareMode ? "Cancelar comparacao" : "Comparar lado a lado"}
           </button>
         </div>
 
         <div className="bg-gray-50 p-3 sm:p-4 rounded-xl mb-6">
           <h3 className="font-semibold text-sm text-gray-700 mb-3">
-            ➕ Anexar Novo Exame
+            ➕ Anexar novo exame
           </h3>
 
           <div className="grid grid-cols-1 sm:grid-cols-[1fr_1.3fr_auto] gap-3">
@@ -554,7 +585,7 @@ const ConsultationPreview = ({
           </h2>
 
           {loadingFiles && (
-            <p className="text-sm text-gray-500 inline-flex items-center gap-2"><LoadingDot className="text-gray-500" /> Carregando exames...</p>
+            <p className="text-sm text-gray-500 inline-flex items-center gap-2"><LoadingDot className="text-gray-500" /> Carregando anexos...</p>
           )}
 
           {!loadingFiles && files && (
@@ -585,10 +616,10 @@ const ConsultationPreview = ({
                               {file.originalName}
                             </span>
 
-                            <div className="flex items-center gap-4 sm:gap-3 self-end sm:self-auto">
+                            <div className="flex items-center gap-2 self-end sm:self-auto">
                               <button
                                 type="button"
-                                className="text-blue-600 hover:text-blue-700 text-sm sm:text-xs font-semibold"
+                                className="btn btn-neutral btn-sm"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   handlePreviewFile(file.id);
@@ -598,7 +629,7 @@ const ConsultationPreview = ({
                               </button>
                               <button
                                 type="button"
-                                className="text-indigo-600 hover:text-indigo-700 text-sm sm:text-xs font-semibold"
+                                className="btn btn-info-soft btn-sm"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   handleDownloadFile(file);
@@ -622,6 +653,14 @@ const ConsultationPreview = ({
               {Object.values(files).every((arr) => arr.length === 0) && (
                 <p className="text-sm text-gray-500">Nenhum exame anexado.</p>
               )}
+            </div>
+          )}
+          {!loadingFiles && !files && (
+            <div className="rounded-xl border border-dashed border-gray-300 p-4 text-sm text-gray-600">
+              Nao foi possivel carregar os anexos.{" "}
+              <button type="button" onClick={fetchFiles} className="font-semibold text-blue-700">
+                Tentar novamente
+              </button>
             </div>
           )}
         </div>
@@ -649,7 +688,7 @@ const ConsultationPreview = ({
             <span className="mr-2">
               <AppIcon name="print" className="h-4 w-4" />
             </span>
-            Imprimir PDF
+            Abrir PDF
           </button>
           </div>
         </div>

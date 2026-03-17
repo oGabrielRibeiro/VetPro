@@ -1,6 +1,7 @@
 // Console replaced by logger
 const fs = require('fs/promises');
 const path = require('path');
+const { randomUUID } = require('crypto');
 const consultationService = require('../services/consultationService');
 const pdfService = require('../services/pdfService');
 const {
@@ -19,6 +20,9 @@ const {
   generateRecordDraftFromChat,
   refineRecordField,
 } = require('../services/recordChatAssistService');
+const {
+  captureFieldAssistFeedback,
+} = require('../services/fieldAssistFeedbackService');
 const prisma = require('../lib/prisma');
 const logger = require('../utils/logger');
 
@@ -200,6 +204,37 @@ async function create(req, res) {
         .json({ error: 'Selecione um paciente para continuar.' });
     }
 
+    if (data?.customFormData && typeof data.customFormData === 'object') {
+      const capturedAt = new Date().toISOString();
+      const baseMeta = {
+        capturedAt,
+        capturedByUserId: req.user.id,
+        capturedByName: req.user.name || null,
+        clinicId: req.user.clinicId,
+        patientId,
+        ip: req.ip || null,
+        userAgent: req.get('user-agent') || null,
+      };
+
+      if (data.customFormData.anesthesia?.consentSignature) {
+        data.customFormData.anesthesia = {
+          ...data.customFormData.anesthesia,
+          consentMeta:
+            data.customFormData.anesthesia.consentMeta ||
+            { ...baseMeta, consentType: 'anestesia' },
+        };
+      }
+
+      if (data.customFormData.procedure?.consentSignature) {
+        data.customFormData.procedure = {
+          ...data.customFormData.procedure,
+          consentMeta:
+            data.customFormData.procedure.consentMeta ||
+            { ...baseMeta, consentType: 'procedimento' },
+        };
+      }
+    }
+
     const consultation = await consultationService.createConsultation({
       userId: req.user.id,
       patientId,
@@ -208,6 +243,46 @@ async function create(req, res) {
       recipeYear: currentYear,
       clinicId: req.user.clinicId,
     });
+
+    if (data?.customFormData && typeof data.customFormData === 'object') {
+      const signatures = [];
+      const anesthesiaSignature = data.customFormData?.anesthesia?.consentSignature;
+      if (anesthesiaSignature) {
+        signatures.push({
+          type: 'anestesia',
+          dataUrl: anesthesiaSignature,
+        });
+      }
+      const procedureSignature = data.customFormData?.procedure?.consentSignature;
+      if (procedureSignature) {
+        signatures.push({
+          type: 'procedimento',
+          dataUrl: procedureSignature,
+        });
+      }
+
+      if (signatures.length) {
+        const capturedAt = new Date().toISOString();
+        const baseMeta = {
+          capturedAt,
+          capturedByUserId: req.user.id,
+          capturedByName: req.user.name || null,
+          clinicId: req.user.clinicId,
+          patientId,
+          ip: req.ip || null,
+          userAgent: req.get('user-agent') || null,
+        };
+
+        await prisma.consentSignature.createMany({
+          data: signatures.map((item) => ({
+            ...baseMeta,
+            consultationId: consultation.id,
+            type: item.type,
+            dataUrl: item.dataUrl,
+          })),
+        });
+      }
+    }
 
     try {
       const notesTranscript = extractTranscriptFromNotes(
@@ -366,9 +441,41 @@ async function fieldAssist(req, res) {
 
     const audioBuffer = req.file?.buffer || null;
     const mimeType = req.file?.mimetype || req.body?.mimeType || 'audio/webm';
+    const promptContextModeRaw = String(
+      req.body?.promptContextMode ||
+        req.body?.contextMode ||
+        req.body?.consultationType ||
+        req.body?.mode ||
+        'campo',
+    )
+      .trim()
+      .toLowerCase();
+    const promptContextMode = [
+      'nova',
+      'retorno',
+      'emergencia',
+      'campo',
+    ].includes(promptContextModeRaw)
+      ? promptContextModeRaw
+      : 'campo';
+    const requestId =
+      String(req.headers['x-request-id'] || '').trim() || `fa-${randomUUID()}`;
+    const conservativeMode =
+      String(req.body?.conservativeMode ?? '')
+        .trim()
+        .toLowerCase() !== 'false';
+    const conservativeMinConfidence = Number(
+      req.body?.conservativeMinConfidence,
+    );
+    const resolvedConservativeMinConfidence = Number.isFinite(
+      conservativeMinConfidence,
+    )
+      ? Math.max(0, Math.min(1, conservativeMinConfidence))
+      : undefined;
 
     // Log de debug para entender o que está chegando
     logger.info('fieldAssist receber requisição', {
+      requestId,
       hasFile: !!req.file,
       hasAudioBuffer: !!(audioBuffer && audioBuffer.length > 0),
       audioBufferSize: audioBuffer ? audioBuffer.length : 0,
@@ -376,14 +483,21 @@ async function fieldAssist(req, res) {
       filename: req.file?.originalname,
       segmentsCount: segments.length,
       transcriptLength: transcript.length,
+      promptContextMode,
+      conservativeMode,
+      conservativeMinConfidence: resolvedConservativeMinConfidence,
     });
 
     const result = await analyzeFieldConversation({
+      requestId,
       audioBuffer,
       mimeType,
       filename: req.file?.originalname || 'field-audio.webm',
       segments,
       transcript,
+      promptContextMode,
+      conservativeMode,
+      conservativeMinConfidence: resolvedConservativeMinConfidence,
     });
 
     return res.json(result);
@@ -392,6 +506,30 @@ async function fieldAssist(req, res) {
     return res
       .status(500)
       .json({ error: 'Erro ao analisar conversa de campo' });
+  }
+}
+
+async function fieldAssistFeedback(req, res) {
+  try {
+    const payload = req.body && typeof req.body === 'object' ? req.body : {};
+    const result = await captureFieldAssistFeedback(
+      payload,
+      req.user?.id || null,
+    );
+    return res.status(201).json({
+      message: 'Feedback de campo registrado.',
+      id: result.id,
+      telemetryEnabled: result.telemetryEnabled,
+    });
+  } catch (error) {
+    logger.error('Falha ao registrar feedback do field-assist:', error.message);
+    const status = Number(error?.statusCode || 500);
+    return res.status(status).json({
+      error:
+        status === 400
+          ? String(error?.message || 'Payload invalido.')
+          : 'Erro ao registrar feedback do field-assist.',
+    });
   }
 }
 
@@ -655,6 +793,7 @@ module.exports = {
   generatePrescriptionPDF,
   createReturn,
   fieldAssist,
+  fieldAssistFeedback,
   heuristicParse,
   chatAssist,
   refineField,

@@ -1,9 +1,22 @@
 #!/usr/bin/env pwsh
 
+[CmdletBinding()]
+param(
+  [ValidateSet("docker", "dev")]
+  [string]$Mode = "docker",
+  [switch]$NoBrowser,
+  [switch]$NoBuild
+)
+
 $ErrorActionPreference = "Stop"
+Set-StrictMode -Version Latest
+
 $ProjectRoot = $PSScriptRoot
 $EnvFilePath = Join-Path $ProjectRoot ".env"
-$FrontendPackageJsonPath = Join-Path $ProjectRoot "vetpro-front\package.json"
+$FrontendDir = Join-Path $ProjectRoot "vetpro-front"
+$FrontendPackageJsonPath = Join-Path $FrontendDir "package.json"
+$BackendHealthUrl = "http://localhost:5000/health"
+$FrontendUrl = "http://localhost:3000"
 
 function Assert-LastExitCode {
   param(
@@ -25,8 +38,20 @@ function Test-CommandAvailable {
   return ($null -ne $cmd)
 }
 
+function Invoke-Compose {
+  param(
+    [Parameter(Mandatory = $true)]
+    [string[]]$Args,
+    [Parameter(Mandatory = $true)]
+    [string]$ErrorMessage
+  )
+
+  & docker compose @Args
+  Assert-LastExitCode $ErrorMessage
+}
+
 function Test-DockerDaemon {
-  docker version *> $null
+  docker info *> $null
   return ($LASTEXITCODE -eq 0)
 }
 
@@ -56,20 +81,31 @@ function Get-NodeMajorVersion {
 }
 
 function Show-NodeVersionStatus {
+  param(
+    [switch]$RequireForFrontend
+  )
+
   $major = Get-NodeMajorVersion
   if ($null -eq $major) {
-    Write-Host "Node.js nao encontrado no host. Isso nao impede o Docker, mas para rodar frontend local use Node 20.x." -ForegroundColor Yellow
+    if ($RequireForFrontend) {
+      throw "Node.js nao encontrado no host. No modo dev ele e obrigatorio (Node 20.x)."
+    }
+
+    Write-Host "Node.js nao encontrado no host. Isso nao impede modo docker." -ForegroundColor Yellow
     return
   }
 
   $rawVersion = node -v 2>$null
-  if ($major -ge 20) {
+  if ($major -ge 20 -and $major -lt 21) {
     Write-Host "Node.js no host: OK ($rawVersion)." -ForegroundColor Green
     return
   }
 
+  if ($RequireForFrontend) {
+    throw "Node.js no host: $rawVersion. O modo dev exige Node 20.x."
+  }
+
   Write-Host "Node.js no host: $rawVersion (recomendado: 20.x)." -ForegroundColor Yellow
-  Write-Host "Para build local do frontend, use Node 20.x para evitar falhas de compilacao." -ForegroundColor Yellow
 }
 
 function Read-EnvValue {
@@ -157,7 +193,8 @@ function Show-FrontendStackStatus {
 
   try {
     $pkg = Get-Content -Path $FrontendPackageJsonPath -Raw | ConvertFrom-Json
-  } catch {
+  }
+  catch {
     Write-Host "Aviso: nao foi possivel ler package.json do frontend para validar stack." -ForegroundColor Yellow
     return
   }
@@ -198,7 +235,8 @@ function Wait-HttpReady {
       if ($resp.StatusCode -ge 200 -and $resp.StatusCode -lt 500) {
         return $true
       }
-    } catch {
+    }
+    catch {
       # segue tentando
     }
 
@@ -217,70 +255,143 @@ function Show-ComposeStatus {
 
 function Start-DockerDesktopIfNeeded {
   if (Test-DockerDaemon) {
+    Write-Host "Docker daemon ja esta rodando." -ForegroundColor Green
     return
   }
 
   $dockerDesktopPath = "C:\Program Files\Docker\Docker\Docker Desktop.exe"
   if (-not (Test-Path $dockerDesktopPath)) {
-    throw @"
-Docker daemon indisponivel e o executavel do Docker Desktop nao foi encontrado em:
-  $dockerDesktopPath
-Abra o Docker Desktop manualmente e execute novamente:
-  .\up.ps1
-"@
+    throw "Docker Desktop nao encontrado em $dockerDesktopPath"
   }
 
-  Write-Host "Docker Desktop fechado. Abrindo Docker Desktop..." -ForegroundColor Yellow
-  Start-Process -FilePath $dockerDesktopPath | Out-Null
+  Write-Host "Docker nao esta rodando. Iniciando Docker Desktop..." -ForegroundColor Yellow
+  Start-Process $dockerDesktopPath | Out-Null
 
-  $timeoutSeconds = 120
+  Write-Host "Aguardando Docker iniciar..." -ForegroundColor Cyan
+  $timeout = 120
   $elapsed = 0
-  while ($elapsed -lt $timeoutSeconds) {
-    Start-Sleep -Seconds 3
-    $elapsed += 3
+
+  while ($elapsed -lt $timeout) {
+    Start-Sleep -Seconds 4
+    $elapsed += 4
+
     if (Test-DockerDaemon) {
-      Write-Host "Docker daemon online." -ForegroundColor Green
+      Write-Host "Docker iniciado com sucesso." -ForegroundColor Green
       return
     }
   }
 
-  throw @"
-Docker Desktop foi iniciado, mas o daemon nao ficou disponivel dentro de $timeoutSeconds segundos.
-Verifique o Docker Desktop e tente novamente:
-  .\up.ps1
-"@
+  throw "Docker nao iniciou dentro do tempo esperado."
 }
 
-Write-Host "Subindo VetPro via Docker..." -ForegroundColor Cyan
+function Ensure-FrontendDependencies {
+  if (-not (Test-Path $FrontendDir)) {
+    throw "Diretorio do frontend nao encontrado: $FrontendDir"
+  }
 
-if (-not (Test-CommandAvailable -Name "docker")) {
-  throw "Docker CLI nao encontrado no PATH."
+  if (Test-Path (Join-Path $FrontendDir "node_modules")) {
+    Write-Host "Dependencias do frontend ja estao instaladas." -ForegroundColor Green
+    return
+  }
+
+  Write-Host "Instalando dependencias do frontend..." -ForegroundColor Cyan
+  Push-Location $FrontendDir
+  try {
+    if (Test-Path "package-lock.json") {
+      npm ci
+      Assert-LastExitCode "Falha ao executar 'npm ci' no frontend."
+    }
+    else {
+      npm install
+      Assert-LastExitCode "Falha ao executar 'npm install' no frontend."
+    }
+  }
+  finally {
+    Pop-Location
+  }
 }
 
-Show-NodeVersionStatus
-Show-FrontendStackStatus
-Validate-EnvFile
-Start-DockerDesktopIfNeeded
+function Start-FrontendDevServer {
+  if (-not (Test-CommandAvailable -Name "npm")) {
+    throw "NPM nao encontrado no PATH. O modo dev exige Node/NPM no host."
+  }
 
-docker compose up --build -d
-Assert-LastExitCode "Falha ao executar 'docker compose up --build -d'."
-
-Write-Host "Aguardando backend ficar online..." -ForegroundColor Cyan
-if (-not (Wait-HttpReady -Url "http://localhost:5000/health")) {
-  Write-Host "Backend nao respondeu em /health dentro do timeout." -ForegroundColor Red
-  docker compose logs backend --tail 80
-  throw "Falha no health check do backend."
+  Write-Host "Iniciando frontend local (vite)..." -ForegroundColor Cyan
+  Start-Process -FilePath "powershell" -WorkingDirectory $FrontendDir -ArgumentList "-NoExit", "-Command", "npm run dev" | Out-Null
 }
 
-Write-Host "Aguardando frontend ficar online..." -ForegroundColor Cyan
-if (-not (Wait-HttpReady -Url "http://localhost:3000")) {
-  Write-Host "Frontend nao respondeu dentro do timeout." -ForegroundColor Red
-  docker compose logs frontend --tail 80
-  throw "Falha no health check do frontend."
+function Open-WebApp {
+  if ($NoBrowser) {
+    Write-Host "Abertura automatica do navegador desativada (-NoBrowser)." -ForegroundColor Yellow
+    return
+  }
+
+  Start-Process $FrontendUrl | Out-Null
 }
 
-Write-Host ""
-Write-Host "OK. Acesse:" -ForegroundColor Green
-Write-Host "Frontend: http://localhost:3000"
-Write-Host "Backend:  http://localhost:5000"
-Show-ComposeStatus
+Push-Location $ProjectRoot
+try {
+  Write-Host ""
+  Write-Host "=============================" -ForegroundColor Cyan
+  Write-Host " VetPro - Launcher Profissional"
+  Write-Host "=============================" -ForegroundColor Cyan
+  Write-Host "Modo: $Mode"
+  Write-Host ""
+
+  if (-not (Test-CommandAvailable -Name "docker")) {
+    throw "Docker CLI nao encontrado no PATH."
+  }
+
+  Show-NodeVersionStatus -RequireForFrontend:($Mode -eq "dev")
+  Show-FrontendStackStatus
+  Validate-EnvFile
+  Start-DockerDesktopIfNeeded
+
+  if ($Mode -eq "docker") {
+    Write-Host "Subindo stack completa via Docker..." -ForegroundColor Cyan
+    $composeArgs = @("up", "-d")
+    if (-not $NoBuild) {
+      $composeArgs += "--build"
+    }
+    Invoke-Compose -Args $composeArgs -ErrorMessage "Falha ao subir stack completa via Docker Compose."
+  }
+  else {
+    Write-Host "Subindo backend/infra via Docker e frontend local..." -ForegroundColor Cyan
+    $composeArgs = @("up", "-d")
+    if (-not $NoBuild) {
+      $composeArgs += "--build"
+    }
+    $composeArgs += @("postgres", "redis", "backend")
+    Invoke-Compose -Args $composeArgs -ErrorMessage "Falha ao subir postgres/redis/backend via Docker Compose."
+
+    Invoke-Compose -Args @("stop", "frontend") -ErrorMessage "Falha ao parar container frontend."
+    Ensure-FrontendDependencies
+    Start-FrontendDevServer
+  }
+
+  Write-Host "Aguardando backend ficar online..." -ForegroundColor Cyan
+  if (-not (Wait-HttpReady -Url $BackendHealthUrl -TimeoutSeconds 120)) {
+    Write-Host "Backend nao respondeu em /health dentro do timeout." -ForegroundColor Red
+    docker compose logs backend --tail 120
+    throw "Falha no health check do backend."
+  }
+
+  Write-Host "Aguardando frontend ficar online..." -ForegroundColor Cyan
+  if (-not (Wait-HttpReady -Url $FrontendUrl -TimeoutSeconds 150)) {
+    if ($Mode -eq "docker") {
+      docker compose logs frontend --tail 120
+    }
+    throw "Falha no health check do frontend."
+  }
+
+  Open-WebApp
+
+  Write-Host ""
+  Write-Host "OK. Acesse:" -ForegroundColor Green
+  Write-Host "Frontend: $FrontendUrl"
+  Write-Host "Backend:  http://localhost:5000"
+  Show-ComposeStatus
+}
+finally {
+  Pop-Location
+}

@@ -1,0 +1,68 @@
+{
+  "generatedAt": "2026-03-11T19:20:41.210Z",
+  "backendRoot": "C:\\Cliente\\HSS\\VetPro\\vetpro-backend",
+  "summary": {
+    "totalSteps": 5,
+    "failedSteps": 0,
+    "ok": true
+  },
+  "steps": [
+    {
+      "label": "ai:evaluate",
+      "command": "npm run ai:evaluate",
+      "durationMs": 194001,
+      "exitCode": 0,
+      "ok": true
+    },
+    {
+      "label": "ai:evaluate:field-dataset:simulated",
+      "command": "npm run ai:evaluate:field-dataset:simulated",
+      "durationMs": 213230,
+      "exitCode": 0,
+      "ok": true
+    },
+    {
+      "label": "ai:quality:dashboard",
+      "command": "npm run ai:quality:dashboard -- --days=365",
+      "durationMs": 681,
+      "exitCode": 0,
+      "ok": true
+    },
+    {
+      "label": "ai:quality:alerts",
+      "command": "npm run ai:quality:alerts",
+      "durationMs": 634,
+      "exitCode": 0,
+      "ok": true
+    },
+    {
+      "label": "ai:regression:suite",
+      "command": "npm run ai:regression:suite",
+      "durationMs": 190013,
+      "exitCode": 0,
+      "ok": true
+    }
+  ],
+  "logs": {
+    "ai:evaluate": {
+      "stdout": "\n> vetpro-backend@1.0.0 ai:evaluate\n> node src/scripts/evaluate-chat-assist.js\n\n┌─────────┬─────────────────────────────────────┬──────────┬────────────────────┬────────────────────┬────────────┬───────────────┐\n│ (index) │ id                                  │ provider │ coreCoverage       │ specificCoverage   │ chiefNoise │ behaviorNoise │\n├─────────┼─────────────────────────────────────┼──────────┼────────────────────┼────────────────────┼────────────┼───────────────┤\n│ 0       │ 'peq_canino_otite'                  │ 'openai' │ 1                  │ 0.6666666666666666 │ 0          │ 0             │\n│ 1       │ 'peq_felino_urinario'               │ 'openai' │ 1                  │ 0.6666666666666666 │ 0          │ 0             │\n│ 2       │ 'peq_retorno_dermato'               │ 'openai' │ 1                  │ 0                  │ 0          │ 0             │\n│ 3       │ 'peq_checkup_peso'                  │ 'openai' │ 1                  │ 0.3333333333333333 │ 0          │ 0             │\n│ 4       │ 'peq_canino_neuro_1'                │ 'openai' │ 1                  │ 0.3333333333333333 │ 0          │ 0             │\n│ 5       │ 'peq_felino_trato_urinario'         │ 'openai' │ 1                  │ 0.3333333333333333 │ 0          │ 0             │\n│ 6       │ 'peq_canino_onco'                   │ 'openai' │ 1                  │ 0.3333333333333333 │ 0          │ 0             │\n│ 7       │ 'peq_canino_odonto'                 │ 'openai' │ 1                  │ 0.6666666666666666 │ 0          │ 0             │\n│ 8       │ 'peq_canino_hemato'                 │ 'openai' │ 1                  │ 0.3333333333333333 │ 0          │ 0             │\n│ 9       │ 'peq_canino_leish'                  │ 'openai' │ 1                  │ 0.6666666666666666 │ 0          │ 0             │\n│ 10      │ 'peq_canino_obstetrica'             │ 'openai' │ 1                  │ 0.6666666666666666 │ 0          │ 0             │\n│ 11      │ 'peq_canino_piometra'               │ 'openai' │ 1                  │ 0.6666666666666666 │ 0          │ 0             │\n│ 12      │ 'peq_canino_colapso_traqueia'       │ 'openai' │ 1                  │ 0.6666666666666666 │ 0          │ 0             │\n│ 13      │ 'peq_canino_otite_croni'            │ 'openai' │ 1                  │ 0.6666666666666666 │ 0          │ 0             │\n│ 14      │ 'peq_canino_parvo'                  │ 'openai' │ 1                  │ 0.6666666666666666 │ 0          │ 0             │\n│ 15      │ 'peq_felino_esporo'                 │ 'openai' │ 1                  │ 0.3333333333333333 │ 0          │ 0             │\n│ 16      │ 'peq_canino_gdv'                    │ 'openai' │ 1                  │ 0.6666666666666666 │ 0          │ 0             │\n│ 17      │ 'peq_canino_hipotireo'              │ 'openai' │ 1                  │ 0.6666666666666666 │ 0          │ 0             │\n│ 18      │ 'peq_canino_demodecia'              │ 'openai' │ 1                  │ 0.3333333333333333 │ 0          │ 0             │\n│ 19      │ 'peq_canino_hernia'                 │ 'openai' │ 1                  │ 0.6666666666666666 │ 0          │ 0             │\n│ 20      │ 'grande_bovino_mastite'             │ 'openai' │ 1                  │ 0                  │ 0          │ 0             │\n│ 21      │ 'grande_equino_claudicacao'         │ 'openai' │ 1                  │ 0                  │ 0          │ 0             │\n│ 22      │ 'grande_bezerro_diarreia'           │ 'openai' │ 1                  │ 0                  │ 0          │ 0             │\n│ 23      │ 'grande_retorno_rebanho'            │ 'openai' │ 1                  │ 0                  │ 0          │ 0             │\n│ 24      │ 'grande_bovino_metrite_posparto'    │ 'openai' │ 1                  │ 0                  │ 0          │ 0             │\n│ 25      │ 'grande_bovino_cetose'              │ 'openai' │ 1                  │ 0.3333333333333333 │ 0          │ 0             │\n│ 26      │ 'grande_bovino_pneumonia_lote'      │ 'openai' │ 1                  │ 0                  │ 0          │ 0             │\n│ 27      │ 'grande_equino_laminite'            │ 'openai' │ 1                  │ 0                  │ 0          │ 0             │\n│ 28      │ 'grande_equino_colica_gasosa'       │ 'openai' │ 0.7777777777777778 │ 0                  │ 0          │ 0             │\n│ 29      │ 'grande_equino_retorno_tendinite'   │ 'openai' │ 1                  │ 0                  │ 0          │ 0             │\n│ 30      │ 'grande_ovino_helmintose'           │ 'openai' │ 1                  │ 0                  │ 0          │ 0             │\n│ 31      │ 'grande_caprino_mastite'            │ 'openai' │ 1                  │ 0                  │ 0          │ 0             │\n│ 32      │ 'grande_suino_enterite'             │ 'openai' │ 1                  │ 0                  │ 0          │ 0             │\n│ 33      │ 'grande_bovino_hipocalcemia'        │ 'openai' │ 0.8888888888888888 │ 0                  │ 0          │ 0             │\n│ 34      │ 'grande_bovino_retorno_mastite'     │ 'openai' │ 1                  │ 0                  │ 0          │ 0             │\n│ 35      │ 'grande_equino_anemia_infecciosa'   │ 'openai' │ 1                  │ 0                  │ 0          │ 0             │\n│ 36      │ 'grande_caprino_retorno_parasitose' │ 'openai' │ 1                  │ 0                  │ 0          │ 0             │\n│ 37      │ 'grande_bovino_pododermatite'       │ 'openai' │ 1                  │ 0                  │ 0          │ 0             │\n│ 38      │ 'grande_equino_uveite'              │ 'openai' │ 1                  │ 0                  │ 0          │ 0             │\n│ 39      │ 'grande_bovino_repro_infertilidade' │ 'openai' │ 1                  │ 0                  │ 0          │ 0             │\n└─────────┴─────────────────────────────────────┴──────────┴────────────────────┴────────────────────┴────────────┴───────────────┘\n",
+      "stderr": ""
+    },
+    "ai:evaluate:field-dataset:simulated": {
+      "stdout": "\n> vetpro-backend@1.0.0 ai:evaluate:field-dataset:simulated\n> node src/scripts/evaluate-field-agent-dataset.js --simulate-asr --runs=12\n\n=== Avaliacao Dataset de Campo (Apolo) ===\n┌─────────┬─────────────┬────────────┬───────┬─────────────┬────────────────┬────────────────┬───────────────┬──────────┬────────────────┬─────────────┬──────┐\n│ (index) │ diagnostico │ tratamento │ exame │ scoreGlobal │ coberturaPorte │ temDiagnostico │ temTratamento │ temExame │ transcriptOnly │ simulateAsr │ runs │\n├─────────┼─────────────┼────────────┼───────┼─────────────┼────────────────┼────────────────┼───────────────┼──────────┼────────────────┼─────────────┼──────┤\n│ 0       │ 1           │ 0.357      │ 0.333 │ 0.563       │ 0.6            │ true           │ true          │ false    │ true           │ true        │ 12   │\n└─────────┴─────────────┴────────────┴───────┴─────────────┴────────────────┴────────────────┴───────────────┴──────────┴────────────────┴─────────────┴──────┘\n┌─────────┬──────────┬───────────┬────────────┬──────────┬──────────┬───────────┐\n│ (index) │ avgScore │ bestScore │ worstScore │ consDiag │ consTrat │ consExame │\n├─────────┼──────────┼───────────┼────────────┼──────────┼──────────┼───────────┤\n│ 0       │ 0.53     │ 0.635     │ 0.397      │ 0.879    │ 0.667    │ 0.818     │\n└─────────┴──────────┴───────────┴────────────┴──────────┴──────────┴───────────┘\nRelatorio salvo em: C:\\Cliente\\HSS\\VetPro\\vetpro-backend\\logs\\field-agent-eval-2026-03-11T19-17-29-844Z.json\n",
+      "stderr": ""
+    },
+    "ai:quality:dashboard": {
+      "stdout": "\n> vetpro-backend@1.0.0 ai:quality:dashboard\n> node src/scripts/field-assist-quality-dashboard.js --days=365\n\nDashboard gerado: C:\\Cliente\\HSS\\VetPro\\vetpro-backend\\logs\\field-assist-quality-2026-03-11T19-17-30-538Z.json\nResumo markdown: C:\\Cliente\\HSS\\VetPro\\vetpro-backend\\logs\\field-assist-quality-2026-03-11T19-17-30-538Z.md\nTotal requests analisadas: 0\n",
+      "stderr": ""
+    },
+    "ai:quality:alerts": {
+      "stdout": "\n> vetpro-backend@1.0.0 ai:quality:alerts\n> node src/scripts/field-assist-regression-alerts.js\n\nDashboard analisado: C:\\Cliente\\HSS\\VetPro\\vetpro-backend\\logs\\field-assist-quality-latest.json\nThresholds: {\"minSamples\":5,\"maxNeedsReviewRate\":0.35,\"maxP95TotalMs\":12000,\"minAiSelfCheckAvgScore\":0.6,\"maxLowConfidenceAvgCount\":2.5,\"maxTranscriptionFallbackRate\":0.5}\nAmostras: 0\nValidação pulada: insufficient_samples (minSamples=5).\n",
+      "stderr": ""
+    },
+    "ai:regression:suite": {
+      "stdout": "\n> vetpro-backend@1.0.0 ai:regression:suite\n> node src/scripts/field-assist-regression-suite.js\n\nBaseline: 2026-03-11\nRelatorio analisado: C:\\Cliente\\HSS\\VetPro\\vetpro-backend\\logs\\field-agent-eval-2026-03-11T19-20-41-152Z.json\n┌─────────┬────────────────────────┬──────┬────────┬───────────┐\n│ (index) │ metric                 │ pass │ actual │ expected  │\n├─────────┼────────────────────────┼──────┼────────┼───────────┤\n│ 0       │ 'runs'                 │ true │ 12     │ '>= 8'    │\n│ 1       │ 'avgGlobalScore'       │ true │ 0.53   │ '>= 0.45' │\n│ 2       │ 'diagnosisConsistency' │ true │ 0.879  │ '>= 0.55' │\n│ 3       │ 'treatmentConsistency' │ true │ 0.667  │ '>= 0.55' │\n│ 4       │ 'examConsistency'      │ true │ 0.818  │ '>= 0.55' │\n└─────────┴────────────────────────┴──────┴────────┴───────────┘\n",
+      "stderr": ""
+    }
+  }
+}

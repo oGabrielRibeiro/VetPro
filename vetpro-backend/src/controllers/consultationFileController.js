@@ -37,6 +37,12 @@ async function uploadFile(req, res) {
 
     return res.status(201).json(file);
   } catch (error) {
+    if (error?.message === 'LIMIT_CLINICAL_PHOTOS') {
+      return res.status(400).json({
+        error:
+          'Limite de imagens clinicas atingido. Remova um anexo ou aumente o limite.',
+      });
+    }
     logger.error(error);
     return res
       .status(500)

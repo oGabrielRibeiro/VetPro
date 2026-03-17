@@ -1,0 +1,10 @@
+Write-Host "VetPro UI/UX - Roteiro de validacao" -ForegroundColor Cyan
+Write-Host ""
+Write-Host "Arquivo de referencia: docs/UIUX-VALIDACAO.md"
+Write-Host ""
+Write-Host "Checklist rapido:"
+Write-Host "1) Login -> Pacientes -> Consulta -> Receita/PDF"
+Write-Host "2) Estados: loading/empty/error/success por tela"
+Write-Host "3) Regressao visual em 360x780, 390x844, 768x1024, 1366x768, 1440x900"
+Write-Host ""
+Write-Host "Dica: rode o frontend e valide nas resolucoes acima."

@@ -1,13 +1,21 @@
 import React from "react";
 import AppIcon from "./AppIcon";
 
-const Sidebar = ({ currentUser, currentView, setCurrentView, onLogout }) => {
+const Sidebar = ({
+  currentUser,
+  currentView,
+  setCurrentView,
+  onLogout,
+  showUiLab = false,
+}) => {
   const navItems = [
-    { id: "dashboard", icon: "dashboard", label: "Dashboard" },
+    { id: "dashboard", icon: "dashboard", label: "Inicio" },
     { id: "patients", icon: "patients", label: "Pacientes" },
     { id: "appointments", icon: "appointments", label: "Agenda" },
     { id: "consultations", icon: "consultations", label: "Prontuarios" },
     { id: "reports", icon: "reports", label: "Relatorios" },
+    { id: "about", icon: "info", label: "Sobre" },
+    ...(showUiLab ? [{ id: "ui-playground", icon: "reports", label: "Laboratorio UI" }] : []),
   ];
 
   const clinicLogo =
@@ -41,15 +49,16 @@ const Sidebar = ({ currentUser, currentView, setCurrentView, onLogout }) => {
         </div>
       </div>
 
-      <nav className="p-4 sm:p-5 flex-1 overflow-y-auto">
+      <nav aria-label="Menu principal" className="p-4 sm:p-5 flex-1 overflow-y-auto">
         <p className="mb-3 px-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-gray-400 dark:text-gray-500">
-          Workspace
+          Central
         </p>
         <div className="space-y-1.5">
           {navItems.map((item) => (
             <button
               key={item.id}
               onClick={() => setCurrentView(item.id)}
+              aria-current={currentView === item.id ? "page" : undefined}
               className={`w-full flex items-center space-x-3 px-3.5 py-3 rounded-xl border transition-all ${
                 currentView === item.id
                   ? "border-teal-200 bg-gradient-to-r from-teal-50 to-blue-50 text-teal-800 dark:border-teal-700/60 dark:from-teal-900/40 dark:to-blue-900/25 dark:text-teal-200 shadow-sm"

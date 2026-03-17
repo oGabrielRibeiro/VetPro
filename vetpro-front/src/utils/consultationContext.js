@@ -1,8 +1,12 @@
 export const CONSULTATION_TYPE_OPTIONS = [
   { value: "nova", label: "Consulta geral" },
+  { value: "medicacao", label: "Prescricao / Medicacao" },
   { value: "vacinacao", label: "Vacinacao" },
   { value: "anestesia", label: "Anestesia" },
+  { value: "procedimento", label: "Procedimento cirurgico" },
+  { value: "internacao", label: "Evolucao / Internacao" },
   { value: "retorno", label: "Retorno" },
+  { value: "laudo", label: "Laudo / Atestado" },
 ];
 
 const CONSULTATION_CONTEXT_MAP = {
@@ -14,13 +18,29 @@ const CONSULTATION_CONTEXT_MAP = {
     label: "Vacinacao",
     shortLabel: "Vacinacao",
   },
+  medicacao: {
+    label: "Prescricao / Medicacao",
+    shortLabel: "Medicacao",
+  },
   anestesia: {
     label: "Anestesia",
     shortLabel: "Anestesia",
   },
+  procedimento: {
+    label: "Procedimento cirurgico",
+    shortLabel: "Procedimento",
+  },
+  internacao: {
+    label: "Evolucao / Internacao",
+    shortLabel: "Internacao",
+  },
   retorno: {
     label: "Retorno",
     shortLabel: "Retorno",
+  },
+  laudo: {
+    label: "Laudo / Atestado",
+    shortLabel: "Laudo",
   },
 };
 

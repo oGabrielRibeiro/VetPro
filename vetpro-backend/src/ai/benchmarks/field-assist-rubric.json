@@ -1,0 +1,57 @@
+{
+  "version": "2026-03-11.v1",
+  "description": "Rubrica oficial de avaliacao por campo para pipeline de audio/transcricao/parser/IA.",
+  "labels": {
+    "exato": {
+      "score": 1,
+      "criteria": "Conteudo clinico principal e detalhes chave corretos."
+    },
+    "parcial": {
+      "score": 0.5,
+      "criteria": "Campo com sinal clinico correto, mas incompleto ou parcialmente especifico."
+    },
+    "incorreto": {
+      "score": 0,
+      "criteria": "Conteudo contraditorio, inventado ou clinicamente inadequado."
+    },
+    "nao_informado": {
+      "score": 0,
+      "criteria": "Campo ausente quando havia evidencia suficiente no transcript."
+    }
+  },
+  "fieldWeights": {
+    "chiefComplaint": 0.12,
+    "anamnesis": 0.12,
+    "physicalExam": 0.18,
+    "diagnosis": 0.2,
+    "treatment": 0.2,
+    "medications": 0.08,
+    "examDetails": 0.06,
+    "returnRecommendation": 0.04
+  },
+  "specificFieldWeights": {
+    "vacinacao": 0.15,
+    "vermifugacao": 0.15,
+    "bodyConditionScore": 0.2,
+    "daysInMilk": 0.1,
+    "parity": 0.1,
+    "forage": 0.15,
+    "concentrate": 0.15
+  },
+  "partialMatchRules": {
+    "minLexicalOverlap": 0.45,
+    "minSemanticSignal": 0.5,
+    "allowUnitNormalization": true,
+    "allowSynonymNormalization": true
+  },
+  "gatingRules": {
+    "requiredCoreFields": [
+      "physicalExam",
+      "diagnosis",
+      "treatment"
+    ],
+    "overfillPenalty": 0.2,
+    "hallucinationPenalty": 0.35,
+    "contradictionPenalty": 0.25
+  }
+}

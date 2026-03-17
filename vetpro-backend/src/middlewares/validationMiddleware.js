@@ -51,8 +51,21 @@ const replacePatientSchema = patientBaseSchema
 const createConsultationSchema = z.object({
   patientId: z.string().uuid('ID de paciente inválido').optional(),
   consultationType: z
-    .enum(['nova', 'consulta', 'retorno', 'emergencia', 'checkup'])
+    .enum([
+      'nova',
+      'consulta',
+      'retorno',
+      'emergencia',
+      'checkup',
+      'vacinacao',
+      'anestesia',
+      'medicacao',
+      'procedimento',
+      'internacao',
+      'laudo',
+    ])
     .optional(),
+  customFormData: z.any().optional(),
   chiefComplaint: z.string().optional(),
   anamnesis: z.string().optional(),
   physicalExam: z.string().optional(),

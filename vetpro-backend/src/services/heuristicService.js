@@ -204,6 +204,14 @@ const PORTE_DICTIONARY_FILE_PATH = path.join(
 );
 let porteDictionaryCache = null;
 let porteDictionaryCacheMtime = 0;
+const SPECIFIC_FIELD_DICTIONARY_FILE_PATH = path.join(
+  __dirname,
+  '..',
+  'ai',
+  'specificFieldExtractionDictionary.json',
+);
+let specificFieldDictionaryCache = null;
+let specificFieldDictionaryCacheMtime = 0;
 
 function defaultPorteDictionary() {
   return {
@@ -270,6 +278,145 @@ function safeReadPorteDictionaryFile() {
     });
     return defaultPorteDictionary();
   }
+}
+
+function defaultSpecificFieldDictionary() {
+  return {
+    global: {
+      herdDeworming: [
+        'controle parasitario do rebanho',
+        'anti helmintico coletivo',
+        'desverminacao coletiva',
+      ],
+      herdVaccination: ['imunizacao do rebanho', 'vacinas do lote'],
+      bodyConditionScore: ['ecc', 'escore corporal'],
+      daysInMilk: ['del'],
+      parity: ['paridade', 'numero de crias'],
+    },
+    byPorte: {
+      grande: {
+        forage: ['forragem', 'capineira'],
+        concentrate: ['farelado', 'nucleo concentrado'],
+        rumenMotility: ['movimentos ruminais'],
+      },
+      pequeno: {
+        diet: ['plano alimentar'],
+        ectoparasiteControl: ['controle de carrapatos'],
+      },
+    },
+    bySpecies: {
+      equino: {
+        hoofStatus: ['aprumo', 'ranilha'],
+      },
+      bovino: {
+        rumenMotility: ['ruminacao', 'atonia ruminal'],
+        milkProduction: ['producao diaria de leite'],
+      },
+      canino: {
+        lifestyle: ['enriquecimento ambiental'],
+      },
+      felino: {
+        lifestyle: ['acesso a janelas'],
+      },
+    },
+  };
+}
+
+function sanitizeSpecificFieldDictionaryMap(raw = {}) {
+  if (!raw || typeof raw !== 'object') return {};
+  const output = {};
+  for (const [fieldKey, terms] of Object.entries(raw)) {
+    if (!Array.isArray(terms)) continue;
+    const seen = new Set();
+    const cleanTerms = terms
+      .map((item) => String(item || '').trim())
+      .filter(Boolean)
+      .filter((item) => {
+        const key = normalize(item);
+        if (!key || seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+    if (cleanTerms.length) output[fieldKey] = cleanTerms;
+  }
+  return output;
+}
+
+function safeReadSpecificFieldDictionaryFile() {
+  if (!fs.existsSync(SPECIFIC_FIELD_DICTIONARY_FILE_PATH))
+    return defaultSpecificFieldDictionary();
+
+  try {
+    const stat = fs.statSync(SPECIFIC_FIELD_DICTIONARY_FILE_PATH);
+    const mtime = Number(stat.mtimeMs || 0);
+    if (
+      specificFieldDictionaryCache &&
+      mtime === specificFieldDictionaryCacheMtime
+    ) {
+      return specificFieldDictionaryCache;
+    }
+
+    const raw = fs.readFileSync(SPECIFIC_FIELD_DICTIONARY_FILE_PATH, 'utf8');
+    const parsed = JSON.parse(raw);
+    const dictionary = {
+      global: sanitizeSpecificFieldDictionaryMap(parsed?.global || {}),
+      byPorte: {
+        grande: sanitizeSpecificFieldDictionaryMap(
+          parsed?.byPorte?.grande || {},
+        ),
+        pequeno: sanitizeSpecificFieldDictionaryMap(
+          parsed?.byPorte?.pequeno || {},
+        ),
+      },
+      bySpecies: Object.entries(parsed?.bySpecies || {}).reduce(
+        (acc, [speciesId, termsByField]) => {
+          acc[
+            String(speciesId || '')
+              .trim()
+              .toLowerCase()
+          ] = sanitizeSpecificFieldDictionaryMap(termsByField || {});
+          return acc;
+        },
+        {},
+      ),
+    };
+
+    specificFieldDictionaryCache = dictionary;
+    specificFieldDictionaryCacheMtime = mtime;
+    return dictionary;
+  } catch (error) {
+    logger.error('Falha ao carregar dicionario de extracao de campos', {
+      error: error.message,
+    });
+    return defaultSpecificFieldDictionary();
+  }
+}
+
+function resolveGuidedLabelsForSpecificField(
+  key = '',
+  baseLabels = [],
+  porte = 'pequeno',
+  speciesId = '',
+) {
+  const dictionary = safeReadSpecificFieldDictionaryFile();
+  const normalizedSpeciesId = String(speciesId || '')
+    .trim()
+    .toLowerCase();
+  const globalLabels = dictionary?.global?.[key] || [];
+  const porteLabels = dictionary?.byPorte?.[porte]?.[key] || [];
+  const speciesLabels =
+    dictionary?.bySpecies?.[normalizedSpeciesId]?.[key] || [];
+
+  const seen = new Set();
+  return [...baseLabels, ...globalLabels, ...porteLabels, ...speciesLabels]
+    .map((value) => String(value || '').trim())
+    .filter(Boolean)
+    .filter((value) => {
+      const normalized = normalize(value);
+      if (!normalized || seen.has(normalized)) return false;
+      seen.add(normalized);
+      return true;
+    });
 }
 
 function scorePorteByDictionary(source = '', terms = []) {
@@ -476,7 +623,7 @@ const SPECIFIC_FIELD_SEMANTIC_REGEX = {
   parity: /\b(partos?|paridade)\b/,
   herdVaccination: /\b(vacin|raiva|brucel|clostrid|rebanho)\b/,
   herdDeworming: /\b(vermif|ivermect|rebanho)/,
-  forage: /\b(volumoso|pasto|silagem|feno|capim)\b/,
+  forage: /\b(volumoso|forragem|capineira|pasto|silagem|feno|capim)\b/,
   concentrate: /\b(concentrado|racao|ração|milho|farelo)\b/,
   waterIntake: /\b(agua|água|ingest|consumo|litro)\b/,
   mineralSupplementation: /\b(sal mineral|mineral|suplement)\b/,
@@ -561,14 +708,172 @@ function resolveSpecificFieldKeys(recordProfile = null, porte = 'pequeno') {
   return SPECIFIC_FIELDS_BY_PORTE[porte] || SPECIFIC_FIELDS_BY_PORTE.pequeno;
 }
 
-function sanitizeSpecificFields(raw = {}, allowedKeys = []) {
+function normalizeSpecificValueForSanitize(key, value) {
+  const text = String(value || '').trim();
+  if (!text) return '';
+
+  const parseNumber = (raw = '') => {
+    const clean = String(raw || '')
+      .replace(',', '.')
+      .trim();
+    if (!clean) return null;
+    const num = Number(clean);
+    return Number.isFinite(num) ? num : null;
+  };
+
+  if (key === 'bodyConditionScore') {
+    const explicit =
+      text.match(
+        /\b(?:ecc|escore(?:\s+corporal)?)\s*(?:de|:)?\s*([1-5](?:[.,]\d)?)\b/i,
+      ) || text.match(/\b([1-5](?:[.,]\d)?)\s*(?:\/\s*5)?\b/i);
+    const score = parseNumber(explicit?.[1] || '');
+    if (score === null || score < 1 || score > 5) return '';
+    return Number.isInteger(score) ? String(score) : score.toFixed(1);
+  }
+
+  if (key === 'daysInMilk') {
+    const match =
+      text.match(/\b(?:del|dias?\s+em\s+lactacao)\s*[:=]?\s*(\d{1,3})\b/i) ||
+      text.match(/\b(\d{1,3})\s*(?:dias?|del)\b/i);
+    const days = parseNumber(match?.[1] || '');
+    if (days === null || days < 0 || days > 999) return '';
+    return `${Math.round(days)} dias`;
+  }
+
+  if (key === 'parity') {
+    const match =
+      text.match(/\b(?:paridade|partos?)\s*(?:de|:)?\s*(\d{1,2})\b/i) ||
+      text.match(/\b(\d{1,2})\s*partos?\b/i);
+    const parity = parseNumber(match?.[1] || '');
+    if (parity === null || parity < 0 || parity > 30) return '';
+    return String(Math.round(parity));
+  }
+
+  return text;
+}
+
+function sanitizeSpecificFields(raw = {}, allowedKeys = [], sourceText = '') {
   const source = raw && typeof raw === 'object' ? raw : {};
+  const normalizedSourceText = normalize(sourceText || '');
+  const normalizedSourceTextNumeric = normalizedSourceText.replace(/,/g, '.');
+  const shortNumericAllowedKeys = new Set([
+    'bodyConditionScore',
+    'daysInMilk',
+    'parity',
+    'temperature',
+    'heartRate',
+    'respiratoryRate',
+  ]);
   const cleanedByKey = {};
   const valueFrequency = new Map();
+  const tokenStopWords = new Set([
+    'de',
+    'da',
+    'do',
+    'das',
+    'dos',
+    'e',
+    'em',
+    'no',
+    'na',
+    'nos',
+    'nas',
+    'com',
+    'para',
+    'por',
+    'um',
+    'uma',
+    'ao',
+    'aos',
+    'as',
+    'os',
+    'que',
+  ]);
+
+  const normalizedFieldSignature = (value = '') =>
+    normalize(value)
+      .replace(/[^a-z0-9\s]/g, ' ')
+      .split(/\s+/g)
+      .map((token) => token.trim())
+      .filter((token) => token.length >= 3 && !tokenStopWords.has(token))
+      .join(' ');
+
+  const specificEvidenceScore = (key, value) => {
+    const normalized = normalize(value);
+    if (!normalized) return 0;
+    let score = 0;
+    const semanticRegex = SPECIFIC_FIELD_SEMANTIC_REGEX[key];
+    if (semanticRegex && semanticRegex.test(normalized)) score += 2;
+    const labels = SPECIFIC_FIELD_LABELS[key] || [];
+    const labelHits = labels.reduce((sum, label) => {
+      const token = normalize(label);
+      return token && normalized.includes(token) ? sum + 1 : sum;
+    }, 0);
+    score += Math.min(1.2, labelHits * 0.4);
+    if (/\b\d+([.,]\d+)?\b/.test(normalized)) score += 0.4;
+    if (/\b(mg\/kg|sid|bid|tid|litro|dias?|horas?)\b/.test(normalized))
+      score += 0.4;
+    if (normalized.split(/\s+/g).length >= 5) score += 0.2;
+    return Number(score.toFixed(2));
+  };
+
+  const hasGroundingInSource = (value = '') => {
+    const normalizedValue = normalize(value);
+    if (!normalizedValue) return false;
+    if (!normalizedSourceText) return true;
+    if (normalizedSourceText.includes(normalizedValue)) return true;
+
+    const lexical = jaccardSimilarityScore(value, sourceText);
+    if (lexical >= 0.035) return true;
+
+    const tokens = normalizedValue
+      .replace(/[^a-z0-9\s]/g, ' ')
+      .split(/\s+/g)
+      .filter((token) => token.length >= 3 && !tokenStopWords.has(token));
+
+    // Campos numericos curtos (ex.: "3.5", "4") precisam de grounding por numero
+    // antes de descartar por falta de tokens lexicais.
+    const numericTokens = normalizedValue.match(/\d+(?:[.,]\d+)?/g) || [];
+    if (
+      numericTokens.length > 0 &&
+      numericTokens.some((num) => {
+        const n = String(num || '').replace(',', '.');
+        return (
+          normalizedSourceText.includes(num) ||
+          normalizedSourceTextNumeric.includes(n)
+        );
+      })
+    ) {
+      return true;
+    }
+
+    if (!tokens.length) return false;
+
+    const overlap = tokens.filter((token) =>
+      normalizedSourceText.includes(token),
+    );
+    const overlapRatio = overlap.length / tokens.length;
+    if (overlapRatio >= 0.5 && overlap.length >= 2) return true;
+
+    return false;
+  };
+
+  const hasLabelAnchoring = (key, value) => {
+    const normalizedValue = normalize(value);
+    if (!normalizedSourceText || !normalizedValue) return false;
+    if (!normalizedSourceText.includes(normalizedValue)) return false;
+    const labels = SPECIFIC_FIELD_LABELS[key] || [];
+    return labels.some((label) =>
+      normalizedSourceText.includes(normalize(label)),
+    );
+  };
 
   for (const key of allowedKeys) {
     const rawValue = source[key];
-    const value = cleanSpecificFieldValue(rawValue);
+    const value = normalizeSpecificValueForSanitize(
+      key,
+      cleanSpecificFieldValue(rawValue),
+    );
     const normalizedValue = normalize(value).trim();
     if (
       !value ||
@@ -580,7 +885,8 @@ function sanitizeSpecificFields(raw = {}, allowedKeys = []) {
       continue;
     }
 
-    if (value.length < 3 || value.length > 180) {
+    const allowShortNumeric = shortNumericAllowedKeys.has(key);
+    if ((value.length < 3 && !allowShortNumeric) || value.length > 180) {
       cleanedByKey[key] = '';
       continue;
     }
@@ -596,11 +902,20 @@ function sanitizeSpecificFields(raw = {}, allowedKeys = []) {
     }
 
     const semanticRegex = SPECIFIC_FIELD_SEMANTIC_REGEX[key];
+    const tokenCount = normalizedValueForField
+      .split(/\s+/g)
+      .filter(Boolean).length;
     if (
       semanticRegex &&
       !semanticRegex.test(normalizedValueForField) &&
-      normalizedValueForField.split(/\s+/g).length > 6
+      tokenCount > 3 &&
+      !hasLabelAnchoring(key, value)
     ) {
+      cleanedByKey[key] = '';
+      continue;
+    }
+
+    if (!hasGroundingInSource(value)) {
       cleanedByKey[key] = '';
       continue;
     }
@@ -613,6 +928,7 @@ function sanitizeSpecificFields(raw = {}, allowedKeys = []) {
   // Evita sobrepreenchimento com a mesma frase em vários campos.
   const deduped = {};
   const seenRepeated = new Set();
+  const accepted = [];
   for (const key of allowedKeys) {
     const value = cleanedByKey[key] || '';
     if (!value) {
@@ -621,27 +937,93 @@ function sanitizeSpecificFields(raw = {}, allowedKeys = []) {
     }
     const normalizedValue = normalize(value);
     const repeated = (valueFrequency.get(normalizedValue) || 0) > 1;
+    const signature = normalizedFieldSignature(value);
+    const currentScore = specificEvidenceScore(key, value);
+    let skipCurrent = false;
+
     if (repeated && seenRepeated.has(normalizedValue)) {
       deduped[key] = '';
       continue;
     }
+
+    for (let i = 0; i < accepted.length; i += 1) {
+      const existing = accepted[i];
+      const similarity = jaccardSimilarityScore(signature, existing.signature);
+      const overlapByContainment =
+        (signature.length >= 22 && existing.signature.includes(signature)) ||
+        (existing.signature.length >= 22 &&
+          signature.includes(existing.signature));
+      const nearDuplicate =
+        similarity >= 0.84 ||
+        overlapByContainment ||
+        normalizedValue === existing.normalizedValue;
+
+      if (!nearDuplicate) continue;
+
+      if (currentScore > existing.score + 0.35) {
+        deduped[existing.key] = '';
+        accepted[i] = {
+          key,
+          normalizedValue,
+          signature,
+          score: currentScore,
+        };
+        deduped[key] = value;
+      } else {
+        deduped[key] = '';
+        skipCurrent = true;
+      }
+      break;
+    }
+
+    if (skipCurrent) continue;
+
     if (repeated) {
       seenRepeated.add(normalizedValue);
     }
-    deduped[key] = value;
+    if (!(key in deduped)) {
+      deduped[key] = value;
+      accepted.push({
+        key,
+        normalizedValue,
+        signature,
+        score: currentScore,
+      });
+    }
   }
 
   return deduped;
 }
 
 /* eslint-disable no-use-before-define */
-function extractSpecificFieldsHeuristic(sourceText = '', allowedKeys = []) {
+function extractSpecificFieldsHeuristic(
+  sourceText = '',
+  allowedKeys = [],
+  options = {},
+) {
   const source = stripSpeakerTagsFromText(sourceText);
+  const porte = options?.porte === 'grande' ? 'grande' : 'pequeno';
+  const speciesProfile =
+    options?.speciesProfile || detectSpeciesProfile(options?.patient, source);
   const output = {};
-  const stopLabels = Object.values(SPECIFIC_FIELD_LABELS).flat();
+  const labelsByKey = {};
+  const stopLabelsSet = new Set();
 
   for (const key of allowedKeys) {
-    const labels = SPECIFIC_FIELD_LABELS[key] || [];
+    const labels = resolveGuidedLabelsForSpecificField(
+      key,
+      SPECIFIC_FIELD_LABELS[key] || [],
+      porte,
+      speciesProfile?.id || '',
+    );
+    labelsByKey[key] = labels;
+    labels.forEach((label) => stopLabelsSet.add(label));
+  }
+
+  const stopLabels = Array.from(stopLabelsSet);
+
+  for (const key of allowedKeys) {
+    const labels = labelsByKey[key] || [];
     if (!labels.length) {
       output[key] = '';
       continue;
@@ -682,7 +1064,81 @@ function buildMissingFields(draft, specificFieldKeys = []) {
 function normalizeSpecificValueByKey(key, value) {
   const text = String(value || '').trim();
   if (!text) return '';
-  // extensões por chave podem ser aplicadas aqui (ex.: upper/lower, map aliases)
+  const normalized = normalize(text);
+
+  const parseNumber = (raw = '') => {
+    const clean = String(raw || '')
+      .replace(',', '.')
+      .trim();
+    if (!clean) return null;
+    const num = Number(clean);
+    if (!Number.isFinite(num)) return null;
+    return num;
+  };
+
+  if (key === 'bodyConditionScore') {
+    const explicit =
+      text.match(
+        /\b(?:ecc|escore(?:\s+corporal)?)\s*(?:de|:)?\s*([1-5](?:[.,]\d)?)\b/i,
+      ) || text.match(/\b([1-5](?:[.,]\d)?)\s*(?:\/\s*5)?\b/i);
+    const score = parseNumber(explicit?.[1] || '');
+    if (score === null) return '';
+    if (score < 1 || score > 5) return '';
+    return Number.isInteger(score) ? String(score) : score.toFixed(1);
+  }
+
+  if (key === 'daysInMilk') {
+    const match =
+      text.match(/\b(?:del|dias?\s+em\s+lactacao)\s*[:=]?\s*(\d{1,3})\b/i) ||
+      text.match(/\b(\d{1,3})\s*(?:dias?|del)\b/i);
+    const days = parseNumber(match?.[1] || '');
+    if (days === null) return '';
+    if (days < 0 || days > 999) return '';
+    return `${Math.round(days)} dias`;
+  }
+
+  if (key === 'parity') {
+    const match =
+      text.match(/\b(?:paridade|partos?)\s*(?:de|:)?\s*(\d{1,2})\b/i) ||
+      text.match(/\b(\d{1,2})\s*partos?\b/i);
+    const parity = parseNumber(match?.[1] || '');
+    if (parity === null) return '';
+    if (parity < 0 || parity > 30) return '';
+    return String(Math.round(parity));
+  }
+
+  if (key === 'temperature') {
+    const match = text.match(/\b(\d{2}(?:[.,]\d)?)\s*(?:°?\s*c|graus?)\b/i);
+    const temp = parseNumber(match?.[1] || '');
+    if (temp === null) return '';
+    if (temp < 34 || temp > 43) return '';
+    return `${temp.toFixed(1)} C`;
+  }
+
+  if (key === 'heartRate') {
+    const match = text.match(
+      /\b(?:fc|frequencia\s+cardiaca)\D{0,10}(\d{2,3})\s*(?:bpm)?\b/i,
+    );
+    const hr = parseNumber(match?.[1] || '');
+    if (hr === null) return '';
+    if (hr < 20 || hr > 260) return '';
+    return `${Math.round(hr)} bpm`;
+  }
+
+  if (key === 'respiratoryRate') {
+    const match = text.match(
+      /\b(?:fr|frequencia\s+respiratoria)\D{0,10}(\d{1,3})\s*(?:mpm|irpm)?\b/i,
+    );
+    const rr = parseNumber(match?.[1] || '');
+    if (rr === null) return '';
+    if (rr < 5 || rr > 180) return '';
+    return `${Math.round(rr)} mpm`;
+  }
+
+  if (normalized === 'nao informado' || normalized === 'não informado') {
+    return '';
+  }
+
   return text;
 }
 
@@ -1649,12 +2105,14 @@ function ensureDraftShape(
   mode = 'nova',
   allowedSpecificFieldKeys = [],
   porte = 'pequeno',
+  sourceText = '',
 ) {
   const consultationType = mode === 'retorno' ? 'retorno' : 'nova';
   const rawSpecific = raw.specificFields || raw.specific_fields || {};
   const specificFields = sanitizeSpecificFields(
     rawSpecific,
     allowedSpecificFieldKeys,
+    sourceText,
   );
 
   return {
@@ -1818,6 +2276,7 @@ function buildHeuristicDraft(
   const specificFields = extractSpecificFieldsHeuristic(
     sourceText,
     specificFieldKeys,
+    { patient, porte, speciesProfile },
   );
 
   const draftRaw = {
@@ -2081,6 +2540,7 @@ function buildHeuristicDraft(
     mode,
     specificFieldKeys,
     porte,
+    sourceText,
   );
   const confidence = buildConfidenceByField(
     draft,
@@ -2162,7 +2622,13 @@ function mergeDraftsPreferAI(
   merged.specificFields = mergedSpecific;
 
   // Garante shape correto
-  return ensureDraftShape(merged, mode, specificFieldKeys, porte);
+  return ensureDraftShape(
+    merged,
+    mode,
+    specificFieldKeys,
+    porte,
+    String(aiDraft?.sourceText || heuristicDraft?.sourceText || '').trim(),
+  );
 }
 
 module.exports = {

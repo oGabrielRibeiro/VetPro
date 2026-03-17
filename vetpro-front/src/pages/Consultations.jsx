@@ -2,10 +2,15 @@ import React, { useEffect, useMemo, useState } from "react";
 import { formatDateTimeBR } from "../utils";
 import AppIcon from "../components/AppIcon";
 import SpeciesIcon from "../components/SpeciesIcon";
+import { VpButton } from "../components/ui";
+import useDebouncedValue from "../hooks/useDebouncedValue";
 
 const Consultations = ({
   consultations,
   patients,
+  isLoading = false,
+  errorMessage = "",
+  onRetry,
   onNewConsultation,
   onViewPatientConsultations,
   onViewConsultation,
@@ -14,18 +19,20 @@ const Consultations = ({
   const [filterPatientId, setFilterPatientId] = useState("");
   const [filterDateRange, setFilterDateRange] = useState({ start: "", end: "" });
   const [filteredConsultations, setFilteredConsultations] = useState([]);
+  const debouncedPatientId = useDebouncedValue(filterPatientId, 250);
+  const debouncedDateRange = useDebouncedValue(filterDateRange, 250);
 
   useEffect(() => {
     let filtered = [...consultations];
 
-    if (filterPatientId) {
+    if (debouncedPatientId) {
       filtered = filtered.filter(
-        (c) => String(c.patientId) === String(filterPatientId),
+        (c) => String(c.patientId) === String(debouncedPatientId),
       );
     }
 
-    if (filterDateRange.start) {
-      const startDate = new Date(filterDateRange.start);
+    if (debouncedDateRange?.start) {
+      const startDate = new Date(debouncedDateRange.start);
       startDate.setHours(0, 0, 0, 0);
       filtered = filtered.filter((c) => {
         const consultDate = new Date(c.date || c.createdAt);
@@ -34,8 +41,8 @@ const Consultations = ({
       });
     }
 
-    if (filterDateRange.end) {
-      const endDate = new Date(filterDateRange.end);
+    if (debouncedDateRange?.end) {
+      const endDate = new Date(debouncedDateRange.end);
       endDate.setHours(23, 59, 59, 999);
       filtered = filtered.filter((c) => {
         const consultDate = new Date(c.date || c.createdAt);
@@ -48,7 +55,7 @@ const Consultations = ({
       (a, b) => new Date(b.date || b.createdAt) - new Date(a.date || a.createdAt),
     );
     setFilteredConsultations(filtered);
-  }, [consultations, filterPatientId, filterDateRange]);
+  }, [consultations, debouncedPatientId, debouncedDateRange]);
 
   const getPatientById = (id) =>
     patients.find((p) => String(p.id) === String(id));
@@ -63,12 +70,21 @@ const Consultations = ({
       case "general":
       case "nova":
         return "Consulta geral";
+      case "medicacao":
+      case "prescription":
+        return "Prescricao";
       case "return":
       case "retorno":
         return "Retorno";
       case "vaccination":
       case "vacinacao":
         return "Vacinacao";
+      case "anestesia":
+        return "Anestesia";
+      case "procedimento":
+        return "Procedimento";
+      case "internacao":
+        return "Internacao";
       default:
         return "Consulta";
     }
@@ -83,6 +99,18 @@ const Consultations = ({
     }
     if (template === "vaccination" || template === "vacinacao") {
       return "bg-violet-50 text-violet-800 dark:bg-violet-900/30 dark:text-violet-300";
+    }
+    if (template === "anestesia") {
+      return "bg-amber-50 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300";
+    }
+    if (template === "medicacao" || template === "prescription") {
+      return "bg-cyan-50 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-300";
+    }
+    if (template === "procedimento") {
+      return "bg-indigo-50 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300";
+    }
+    if (template === "internacao") {
+      return "bg-emerald-50 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300";
     }
     return "bg-gray-100 text-gray-800 dark:bg-dark-700 dark:text-gray-200";
   };
@@ -108,65 +136,73 @@ const Consultations = ({
     const returnRate = total ? Math.round((returns / total) * 100) : 0;
     return { total, uniquePatients, returnRate, vaccinations };
   }, [filteredConsultations]);
+  const hasError = Boolean(String(errorMessage || "").trim());
 
   return (
     <div className="w-full max-w-7xl mx-auto space-y-3 sm:space-y-4 subtle-enter">
       {onBack && (
         <div className="flex justify-end">
-          <button
+          <VpButton
             onClick={onBack}
-            className="inline-flex items-center gap-1 rounded-lg border border-gray-200 dark:border-dark-600 bg-white/70 dark:bg-dark-800/60 px-2.5 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-300"
+            variant="neutral"
+            size="sm"
+            icon={<AppIcon name="back" className="h-3.5 w-3.5" />}
+            className="text-xs"
           >
-            <AppIcon name="back" className="h-3.5 w-3.5" />
             Voltar
-          </button>
+          </VpButton>
         </div>
       )}
 
       <section className="shell-surface rounded-3xl border border-gray-200/80 dark:border-dark-700/70 p-3 sm:p-5 lg:p-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-gray-500 dark:text-gray-400">
+            <p className="vp-overline">
               Prontuario central
             </p>
-            <h1 className="shell-title mt-1 text-xl sm:text-3xl font-extrabold text-gray-900 dark:text-white">
+            <h1 className="vp-h1 mt-1">
               Consultas veterinarias
             </h1>
-            <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
+            <p className="vp-subtitle mt-1">
               Consulte historico, compare evolucao e abra rapidamente o atendimento.
             </p>
           </div>
-          <button
+          <VpButton
             onClick={onNewConsultation}
-            className="btn btn-primary btn-lg w-full sm:w-auto"
+            variant="primary"
+            size="lg"
+            icon={<AppIcon name="plus" className="h-4 w-4" />}
+            className="w-full sm:w-auto"
           >
-            <AppIcon name="plus" className="h-4 w-4" />
             Nova consulta
-          </button>
+          </VpButton>
         </div>
       </section>
 
       <section className="shell-surface rounded-3xl border border-gray-200/80 dark:border-dark-700/70 p-3 sm:p-5 lg:p-6">
         <div className="mb-4 flex items-center justify-between gap-2">
-          <h2 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white">
+          <h2 className="vp-h2">
             Filtros
           </h2>
-          <button
+          <VpButton
             onClick={resetFilters}
-            className="text-xs font-semibold text-emerald-700 dark:text-emerald-300"
+            variant="neutral"
+            size="sm"
+            className="text-xs"
           >
             Limpar
-          </button>
+          </VpButton>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1.5">
+            <label htmlFor="consultationFilterPatient" className="vp-label">
               Paciente
             </label>
             <select
+              id="consultationFilterPatient"
               value={filterPatientId}
               onChange={(e) => setFilterPatientId(e.target.value)}
-              className="h-11 sm:h-10 w-full rounded-xl border border-gray-300 dark:border-dark-600 bg-white dark:bg-dark-800 px-3 text-sm"
+              className="vp-input"
             >
               <option value="">Todos os pacientes</option>
               {patients.map((patient) => (
@@ -177,33 +213,63 @@ const Consultations = ({
             </select>
           </div>
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1.5">
+            <label htmlFor="consultationFilterStartDate" className="vp-label">
               Data inicial
             </label>
             <input
+              id="consultationFilterStartDate"
               type="date"
               value={filterDateRange.start}
               onChange={(e) =>
                 setFilterDateRange((prev) => ({ ...prev, start: e.target.value }))
               }
-              className="h-11 sm:h-10 w-full rounded-xl border border-gray-300 dark:border-dark-600 bg-white dark:bg-dark-800 px-3 text-sm"
+              className="vp-input"
             />
           </div>
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1.5">
+            <label htmlFor="consultationFilterEndDate" className="vp-label">
               Data final
             </label>
             <input
+              id="consultationFilterEndDate"
               type="date"
               value={filterDateRange.end}
               onChange={(e) =>
                 setFilterDateRange((prev) => ({ ...prev, end: e.target.value }))
               }
-              className="h-11 sm:h-10 w-full rounded-xl border border-gray-300 dark:border-dark-600 bg-white dark:bg-dark-800 px-3 text-sm"
+              className="vp-input"
             />
           </div>
         </div>
       </section>
+
+      {hasError && (
+        <section className="shell-surface rounded-2xl border border-red-300 bg-red-50 p-4 subtle-fade">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm font-semibold text-red-800">
+              {errorMessage || "Falha ao carregar consultas."}
+            </p>
+            <VpButton type="button" onClick={onRetry} variant="danger">
+              Recarregar
+            </VpButton>
+          </div>
+        </section>
+      )}
+
+      {isLoading && (
+        <section className="space-y-3 subtle-fade">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <article
+              key={`consultation-skeleton-${index}`}
+              className="shell-surface rounded-3xl border border-gray-200/80 dark:border-dark-700/70 p-4 animate-pulse"
+            >
+              <div className="h-4 w-44 rounded bg-gray-200 dark:bg-dark-700" />
+              <div className="mt-2 h-3 w-56 rounded bg-gray-200 dark:bg-dark-700" />
+              <div className="mt-4 h-9 rounded bg-gray-200 dark:bg-dark-700" />
+            </article>
+          ))}
+        </section>
+      )}
 
       <section className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <article className="rounded-2xl border border-gray-200/80 dark:border-dark-700/70 bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-900/25 dark:to-cyan-900/20 p-3.5">
@@ -240,8 +306,8 @@ const Consultations = ({
         </article>
       </section>
 
-      {filteredConsultations.length > 0 ? (
-        <section className="space-y-3">
+      {!isLoading && filteredConsultations.length > 0 ? (
+        <section className="space-y-3 subtle-fade">
           {filteredConsultations.map((consultation) => {
             const patient = getPatientById(consultation.patientId);
             if (!patient) return null;
@@ -317,18 +383,22 @@ const Consultations = ({
 
                   <footer className="pt-3 border-t border-gray-200 dark:border-dark-700 flex flex-wrap items-center justify-between gap-2">
                     <div className="flex flex-wrap gap-2">
-                      <button
+                      <VpButton
                         onClick={() => viewConsultationPreview(consultation)}
-                        className="rounded-lg border border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-900/30 px-2.5 py-1.5 text-xs font-semibold text-indigo-700 dark:text-indigo-300"
+                        variant="info"
+                        size="sm"
+                        className="min-h-[44px] sm:min-h-[40px]"
                       >
                         Visualizar prontuario
-                      </button>
-                      <button
+                      </VpButton>
+                      <VpButton
                         onClick={() => onViewPatientConsultations(patient)}
-                        className="rounded-lg border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/30 px-2.5 py-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-300"
+                        variant="success"
+                        size="sm"
+                        className="min-h-[44px] sm:min-h-[40px]"
                       >
                         Ver historico
-                      </button>
+                      </VpButton>
                     </div>
                     <span className="text-xs text-gray-500 dark:text-gray-400">
                       {consultation.veterinarianName || "Veterinario nao informado"}
@@ -339,26 +409,26 @@ const Consultations = ({
             );
           })}
         </section>
-      ) : (
-        <section className="shell-surface rounded-3xl border border-dashed border-gray-300 dark:border-dark-600 p-8 text-center">
+      ) : !isLoading ? (
+        <section className="shell-surface rounded-3xl border border-dashed border-gray-300 dark:border-dark-600 p-8 text-center subtle-fade">
           <span className="mx-auto mb-3 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-gray-100 dark:bg-dark-700 text-gray-700 dark:text-gray-300">
             <AppIcon name="consultations" />
           </span>
-          <h3 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white mb-2">
+          <h3 className="vp-h2 text-gray-900 dark:text-white mb-2">
             {filterPatientId || filterDateRange.start || filterDateRange.end
               ? "Nenhuma consulta encontrada"
               : "Nenhuma consulta registrada"}
           </h3>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mb-5 max-w-md mx-auto">
+          <p className="vp-subtitle text-gray-500 dark:text-gray-400 mb-5 max-w-md mx-auto">
             {filterPatientId || filterDateRange.start || filterDateRange.end
               ? "Nenhuma consulta corresponde aos filtros selecionados. Ajuste os filtros e tente novamente."
               : "Voce ainda nao registrou nenhuma consulta. Comece com o primeiro atendimento."}
           </p>
-          <button onClick={onNewConsultation} className="btn btn-success btn-lg">
+          <VpButton onClick={onNewConsultation} variant="success" size="lg">
             Registrar primeira consulta
-          </button>
+          </VpButton>
         </section>
-      )}
+      ) : null}
     </div>
   );
 };

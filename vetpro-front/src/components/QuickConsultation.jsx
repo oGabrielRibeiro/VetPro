@@ -5,6 +5,14 @@ import FeedbackBanner from "./FeedbackBanner";
 import LoadingDot from "./LoadingDot";
 import FloatingFormActions from "./FloatingFormActions";
 import ConfirmDialog from "./ConfirmDialog";
+import AnesthesiaFormFields from "./AnesthesiaFormFields";
+import MedicationFormFields from "./MedicationFormFields";
+import ProcedureFormFields from "./ProcedureFormFields";
+import HospitalizationFormFields from "./HospitalizationFormFields";
+import VaccinationFormFields from "./VaccinationFormFields";
+import FollowUpFormFields from "./FollowUpFormFields";
+import ReportFormFields from "./ReportFormFields";
+import SignatureModal from "./SignatureModal";
 import {
   extractFirstValidationField,
   toUserFriendlyError,
@@ -321,6 +329,159 @@ const QuickConsultation = ({ patient, onSave, onBack, initialData = null }) => {
   const [consultationType, setConsultationType] = useState(
     initialData?.consultationType || "nova",
   );
+  const [anesthesiaForm, setAnesthesiaForm] = useState(() => ({
+    surgeryName: "",
+    preOpDiagnosis: "",
+    surgeon: "",
+    anesthetist: "",
+    assistant: "",
+    asaClass: "",
+    anesthesiaStart: "",
+    anesthesiaEnd: "",
+    surgeryStart: "",
+    surgeryEnd: "",
+    procedureDate: "",
+    premedication: [],
+    induction: [],
+    maintenance: [],
+    analgesia: [],
+    rescue: [],
+    vitals: [],
+    vitalsGrid: [],
+    animalName: "",
+    ownerName: "",
+    recordNumber: "",
+    species: "",
+    breed: "",
+    weight: "",
+    age: "",
+    sex: "",
+    hydration: "",
+    preOpTemperature: "",
+    preOpHeartRate: "",
+    preOpRespiratoryRate: "",
+    mucosaColor: "",
+    tpc: "",
+    tgoAst: "",
+    tp: "",
+    totalProteins: "",
+    hematocrit: "",
+    urea: "",
+    creatinine: "",
+    fibrinogen: "",
+    fa: "",
+    respSpontaneous: "",
+    respAssisted: "",
+    localAnesthesia: "",
+    generalAnesthesia: "",
+    intubation: "",
+    tubeProbe: "",
+    tubeProbeNumber: "",
+    oxygen: "",
+    ventilation: "",
+    consentSignature: "",
+    animalPosition: "",
+    circuit: "",
+    fluidTherapy: "",
+    finalOutcome: "",
+    conditions: "",
+    legendMarkers: [
+      { code: "FC*", label: "Frequencia cardiaca" },
+      { code: "FR*", label: "Frequencia respiratoria" },
+      { code: "Temp*", label: "Temperatura" },
+      { code: "SpO2*", label: "Saturacao" },
+      { code: "PAM*", label: "Pressao arterial media" },
+      { code: "PASV*", label: "Pressao arterial sistolica" },
+      { code: "EtCO2*", label: "CO2 expirado" },
+    ],
+    notes: "",
+  }));
+  const [medicationForm, setMedicationForm] = useState(() => ({
+    diagnosis: "",
+    items: [],
+    notes: "",
+  }));
+  const [procedureForm, setProcedureForm] = useState(() => ({
+    procedureName: "",
+    indication: "",
+    technique: "",
+    anesthesiaUsed: "",
+    surgeon: "",
+    assistant: "",
+    consentGiven: "",
+    consentDate: "",
+    consentSignature: "",
+    findings: "",
+    complications: "",
+    postOpPlan: "",
+    medications: [],
+  }));
+  const [hospitalizationForm, setHospitalizationForm] = useState(() => ({
+    admissionDate: "",
+    dischargeDate: "",
+    mainDiagnosis: "",
+    responsible: "",
+    dailyEvolution: "",
+    vitalsNotes: "",
+    medications: [],
+    feeding: "",
+    hydration: "",
+    elimination: "",
+    observations: "",
+  }));
+  const [vaccinationForm, setVaccinationForm] = useState(() => ({
+    vaccineName: "",
+    vaccineManufacturer: "",
+    vaccineLot: "",
+    vaccineExpiry: "",
+    vaccineDose: "",
+    vaccineRoute: "",
+    vaccineDate: "",
+    vaccineNextDate: "",
+    dewormerName: "",
+    dewormerManufacturer: "",
+    dewormerLot: "",
+    dewormerDate: "",
+    dewormerNextDate: "",
+    notes: "",
+  }));
+  const [followUpForm, setFollowUpForm] = useState(() => ({
+    previousDiagnosis: "",
+    currentStatus: "",
+    responseToTreatment: "",
+    adjustments: "",
+    nextVisitDate: "",
+    notes: "",
+  }));
+  const [reportForm, setReportForm] = useState(() => ({
+    title: "",
+    reportDate: "",
+    summary: "",
+    findings: "",
+    conclusion: "",
+    recommendations: "",
+  }));
+  const [isSignatureModalOpen, setIsSignatureModalOpen] = useState(false);
+  const [signatureTarget, setSignatureTarget] = useState(null);
+
+  const openSignatureModal = (target) => {
+    setSignatureTarget(target);
+    setIsSignatureModalOpen(true);
+  };
+
+  const closeSignatureModal = () => {
+    setIsSignatureModalOpen(false);
+    setSignatureTarget(null);
+  };
+
+  const saveSignature = (dataUrl) => {
+    if (signatureTarget === "anesthesia") {
+      setAnesthesiaForm((prev) => ({ ...prev, consentSignature: dataUrl }));
+    } else if (signatureTarget === "procedure") {
+      setProcedureForm((prev) => ({ ...prev, consentSignature: dataUrl }));
+    }
+    closeSignatureModal();
+  };
   const [anamnesis, setAnamnesis] = useState("");
   const [physicalExam, setPhysicalExam] = useState("");
   const [diagnosis, setDiagnosis] = useState(initialData?.diagnosis || "");
@@ -376,6 +537,21 @@ const QuickConsultation = ({ patient, onSave, onBack, initialData = null }) => {
     () => resolveConsultationContext(consultationType),
     [consultationType],
   );
+  const isAnesthesiaType = consultationType === "anestesia";
+  const isMedicationType = consultationType === "medicacao";
+  const isProcedureType = consultationType === "procedimento";
+  const isHospitalizationType = consultationType === "internacao";
+  const isVaccinationType = consultationType === "vacinacao";
+  const isFollowUpType = consultationType === "retorno";
+  const isReportType = consultationType === "laudo";
+  const isCustomFormType =
+    isAnesthesiaType ||
+    isMedicationType ||
+    isProcedureType ||
+    isHospitalizationType ||
+    isVaccinationType ||
+    isFollowUpType ||
+    isReportType;
   const isReturnTypeLockedByContext = isReturnConsultationType(
     initialData?.consultationType,
   );
@@ -1331,6 +1507,30 @@ const QuickConsultation = ({ patient, onSave, onBack, initialData = null }) => {
         ...DEFAULT_LARGE_ANIMAL_DATA,
         ...sanitizeSpecificFields(draft.largeAnimalData || {}),
       });
+      if (draft.customFormData?.anesthesia) {
+        setAnesthesiaForm((prev) => ({ ...prev, ...draft.customFormData.anesthesia }));
+      }
+      if (draft.customFormData?.medication) {
+        setMedicationForm((prev) => ({ ...prev, ...draft.customFormData.medication }));
+      }
+      if (draft.customFormData?.procedure) {
+        setProcedureForm((prev) => ({ ...prev, ...draft.customFormData.procedure }));
+      }
+      if (draft.customFormData?.hospitalization) {
+        setHospitalizationForm((prev) => ({
+          ...prev,
+          ...draft.customFormData.hospitalization,
+        }));
+      }
+      if (draft.customFormData?.vaccination) {
+        setVaccinationForm((prev) => ({ ...prev, ...draft.customFormData.vaccination }));
+      }
+      if (draft.customFormData?.followUp) {
+        setFollowUpForm((prev) => ({ ...prev, ...draft.customFormData.followUp }));
+      }
+      if (draft.customFormData?.report) {
+        setReportForm((prev) => ({ ...prev, ...draft.customFormData.report }));
+      }
       setConversationTranscript(draft.conversationTranscript || "");
       setTranscriptSegments(draft.transcriptSegments || []);
       setConversationStartedAt(draft.conversationStartedAt || null);
@@ -1356,7 +1556,13 @@ const QuickConsultation = ({ patient, onSave, onBack, initialData = null }) => {
       chiefComplaint,
       anamnesis,
       physicalExam,
-      diagnosis,
+      diagnosis: isAnesthesiaType
+        ? anesthesiaForm.preOpDiagnosis || diagnosis
+        : isMedicationType
+          ? medicationForm.diagnosis || diagnosis
+          : isFollowUpType
+            ? followUpForm.previousDiagnosis || diagnosis
+          : diagnosis,
       treatment,
       procedurePerformed,
       procedureDetails,
@@ -1371,6 +1577,15 @@ const QuickConsultation = ({ patient, onSave, onBack, initialData = null }) => {
       returnRecommendation,
       smallAnimalData,
       largeAnimalData,
+      customFormData: {
+        anesthesia: anesthesiaForm,
+        medication: medicationForm,
+        procedure: procedureForm,
+        hospitalization: hospitalizationForm,
+        vaccination: vaccinationForm,
+        followUp: followUpForm,
+        report: reportForm,
+      },
       conversationTranscript,
       transcriptSegments,
       conversationStartedAt,
@@ -1411,6 +1626,13 @@ const QuickConsultation = ({ patient, onSave, onBack, initialData = null }) => {
     returnRecommendation,
     smallAnimalData,
     largeAnimalData,
+    anesthesiaForm,
+    medicationForm,
+    procedureForm,
+    hospitalizationForm,
+    vaccinationForm,
+    followUpForm,
+    reportForm,
     consultationType,
     conversationTranscript,
     transcriptSegments,
@@ -1818,6 +2040,37 @@ const QuickConsultation = ({ patient, onSave, onBack, initialData = null }) => {
           }, {}),
         })}\n${PORTE_NOTES_MARK_END}`
       : "";
+    const medicationSummary = isMedicationType
+      ? (medicationForm.items || [])
+          .filter((item) => String(item.name || "").trim())
+          .map(
+            (item) =>
+              `${item.name}${item.dose ? ` - ${item.dose}` : ""}${
+                item.route ? ` - ${item.route}` : ""
+              }${item.frequency ? ` - ${item.frequency}` : ""}${
+                item.duration ? ` - ${item.duration}` : ""
+              }`,
+          )
+          .join("\n")
+      : "";
+    const procedureMedicationSummary = (procedureForm.medications || [])
+      .filter((item) => String(item.name || "").trim())
+      .map(
+        (item) =>
+          `${item.name}${item.dose ? ` - ${item.dose}` : ""}${
+            item.route ? ` - ${item.route}` : ""
+          }`,
+      )
+      .join("\n");
+    const hospitalizationMedicationSummary = (hospitalizationForm.medications || [])
+      .filter((item) => String(item.name || "").trim())
+      .map(
+        (item) =>
+          `${item.name}${item.dose ? ` - ${item.dose}` : ""}${
+            item.route ? ` - ${item.route}` : ""
+          }`,
+      )
+      .join("\n");
     const persistentFields = filledSpecificItems.reduce((acc, item) => {
       const text = String(item.value || "").trim();
       if (!text || isNotInformed(text)) return acc;
@@ -1829,6 +2082,13 @@ const QuickConsultation = ({ patient, onSave, onBack, initialData = null }) => {
       acc[item.key] = text;
       return acc;
     }, {});
+    const resolvedDiagnosis = isAnesthesiaType
+      ? anesthesiaForm.preOpDiagnosis || diagnosis
+      : isMedicationType
+        ? medicationForm.diagnosis || diagnosis
+        : isFollowUpType
+          ? followUpForm.previousDiagnosis || diagnosis
+          : diagnosis;
 
     return {
       patientId: patient.id,
@@ -1843,28 +2103,72 @@ const QuickConsultation = ({ patient, onSave, onBack, initialData = null }) => {
       chiefComplaint,
       anamnesis,
       physicalExam,
-      diagnosis,
+      diagnosis: resolvedDiagnosis,
       treatment,
-      procedures:
-        procedurePerformed === "sim"
-          ? procedureDetails || "Procedimento realizado sem descricao"
-          : "Nao realizado",
-      medications:
-        medicationPrescribed === "sim"
-          ? medicationDetails || "Medicacao prescrita sem descricao"
-          : "Nao prescrita",
+      procedures: isAnesthesiaType
+        ? anesthesiaForm.surgeryName || "Procedimento anestesico"
+        : isProcedureType
+          ? procedureForm.procedureName || "Procedimento cirurgico"
+          : isHospitalizationType
+            ? "Evolucao / Internacao"
+            : isVaccinationType
+              ? "Vacinacao / Vermifugacao"
+              : isReportType
+                ? "Laudo / Atestado"
+                : procedurePerformed === "sim"
+                  ? procedureDetails || "Procedimento realizado sem descricao"
+                  : "Nao realizado",
+      medications: isMedicationType
+        ? medicationSummary || "Medicacao prescrita sem descricao"
+        : isProcedureType
+          ? procedureMedicationSummary || "Medicacao do procedimento"
+          : isHospitalizationType
+            ? hospitalizationMedicationSummary || "Medicacoes da internacao"
+            : medicationPrescribed === "sim"
+              ? medicationDetails || "Medicacao prescrita sem descricao"
+              : "Nao prescrita",
       notes: [
         notes,
-        `Exame solicitado: ${examRequested === "sim" ? "Sim" : "Nao"}`,
-        examRequested === "sim" && examDetails
+        !isCustomFormType &&
+          `Exame solicitado: ${examRequested === "sim" ? "Sim" : "Nao"}`,
+        !isCustomFormType && examRequested === "sim" && examDetails
           ? `Detalhes do exame: ${examDetails}`
           : "",
-        specificSummary,
+        !isCustomFormType && specificSummary,
         transcriptBlock,
-        structuredPorteBlock,
+        !isCustomFormType && structuredPorteBlock,
+        isAnesthesiaType && anesthesiaForm.notes
+          ? `Anestesia: ${anesthesiaForm.notes}`
+          : "",
+        isMedicationType && medicationForm.notes
+          ? `Medicacao: ${medicationForm.notes}`
+          : "",
+        isProcedureType && procedureForm.postOpPlan
+          ? `Plano pos-operatorio: ${procedureForm.postOpPlan}`
+          : "",
+        isHospitalizationType && hospitalizationForm.observations
+          ? `Internacao: ${hospitalizationForm.observations}`
+          : "",
+        isVaccinationType && vaccinationForm.notes
+          ? `Vacinacao: ${vaccinationForm.notes}`
+          : "",
+        isFollowUpType && followUpForm.notes
+          ? `Retorno: ${followUpForm.notes}`
+          : "",
       ]
         .filter(Boolean)
         .join("\n\n"),
+      customFormData: isCustomFormType
+        ? {
+            anesthesia: isAnesthesiaType ? anesthesiaForm : null,
+            medication: isMedicationType ? medicationForm : null,
+            procedure: isProcedureType ? procedureForm : null,
+            hospitalization: isHospitalizationType ? hospitalizationForm : null,
+            vaccination: isVaccinationType ? vaccinationForm : null,
+            followUp: isFollowUpType ? followUpForm : null,
+            report: isReportType ? reportForm : null,
+          }
+        : null,
       returnRecommendation,
       persistentProfileUpdate: Object.keys(persistentFields).length
         ? {
@@ -2623,6 +2927,138 @@ const QuickConsultation = ({ patient, onSave, onBack, initialData = null }) => {
     setFeedback(null);
     liveInterimRef.current = "";
     transcriptRef.current = "";
+    setAnesthesiaForm({
+      surgeryName: "",
+      preOpDiagnosis: "",
+      surgeon: "",
+      anesthetist: "",
+      assistant: "",
+      asaClass: "",
+      anesthesiaStart: "",
+      anesthesiaEnd: "",
+      surgeryStart: "",
+      surgeryEnd: "",
+      procedureDate: "",
+      premedication: [],
+      induction: [],
+      maintenance: [],
+      analgesia: [],
+      rescue: [],
+      vitals: [],
+      vitalsGrid: [],
+      animalName: "",
+      ownerName: "",
+      recordNumber: "",
+      species: "",
+      breed: "",
+      weight: "",
+      age: "",
+      sex: "",
+      hydration: "",
+      preOpTemperature: "",
+      preOpHeartRate: "",
+      preOpRespiratoryRate: "",
+      mucosaColor: "",
+      tpc: "",
+      tgoAst: "",
+      tp: "",
+      totalProteins: "",
+      hematocrit: "",
+      urea: "",
+      creatinine: "",
+      fibrinogen: "",
+      fa: "",
+      respSpontaneous: "",
+      respAssisted: "",
+      localAnesthesia: "",
+      generalAnesthesia: "",
+      intubation: "",
+      tubeProbe: "",
+      tubeProbeNumber: "",
+      oxygen: "",
+      ventilation: "",
+      consentSignature: "",
+      animalPosition: "",
+      circuit: "",
+      fluidTherapy: "",
+      finalOutcome: "",
+      conditions: "",
+      legendMarkers: [
+        { code: "FC*", label: "Frequencia cardiaca" },
+        { code: "FR*", label: "Frequencia respiratoria" },
+        { code: "Temp*", label: "Temperatura" },
+        { code: "SpO2*", label: "Saturacao" },
+        { code: "PAM*", label: "Pressao arterial media" },
+        { code: "PASV*", label: "Pressao arterial sistolica" },
+        { code: "EtCO2*", label: "CO2 expirado" },
+      ],
+      notes: "",
+    });
+    setMedicationForm({
+      diagnosis: "",
+      items: [],
+      notes: "",
+    });
+    setProcedureForm({
+      procedureName: "",
+      indication: "",
+      technique: "",
+      anesthesiaUsed: "",
+      surgeon: "",
+      assistant: "",
+      consentGiven: "",
+      consentDate: "",
+      consentSignature: "",
+      findings: "",
+      complications: "",
+      postOpPlan: "",
+      medications: [],
+    });
+    setHospitalizationForm({
+      admissionDate: "",
+      dischargeDate: "",
+      mainDiagnosis: "",
+      responsible: "",
+      dailyEvolution: "",
+      vitalsNotes: "",
+      medications: [],
+      feeding: "",
+      hydration: "",
+      elimination: "",
+      observations: "",
+    });
+    setVaccinationForm({
+      vaccineName: "",
+      vaccineManufacturer: "",
+      vaccineLot: "",
+      vaccineExpiry: "",
+      vaccineDose: "",
+      vaccineRoute: "",
+      vaccineDate: "",
+      vaccineNextDate: "",
+      dewormerName: "",
+      dewormerManufacturer: "",
+      dewormerLot: "",
+      dewormerDate: "",
+      dewormerNextDate: "",
+      notes: "",
+    });
+    setFollowUpForm({
+      previousDiagnosis: "",
+      currentStatus: "",
+      responseToTreatment: "",
+      adjustments: "",
+      nextVisitDate: "",
+      notes: "",
+    });
+    setReportForm({
+      title: "",
+      reportDate: "",
+      summary: "",
+      findings: "",
+      conclusion: "",
+      recommendations: "",
+    });
 
     if (draftKey) {
       localStorage.removeItem(draftKey);
@@ -2658,14 +3094,18 @@ const QuickConsultation = ({ patient, onSave, onBack, initialData = null }) => {
         }
       }
 
-      const shouldGeneratePrescription =
-        medicationPrescribed === "sim" && medicationDetails.trim().length > 0;
+      const medicationItemsFilled = (medicationForm.items || []).some(
+        (item) => String(item.name || "").trim() || String(item.dose || "").trim(),
+      );
+      const shouldGeneratePrescription = isMedicationType
+        ? medicationItemsFilled
+        : medicationPrescribed === "sim" && medicationDetails.trim().length > 0;
 
       if (!shouldGeneratePrescription) {
         if (draftKey) localStorage.removeItem(draftKey);
         showFeedback(
           "success",
-          "Prontuario salvo com sucesso. Nao ha nova medicacao para receita.",
+          "Prontuario salvo com sucesso. Nao ha nova medicacao para gerar receita.",
         );
         onBack?.();
         return;
@@ -2698,8 +3138,8 @@ const QuickConsultation = ({ patient, onSave, onBack, initialData = null }) => {
       showFeedback(
         "success",
         download
-          ? "Prontuario salvo. Receita anexada e download iniciado."
-          : "Prontuario salvo com receita anexada.",
+          ? "Prontuario salvo. Receita gerada e download iniciado."
+          : "Prontuario salvo com receita gerada.",
       );
       onBack?.();
     } catch (error) {
@@ -2709,7 +3149,7 @@ const QuickConsultation = ({ patient, onSave, onBack, initialData = null }) => {
         "error",
         toUserFriendlyError(
           error,
-          "Nao foi possivel concluir o salvamento da consulta/receita.",
+          "Nao foi possivel concluir o salvamento da consulta/receita. Revise os campos obrigatorios e tente novamente.",
         ),
       );
     } finally {
@@ -2776,6 +3216,49 @@ const QuickConsultation = ({ patient, onSave, onBack, initialData = null }) => {
         </div>
       </div>
 
+      {isCustomFormType ? (
+        <div className="space-y-4">
+          {isAnesthesiaType && (
+            <AnesthesiaFormFields
+              value={anesthesiaForm}
+              onChange={setAnesthesiaForm}
+              onRequestSignature={() => openSignatureModal("anesthesia")}
+            />
+          )}
+          {isMedicationType && (
+            <MedicationFormFields
+              value={medicationForm}
+              onChange={setMedicationForm}
+            />
+          )}
+          {isProcedureType && (
+            <ProcedureFormFields
+              value={procedureForm}
+              onChange={setProcedureForm}
+              onRequestSignature={() => openSignatureModal("procedure")}
+            />
+          )}
+          {isHospitalizationType && (
+            <HospitalizationFormFields
+              value={hospitalizationForm}
+              onChange={setHospitalizationForm}
+            />
+          )}
+          {isVaccinationType && (
+            <VaccinationFormFields
+              value={vaccinationForm}
+              onChange={setVaccinationForm}
+            />
+          )}
+          {isFollowUpType && (
+            <FollowUpFormFields value={followUpForm} onChange={setFollowUpForm} />
+          )}
+          {isReportType && (
+            <ReportFormFields value={reportForm} onChange={setReportForm} />
+          )}
+        </div>
+      ) : (
+      <>
       <div className="md:hidden sticky top-0 z-20 -mx-1 rounded-xl border border-gray-200 bg-white/95 px-2 py-2 backdrop-blur">
         <div className="flex gap-2 overflow-x-auto">
           <button
@@ -2830,7 +3313,7 @@ const QuickConsultation = ({ patient, onSave, onBack, initialData = null }) => {
           value={aiChatText}
           onChange={(e) => setAiChatText(e.target.value)}
           rows={3}
-          placeholder="Ex: retorno de ave com febre, sem apetite, no exame apresentou..."
+          placeholder="Ex.: retorno de ave com febre e apetite reduzido, com achados no exame fisico."
           className="w-full rounded-lg border border-violet-300 dark:border-violet-700 bg-white dark:bg-dark-800 px-3 py-3 text-sm text-gray-900 dark:text-white"
         />
         <div className="grid grid-cols-1 gap-2">
@@ -2947,455 +3430,508 @@ const QuickConsultation = ({ patient, onSave, onBack, initialData = null }) => {
         )}
       </div>
 
-      <div
+      <details
         id="porte-section"
-        className="rounded-xl border border-gray-200 bg-white p-4 sm:p-6 space-y-4"
+        className="group rounded-xl border border-gray-200 bg-white p-4 sm:p-6"
+        open
       >
-        <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
-          Classificacao do prontuario por porte
-        </h2>
-        <div className="space-y-2">
-          <p className="text-sm text-gray-700">
-            Porte detectado:{" "}
-            <strong>
-              {detectedPorte === "grande"
-                ? "Grande porte"
-                : detectedPorte === "pequeno"
-                  ? "Pequeno porte"
-                  : "Nao detectado automaticamente"}
-            </strong>
-          </p>
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setSelectedPorte("pequeno")}
-              className={`rounded-lg border px-3 py-2 text-sm font-semibold transition ${
-                animalPorte === "pequeno"
-                  ? "border-blue-600 bg-blue-600 text-white"
+        <summary className="flex cursor-pointer items-center justify-between gap-3 list-none">
+          <div>
+            <p className="vp-overline text-gray-500">Ficha de porte</p>
+            <h2 className="vp-h2 text-gray-900">
+              Classificacao do prontuario por porte
+            </h2>
+            <p className="vp-helper mt-1">
+              Preencha apenas o que for pertinente para este atendimento.
+            </p>
+          </div>
+          <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+            {specificCompletion.filled}/{specificCompletion.total}
+          </span>
+        </summary>
+        <div className="mt-4 space-y-4">
+          <div className="space-y-2">
+            <p className="text-sm text-gray-700">
+              Porte detectado:{" "}
+              <strong>
+                {detectedPorte === "grande"
+                  ? "Grande porte"
                   : detectedPorte === "pequeno"
-                    ? "border-blue-300 bg-blue-50 text-blue-700"
-                    : "border-gray-300 bg-white text-gray-700"
-              }`}
-            >
-              Pequeno porte
-              {detectedPorte === "pequeno" && (
-                <span className="ml-2 rounded-full bg-white/70 px-2 py-0.5 text-[10px] font-bold text-blue-700">
-                  Detectado
-                </span>
-              )}
-            </button>
-            <button
-              type="button"
-              onClick={() => setSelectedPorte("grande")}
-              className={`rounded-lg border px-3 py-2 text-sm font-semibold transition ${
-                animalPorte === "grande"
-                  ? "border-amber-600 bg-amber-600 text-white"
-                  : detectedPorte === "grande"
-                    ? "border-amber-300 bg-amber-50 text-amber-800"
-                    : "border-gray-300 bg-white text-gray-700"
-              }`}
-            >
-              Grande porte
-              {detectedPorte === "grande" && (
-                <span className="ml-2 rounded-full bg-white/80 px-2 py-0.5 text-[10px] font-bold text-amber-800">
-                  Detectado
-                </span>
-              )}
-            </button>
-            {selectedPorte && (
+                    ? "Pequeno porte"
+                    : "Nao detectado automaticamente"}
+              </strong>
+            </p>
+            <div className="flex flex-wrap items-center gap-2">
               <button
                 type="button"
-                onClick={() => setSelectedPorte(null)}
-                className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-700"
+                onClick={() => setSelectedPorte("pequeno")}
+                className={`rounded-lg border px-3 py-2 text-sm font-semibold transition ${
+                  animalPorte === "pequeno"
+                    ? "border-blue-600 bg-blue-600 text-white"
+                    : detectedPorte === "pequeno"
+                      ? "border-blue-300 bg-blue-50 text-blue-700"
+                      : "border-gray-300 bg-white text-gray-700"
+                }`}
               >
-                Usar detectado
+                Pequeno porte
+                {detectedPorte === "pequeno" && (
+                  <span className="ml-2 rounded-full bg-white/70 px-2 py-0.5 text-[10px] font-bold text-blue-700">
+                    Detectado
+                  </span>
+                )}
               </button>
-            )}
+              <button
+                type="button"
+                onClick={() => setSelectedPorte("grande")}
+                className={`rounded-lg border px-3 py-2 text-sm font-semibold transition ${
+                  animalPorte === "grande"
+                    ? "border-amber-600 bg-amber-600 text-white"
+                    : detectedPorte === "grande"
+                      ? "border-amber-300 bg-amber-50 text-amber-800"
+                      : "border-gray-300 bg-white text-gray-700"
+                }`}
+              >
+                Grande porte
+                {detectedPorte === "grande" && (
+                  <span className="ml-2 rounded-full bg-white/80 px-2 py-0.5 text-[10px] font-bold text-amber-800">
+                    Detectado
+                  </span>
+                )}
+              </button>
+              {selectedPorte && (
+                <button
+                  type="button"
+                  onClick={() => setSelectedPorte(null)}
+                  className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-700"
+                >
+                  Usar detectado
+                </button>
+              )}
+            </div>
+            {selectedPorte &&
+              detectedPorte &&
+              selectedPorte !== detectedPorte && (
+                <p className="text-xs font-medium text-amber-700">
+                  Porte selecionado manualmente. A IA usara este porte para
+                  preencher a ficha.
+                </p>
+              )}
           </div>
-          {selectedPorte &&
-            detectedPorte &&
-            selectedPorte !== detectedPorte && (
-              <p className="text-xs font-medium text-amber-700">
-                Porte selecionado manualmente. A IA usara este porte para
-                preencher a ficha.
-              </p>
-            )}
+          <div>
+            <div className="mb-1 flex items-center justify-between text-xs text-gray-600">
+              <span>Preenchimento da ficha de porte</span>
+              <strong>
+                {specificCompletion.filled}/{specificCompletion.total}
+              </strong>
+            </div>
+            <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200">
+              <div
+                className="h-full rounded-full bg-emerald-500 transition-all duration-300"
+                style={{ width: `${Math.max(8, specificCompletion.percent)}%` }}
+              />
+            </div>
+          </div>
+          {isSmallAnimal
+            ? renderSmallAnimalSection()
+            : renderLargeAnimalSection()}
         </div>
-        <div>
-          <div className="mb-1 flex items-center justify-between text-xs text-gray-600">
-            <span>Preenchimento da ficha de porte</span>
-            <strong>
-              {specificCompletion.filled}/{specificCompletion.total}
-            </strong>
-          </div>
-          <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200">
-            <div
-              className="h-full rounded-full bg-emerald-500 transition-all duration-300"
-              style={{ width: `${Math.max(8, specificCompletion.percent)}%` }}
-            />
-          </div>
-        </div>
-        {isSmallAnimal
-          ? renderSmallAnimalSection()
-          : renderLargeAnimalSection()}
-      </div>
+      </details>
 
-      <div
+      <details
         id="clinical-section"
-        className="rounded-xl border border-gray-200 bg-white p-4 sm:p-6 space-y-4"
+        className="group rounded-xl border border-gray-200 bg-white p-4 sm:p-6"
+        open
       >
-        <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
-          Parametros vitais
-        </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <summary className="flex cursor-pointer items-center justify-between gap-3 list-none">
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">
-              Peso (kg)
-            </label>
-            <input
-              id="weight"
-              type="number"
-              value={weight}
-              onChange={(e) => setWeight(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm"
-            />
+            <p className="vp-overline text-gray-500">Clinico</p>
+            <h2 className="vp-h2 text-gray-900">Avaliacao clinica</h2>
+            <p className="vp-helper mt-1">
+              Preencha apenas os campos usados no atendimento.
+            </p>
           </div>
+          <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
+            Secao clinica
+          </span>
+        </summary>
+        <div className="mt-4 space-y-4">
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">
-              Temperatura (C)
-            </label>
-            <input
-              id="temperature"
-              type="number"
-              value={temperature}
-              onChange={(e) => setTemperature(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm"
-            />
+            <h3 className="vp-h3 text-gray-800 mb-2">Parametros vitais</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-700">
+                  Peso (kg)
+                </label>
+                <input
+                  id="weight"
+                  type="number"
+                  value={weight}
+                  onChange={(e) => setWeight(e.target.value)}
+                  className="vp-input-field text-base sm:text-sm"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-700">
+                  Temperatura (C)
+                </label>
+                <input
+                  id="temperature"
+                  type="number"
+                  value={temperature}
+                  onChange={(e) => setTemperature(e.target.value)}
+                  className="vp-input-field text-base sm:text-sm"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-700">
+                  Frequencia cardiaca (bpm)
+                </label>
+                <input
+                  id="heartRate"
+                  type="number"
+                  value={heartRate}
+                  onChange={(e) => setHeartRate(e.target.value)}
+                  className="vp-input-field text-base sm:text-sm"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-700">
+                  Frequencia respiratoria (mpm)
+                </label>
+                <input
+                  id="respiratoryRate"
+                  type="number"
+                  value={respiratoryRate}
+                  onChange={(e) => setRespiratoryRate(e.target.value)}
+                  className="vp-input-field text-base sm:text-sm"
+                />
+              </div>
+            </div>
           </div>
+
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">
-              Frequencia cardiaca
-            </label>
-            <input
-              id="heartRate"
-              type="number"
-              value={heartRate}
-              onChange={(e) => setHeartRate(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm"
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">
-              Frequencia respiratoria
-            </label>
-            <input
-              id="respiratoryRate"
-              type="number"
-              value={respiratoryRate}
-              onChange={(e) => setRespiratoryRate(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm"
-            />
-          </div>
-        </div>
-
-        <VoiceTextarea
-          id="chiefComplaint"
-          label="Queixa principal"
-          value={chiefComplaint}
-          onChange={setChiefComplaint}
-          rows={3}
-          placeholder="Descreva o motivo da consulta"
-        />
-
-        <VoiceTextarea
-          id="anamnesis"
-          label="Anamnese"
-          value={anamnesis}
-          onChange={setAnamnesis}
-          rows={4}
-          placeholder="Historico clinico relatado pelo tutor"
-        />
-
-        <VoiceTextarea
-          id="physicalExam"
-          label="Exame fisico"
-          value={physicalExam}
-          onChange={setPhysicalExam}
-          rows={4}
-          placeholder="Achados do exame fisico"
-        />
-
-        <VoiceTextarea
-          id="diagnosis"
-          label="Diagnostico"
-          value={diagnosis}
-          onChange={setDiagnosis}
-          rows={3}
-          placeholder="Diagnostico clinico"
-        />
-
-        <VoiceTextarea
-          id="treatment"
-          label="Tratamento / conduta"
-          value={treatment}
-          onChange={setTreatment}
-          rows={4}
-          placeholder="Plano terapeutico"
-        />
-
-        <div className="rounded-xl border border-gray-200 p-3">
-          <p className="text-sm font-semibold text-gray-700">
-            Procedimento realizado?
-          </p>
-          <div className="mt-2 flex flex-wrap gap-2">
-            <label className="inline-flex items-center gap-2 rounded-full border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700">
-              <input
-                type="radio"
-                name="procedurePerformed"
-                checked={procedurePerformed === "sim"}
-                onChange={() => setProcedurePerformed("sim")}
-              />{" "}
-              Sim
-            </label>
-            <label className="inline-flex items-center gap-2 rounded-full border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700">
-              <input
-                type="radio"
-                name="procedurePerformed"
-                checked={procedurePerformed === "nao"}
-                onChange={() => setProcedurePerformed("nao")}
-              />{" "}
-              Nao
-            </label>
-          </div>
-          {procedurePerformed === "sim" && (
-            <div className="mt-3">
+            <h3 className="vp-h3 text-gray-800 mb-2">Narrativa clinica</h3>
+            <div className="space-y-3">
               <VoiceTextarea
-                id="procedureDetails"
-                label="Descreva o procedimento"
-                value={procedureDetails}
-                onChange={setProcedureDetails}
+                id="chiefComplaint"
+                label="Queixa principal"
+                value={chiefComplaint}
+                onChange={setChiefComplaint}
                 rows={3}
-                placeholder="Detalhes do procedimento executado"
+                placeholder="Descreva a queixa principal do tutor."
+              />
+
+              <VoiceTextarea
+                id="anamnesis"
+                label="Anamnese"
+                value={anamnesis}
+                onChange={setAnamnesis}
+                rows={4}
+                placeholder="Resuma o historico clinico relatado pelo tutor."
+              />
+
+              <VoiceTextarea
+                id="physicalExam"
+                label="Exame fisico"
+                value={physicalExam}
+                onChange={setPhysicalExam}
+                rows={4}
+                placeholder="Informe os achados do exame fisico."
+              />
+
+              <VoiceTextarea
+                id="diagnosis"
+                label="Diagnostico"
+                value={diagnosis}
+                onChange={setDiagnosis}
+                rows={3}
+                placeholder="Informe o diagnostico clinico."
+              />
+
+              <VoiceTextarea
+                id="treatment"
+                label="Tratamento / conduta"
+                value={treatment}
+                onChange={setTreatment}
+                rows={4}
+                placeholder="Descreva o plano terapeutico."
               />
             </div>
-          )}
-        </div>
-
-        <div className="rounded-xl border border-gray-200 p-3">
-          <p className="text-sm font-semibold text-gray-700">
-            Medicacao prescrita?
-          </p>
-          <div className="mt-2 flex flex-wrap gap-2">
-            <label className="inline-flex items-center gap-2 rounded-full border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700">
-              <input
-                type="radio"
-                name="medicationPrescribed"
-                checked={medicationPrescribed === "sim"}
-                onChange={() => setMedicationPrescribed("sim")}
-              />{" "}
-              Sim
-            </label>
-            <label className="inline-flex items-center gap-2 rounded-full border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700">
-              <input
-                type="radio"
-                name="medicationPrescribed"
-                checked={medicationPrescribed === "nao"}
-                onChange={() => setMedicationPrescribed("nao")}
-              />{" "}
-              Nao
-            </label>
           </div>
-          {medicationPrescribed === "sim" && (
-            <div className="mt-3">
-              <VoiceTextarea
-                id="medicationDetails"
-                label="Descreva a medicacao"
-                value={medicationDetails}
-                onChange={setMedicationDetails}
-                rows={3}
-                placeholder="Farmaco, dose, via e tempo"
-              />
+
+          <details className="rounded-xl border border-gray-200 p-3">
+            <summary className="cursor-pointer text-sm font-semibold text-gray-700">
+              Procedimentos, medicacoes e exames
+            </summary>
+            <div className="mt-3 space-y-3">
+              <div>
+                <p className="text-sm font-semibold text-gray-700">
+                  Procedimento realizado?
+                </p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <label className="inline-flex items-center gap-2 rounded-full border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700">
+                    <input
+                      type="radio"
+                      name="procedurePerformed"
+                      checked={procedurePerformed === "sim"}
+                      onChange={() => setProcedurePerformed("sim")}
+                    />{" "}
+                    Sim
+                  </label>
+                  <label className="inline-flex items-center gap-2 rounded-full border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700">
+                    <input
+                      type="radio"
+                      name="procedurePerformed"
+                      checked={procedurePerformed === "nao"}
+                      onChange={() => setProcedurePerformed("nao")}
+                    />{" "}
+                    Nao
+                  </label>
+                </div>
+                {procedurePerformed === "sim" && (
+                  <div className="mt-3">
+                    <VoiceTextarea
+                      id="procedureDetails"
+                      label="Descreva o procedimento"
+                      value={procedureDetails}
+                      onChange={setProcedureDetails}
+                      rows={3}
+                      placeholder="Descreva tecnica, local e evolucao do procedimento."
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <p className="text-sm font-semibold text-gray-700">
+                  Medicacao prescrita?
+                </p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <label className="inline-flex items-center gap-2 rounded-full border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700">
+                    <input
+                      type="radio"
+                      name="medicationPrescribed"
+                      checked={medicationPrescribed === "sim"}
+                      onChange={() => setMedicationPrescribed("sim")}
+                    />{" "}
+                    Sim
+                  </label>
+                  <label className="inline-flex items-center gap-2 rounded-full border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700">
+                    <input
+                      type="radio"
+                      name="medicationPrescribed"
+                      checked={medicationPrescribed === "nao"}
+                      onChange={() => setMedicationPrescribed("nao")}
+                    />{" "}
+                    Nao
+                  </label>
+                </div>
+                {medicationPrescribed === "sim" && (
+                  <div className="mt-3">
+                    <VoiceTextarea
+                      id="medicationDetails"
+                      label="Descreva a medicacao"
+                      value={medicationDetails}
+                      onChange={setMedicationDetails}
+                      rows={3}
+                      placeholder="Informe farmaco, dose, via, frequencia e duracao."
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <p className="text-sm font-semibold text-gray-700">
+                  Exame complementar solicitado?
+                </p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <label className="inline-flex items-center gap-2 rounded-full border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700">
+                    <input
+                      type="radio"
+                      name="examRequested"
+                      checked={examRequested === "sim"}
+                      onChange={() => setExamRequested("sim")}
+                    />{" "}
+                    Sim
+                  </label>
+                  <label className="inline-flex items-center gap-2 rounded-full border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700">
+                    <input
+                      type="radio"
+                      name="examRequested"
+                      checked={examRequested === "nao"}
+                      onChange={() => setExamRequested("nao")}
+                    />{" "}
+                    Nao
+                  </label>
+                </div>
+                {examRequested === "sim" && (
+                  <div className="mt-3">
+                    <VoiceTextarea
+                      id="examDetails"
+                      label="Descreva o exame solicitado"
+                      value={examDetails}
+                      onChange={setExamDetails}
+                      rows={3}
+                      placeholder="Informe tipo de exame, justificativa e objetivo."
+                    />
+                  </div>
+                )}
+              </div>
             </div>
-          )}
-        </div>
+          </details>
 
-        <div className="rounded-xl border border-gray-200 p-3">
-          <p className="text-sm font-semibold text-gray-700">
-            Exame complementar solicitado?
-          </p>
-          <div className="mt-2 flex flex-wrap gap-2">
-            <label className="inline-flex items-center gap-2 rounded-full border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700">
-              <input
-                type="radio"
-                name="examRequested"
-                checked={examRequested === "sim"}
-                onChange={() => setExamRequested("sim")}
-              />{" "}
-              Sim
-            </label>
-            <label className="inline-flex items-center gap-2 rounded-full border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700">
-              <input
-                type="radio"
-                name="examRequested"
-                checked={examRequested === "nao"}
-                onChange={() => setExamRequested("nao")}
-              />{" "}
-              Nao
-            </label>
-          </div>
-          {examRequested === "sim" && (
-            <div className="mt-3">
-              <VoiceTextarea
-                id="examDetails"
-                label="Descreva o exame solicitado"
-                value={examDetails}
-                onChange={setExamDetails}
-                rows={3}
-                placeholder="Tipo de exame e justificativa"
-              />
-            </div>
-          )}
-        </div>
+          <VoiceTextarea
+            id="notes"
+            label="Observacoes"
+            value={notes}
+            onChange={setNotes}
+            rows={3}
+            placeholder="Registre observacoes clinicas adicionais."
+          />
 
-        <VoiceTextarea
-          id="notes"
-          label="Observacoes"
-          value={notes}
-          onChange={setNotes}
-          rows={3}
-          placeholder="Observacoes gerais"
-        />
-
-        <div
-          id="followup-section"
-          className="rounded-xl border border-gray-200 p-3 space-y-3"
-        >
-          <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-            <input
-              type="checkbox"
-              checked={returnRecommended}
-              onChange={(e) => {
-                const checked = e.target.checked;
-                setReturnRecommended(checked);
-                if (!checked) {
-                  setReturnRecommendation("");
-                  setReturnDate("");
-                  setOpenReturnWithoutDate(false);
-                }
-              }}
-            />
-            Retorno recomendado?
-          </label>
-
-          {returnRecommended && (
-            <>
-              <VoiceTextarea
-                id="returnRecommendation"
-                label="Recomendacao de retorno"
-                value={returnRecommendation}
-                onChange={setReturnRecommendation}
-                rows={2}
-                placeholder="Prazo e orientacoes para retorno"
-              />
+          <details
+            id="followup-section"
+            className="rounded-xl border border-gray-200 p-3"
+            open={returnRecommended}
+          >
+            <summary className="cursor-pointer text-sm font-semibold text-gray-700">
+              Retorno recomendado?
+            </summary>
+            <div className="mt-3 space-y-3">
               <label className="flex items-center gap-2 text-sm text-gray-700">
                 <input
                   type="checkbox"
-                  checked={openReturnWithoutDate}
-                  onChange={(e) => setOpenReturnWithoutDate(e.target.checked)}
+                  checked={returnRecommended}
+                  onChange={(e) => {
+                    const checked = e.target.checked;
+                    setReturnRecommended(checked);
+                    if (!checked) {
+                      setReturnRecommendation("");
+                      setReturnDate("");
+                      setOpenReturnWithoutDate(false);
+                    }
+                  }}
                 />
-                Marcar como possivel retorno em aberto (sem data)
+                Sim, recomendar retorno
               </label>
-              {!openReturnWithoutDate && (
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-gray-700">
-                    Data sugerida para retorno
-                  </label>
-                  <input
-                    type="date"
-                    value={returnDate}
-                    onChange={(e) => setReturnDate(e.target.value)}
-                    className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm"
+
+              {returnRecommended && (
+                <>
+                  <VoiceTextarea
+                    id="returnRecommendation"
+                    label="Recomendacao de retorno"
+                    value={returnRecommendation}
+                    onChange={setReturnRecommendation}
+                    rows={2}
+                    placeholder="Defina prazo e orientacoes para o retorno."
                   />
-                </div>
+                  <label className="flex items-center gap-2 text-sm text-gray-700">
+                    <input
+                      type="checkbox"
+                      checked={openReturnWithoutDate}
+                      onChange={(e) => setOpenReturnWithoutDate(e.target.checked)}
+                    />
+                    Marcar como possivel retorno em aberto (sem data)
+                  </label>
+                  {!openReturnWithoutDate && (
+                    <div>
+                      <label className="mb-1 block text-sm font-medium text-gray-700">
+                        Data sugerida para retorno
+                      </label>
+                      <input
+                        type="date"
+                        value={returnDate}
+                        onChange={(e) => setReturnDate(e.target.value)}
+                        className="vp-input-field text-base sm:text-sm"
+                      />
+                    </div>
+                  )}
+                </>
               )}
-            </>
-          )}
-        </div>
-
-        <FloatingFormActions maxWidthClass="max-w-4xl" mobileSticky>
-          <div className="sm:hidden space-y-2">
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => saveConsultationWithPrescription(false)}
-                disabled={saving}
-                className="btn btn-success btn-md btn-block"
-              >
-                {saving && <LoadingDot />}
-                {saving ? "Salvando..." : "Salvar"}
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowMobileMoreActions((prev) => !prev)}
-                disabled={saving}
-                className="btn btn-neutral btn-md btn-block"
-              >
-                {showMobileMoreActions ? "Fechar" : "Mais"}
-              </button>
             </div>
-            {showMobileMoreActions && (
-              <div className="grid grid-cols-1 gap-2 rounded-xl border border-gray-200 bg-gray-50 p-2">
-                <button
-                  type="button"
-                  onClick={() => saveConsultationWithPrescription(true)}
-                  disabled={saving}
-                  className="btn btn-primary btn-sm btn-block"
-                >
-                  {saving && <LoadingDot />}
-                  {saving ? "Processando..." : "Salvar + Receita"}
-                </button>
-                <button
-                  type="button"
-                  onClick={clearAllFields}
-                  disabled={saving}
-                  className="btn btn-neutral btn-sm btn-block"
-                >
-                  Limpar campos
-                </button>
-              </div>
-            )}
-          </div>
+          </details>
+        </div>
+      </details>
 
-          <div className="hidden sm:grid grid-cols-3 gap-2">
-            <button
-              type="button"
-              onClick={clearAllFields}
-              disabled={saving}
-              className="btn btn-neutral btn-lg btn-block"
-            >
-              Limpar campos
-            </button>
+      </>
+      )}
+
+      <FloatingFormActions maxWidthClass="max-w-4xl" mobileSticky>
+        <div className="sm:hidden space-y-2">
+          <p className="text-[11px] font-semibold text-gray-600">
+            Acao principal: salvar consulta. Use "Acoes" para gerar receita ou limpar campos.
+          </p>
+          <div className="grid grid-cols-2 gap-2">
             <button
               type="button"
               onClick={() => saveConsultationWithPrescription(false)}
               disabled={saving}
-              className="btn btn-success btn-lg btn-block"
+              className="btn btn-success btn-md btn-block"
             >
               {saving && <LoadingDot />}
-              {saving ? "Salvando..." : "Salvar Consulta"}
+              {saving ? "Salvando..." : "Salvar consulta"}
             </button>
             <button
               type="button"
-              onClick={() => saveConsultationWithPrescription(true)}
+              onClick={() => setShowMobileMoreActions((prev) => !prev)}
               disabled={saving}
-              className="btn btn-primary btn-lg btn-block"
+              className="btn btn-neutral btn-md btn-block"
             >
-              {saving && <LoadingDot />}
-              {saving ? "Processando..." : "Salvar + Gerar Receita"}
+              {showMobileMoreActions ? "Fechar acoes" : "Acoes"}
             </button>
           </div>
-        </FloatingFormActions>
-      </div>
+          {showMobileMoreActions && (
+            <div className="grid grid-cols-1 gap-2 rounded-xl border border-gray-200 bg-gray-50 p-2">
+              <button
+                type="button"
+                onClick={() => saveConsultationWithPrescription(true)}
+                disabled={saving}
+                className="btn btn-primary btn-sm btn-block"
+              >
+                {saving && <LoadingDot />}
+                {saving ? "Processando..." : "Salvar + gerar receita"}
+              </button>
+              <button
+                type="button"
+                onClick={clearAllFields}
+                disabled={saving}
+                className="btn btn-neutral btn-sm btn-block"
+              >
+                Limpar campos
+              </button>
+            </div>
+          )}
+        </div>
+
+        <div className="hidden sm:grid grid-cols-3 gap-2">
+          <button
+            type="button"
+            onClick={clearAllFields}
+            disabled={saving}
+            className="btn btn-neutral btn-lg btn-block"
+          >
+            Limpar campos
+          </button>
+          <button
+            type="button"
+            onClick={() => saveConsultationWithPrescription(false)}
+            disabled={saving}
+            className="btn btn-success btn-lg btn-block"
+          >
+            {saving && <LoadingDot />}
+            {saving ? "Salvando..." : "Salvar consulta"}
+          </button>
+          <button
+            type="button"
+            onClick={() => saveConsultationWithPrescription(true)}
+            disabled={saving}
+            className="btn btn-primary btn-lg btn-block"
+          >
+            {saving && <LoadingDot />}
+            {saving ? "Processando..." : "Salvar + gerar receita"}
+          </button>
+        </div>
+      </FloatingFormActions>
 
       <ConfirmDialog
         isOpen={showClearConfirmModal}
@@ -3409,6 +3945,13 @@ const QuickConsultation = ({ patient, onSave, onBack, initialData = null }) => {
           executeClearAllFields();
           setShowClearConfirmModal(false);
         }}
+      />
+
+      <SignatureModal
+        isOpen={isSignatureModalOpen}
+        onClose={closeSignatureModal}
+        onSave={saveSignature}
+        title="Assinatura do tutor"
       />
     </div>
   );

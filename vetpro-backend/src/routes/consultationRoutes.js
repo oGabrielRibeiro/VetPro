@@ -31,6 +31,10 @@ router.post(
   fieldAudioUpload.single('audio'),
   consultationController.fieldAssist,
 );
+router.post(
+  '/field-assist/feedback',
+  consultationController.fieldAssistFeedback,
+);
 router.post('/heuristic-parse', consultationController.heuristicParse);
 router.post('/chat-assist', consultationController.chatAssist);
 router.post('/refine-field', consultationController.refineField);

@@ -2,6 +2,7 @@ const {
   splitDialogueByRole,
   runUnifiedClinicalBrain,
   buildHeuristicDraft,
+  ensureDraftShape,
   SPECIFIC_FIELDS_BY_PORTE,
 } = require('../services/heuristicService');
 
@@ -103,5 +104,101 @@ describe('heuristicService', () => {
     expect(specific.herdDeworming).toMatch(/ivermectina|60 dias/i);
     expect(specific.forage).toMatch(/silagem/i);
     expect(specific.waterIntake).toMatch(/reduzido|24 horas/i);
+  });
+
+  it('deve bloquear reaproveitamento de frases quase identicas entre campos especificos', () => {
+    const result = buildHeuristicDraft(
+      [
+        {
+          role: 'user',
+          content: [
+            'Tutor: Propriedade e manejo: confinamento semi intensivo no lote 12 com manejo diario.',
+            'Tutor: Contactantes: confinamento semi-intensivo no lote 12 com manejo diário e lotes vizinhos.',
+            'Tutor: Vacinacao do rebanho: em dia.',
+          ].join('\n'),
+        },
+      ],
+      'nova',
+      { species: 'Bovino', porte: 'grande' },
+      { porte: 'grande', specificFieldKeys: SPECIFIC_FIELDS_BY_PORTE.grande },
+    );
+
+    const specific = result?.draft?.specificFields || {};
+    const duplicatedAcrossFields = [
+      specific.propertyAndManagement,
+      specific.contactAnimals,
+    ].filter((value) =>
+      /confinamento semi[- ]intensivo no lote 12 com manejo/i.test(
+        String(value || ''),
+      ),
+    ).length;
+
+    expect(duplicatedAcrossFields).toBeLessThanOrEqual(1);
+    expect(specific.herdVaccination).toMatch(/em dia/i);
+  });
+
+  it('deve exigir grounding no transcript para aceitar campos especificos', () => {
+    const shaped = ensureDraftShape(
+      {
+        specificFields: {
+          forage: 'silagem de milho',
+          herdVaccination: 'vacinacao do rebanho em dia',
+        },
+      },
+      'nova',
+      SPECIFIC_FIELDS_BY_PORTE.grande,
+      'grande',
+      'Tutor: Volumoso: silagem de milho.\nTutor: Consumo de agua normal.',
+    );
+
+    expect(shaped.specificFields.forage).toMatch(/silagem/i);
+    expect(shaped.specificFields.herdVaccination).toBe('');
+  });
+
+  it('deve normalizar campos numericos de porte (ECC, dias em lactacao, paridade)', () => {
+    const shaped = ensureDraftShape(
+      {
+        specificFields: {
+          bodyConditionScore: 'ECC: 3,5 / 5',
+          daysInMilk: 'DEL 120',
+          parity: 'Numero de partos: 4',
+        },
+      },
+      'nova',
+      SPECIFIC_FIELDS_BY_PORTE.grande,
+      'grande',
+      [
+        'Tutor: Escore corporal 3,5.',
+        'Tutor: Dias em lactacao 120.',
+        'Tutor: Numero de partos 4.',
+      ].join('\n'),
+    );
+
+    expect(shaped.specificFields.bodyConditionScore).toBe('3.5');
+    expect(shaped.specificFields.daysInMilk).toBe('120 dias');
+    expect(shaped.specificFields.parity).toBe('4');
+  });
+
+  it('deve usar dicionario tecnico por porte/especie para extracao guiada de campos especificos', () => {
+    const result = buildHeuristicDraft(
+      [
+        {
+          role: 'user',
+          content: [
+            'Tutor: Bovino leiteiro em retorno.',
+            'Tutor: Controle parasitario do rebanho com ivermectina semestral.',
+            'Tutor: Forragem principal: capineira no cocho.',
+          ].join('\n'),
+        },
+      ],
+      'retorno',
+      { species: 'Bovino', porte: 'grande' },
+      { porte: 'grande', specificFieldKeys: SPECIFIC_FIELDS_BY_PORTE.grande },
+    );
+
+    const specific = result?.draft?.specificFields || {};
+
+    expect(specific.herdDeworming).toMatch(/ivermectina|semestral/i);
+    expect(specific.forage).toMatch(/capineira|forragem/i);
   });
 });

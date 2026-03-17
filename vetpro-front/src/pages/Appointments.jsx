@@ -1,10 +1,14 @@
 import React, { useMemo, useState } from "react";
 import AppIcon from "../components/AppIcon";
 import SpeciesIcon from "../components/SpeciesIcon";
+import useDebouncedValue from "../hooks/useDebouncedValue";
 
 const Appointments = ({
   appointments = [],
   patients = [],
+  isLoading = false,
+  errorMessage = "",
+  onRetry,
   onNewAppointment,
   onEditAppointment,
   onDeleteAppointment,
@@ -12,6 +16,8 @@ const Appointments = ({
 }) => {
   const [filterDate, setFilterDate] = useState("");
   const [filterPatient, setFilterPatient] = useState("");
+  const debouncedDate = useDebouncedValue(filterDate, 250);
+  const debouncedPatient = useDebouncedValue(filterPatient, 250);
 
   const filteredAppointments = useMemo(
     () =>
@@ -19,12 +25,13 @@ const Appointments = ({
         const normalizedDate = appointment?.date
           ? String(appointment.date).split("T")[0]
           : "";
-        const matchesDate = !filterDate || normalizedDate === filterDate;
+        const matchesDate = !debouncedDate || normalizedDate === debouncedDate;
         const matchesPatient =
-          !filterPatient || String(appointment.patientId) === String(filterPatient);
+          !debouncedPatient ||
+          String(appointment.patientId) === String(debouncedPatient);
         return matchesDate && matchesPatient;
       }),
-    [appointments, filterDate, filterPatient],
+    [appointments, debouncedDate, debouncedPatient],
   );
 
   const getPatientById = (id) =>
@@ -48,6 +55,7 @@ const Appointments = ({
       return d.getTime() === now.getTime();
     }).length;
   }, [appointments]);
+  const hasError = Boolean(String(errorMessage || "").trim());
 
   return (
     <div className="w-full max-w-7xl mx-auto space-y-3 sm:space-y-4 subtle-enter">
@@ -66,13 +74,13 @@ const Appointments = ({
       <section className="shell-surface rounded-3xl border border-gray-200/80 dark:border-dark-700/70 p-3 sm:p-5 lg:p-6">
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.6fr_1fr]">
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-gray-500 dark:text-gray-400">
+            <p className="vp-overline">
               Agenda clinica
             </p>
-            <h1 className="shell-title mt-1 text-xl sm:text-3xl font-extrabold text-gray-900 dark:text-white">
+            <h1 className="vp-h1 mt-1">
               Consultas agendadas
             </h1>
-            <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
+            <p className="vp-subtitle mt-1">
               Organize visitas, priorize retornos e mantenha o dia sob controle no celular.
             </p>
             <button
@@ -85,13 +93,13 @@ const Appointments = ({
           </div>
 
           <div className="rounded-2xl border border-emerald-200/80 dark:border-emerald-800/60 bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/25 dark:to-teal-900/20 p-4">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-emerald-700 dark:text-emerald-300">
+            <p className="vp-overline text-emerald-700 dark:text-emerald-300">
               Hoje
             </p>
             <p className="mt-2 text-4xl font-black text-emerald-900 dark:text-emerald-200">
               {todayCount}
             </p>
-            <p className="mt-1 text-xs text-emerald-800 dark:text-emerald-300">
+            <p className="vp-helper mt-1 text-emerald-800 dark:text-emerald-300">
               consulta(s) no dia
             </p>
           </div>
@@ -99,30 +107,32 @@ const Appointments = ({
       </section>
 
       <section className="shell-surface rounded-3xl border border-gray-200/80 dark:border-dark-700/70 p-3 sm:p-5 lg:p-6">
-        <h2 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white mb-3">
+        <h2 className="vp-h2 mb-3">
           Filtros
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1.5">
+            <label htmlFor="appointmentFilterDate" className="vp-label">
               Data
             </label>
             <input
+              id="appointmentFilterDate"
               type="date"
               value={filterDate}
               onChange={(e) => setFilterDate(e.target.value)}
-              className="h-11 sm:h-10 w-full rounded-xl border border-gray-300 dark:border-dark-600 bg-white dark:bg-dark-800 text-gray-900 dark:text-white px-3 text-sm"
+              className="vp-input"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1.5">
+            <label htmlFor="appointmentFilterPatient" className="vp-label">
               Paciente
             </label>
             <select
+              id="appointmentFilterPatient"
               value={filterPatient}
               onChange={(e) => setFilterPatient(e.target.value)}
-              className="h-11 sm:h-10 w-full rounded-xl border border-gray-300 dark:border-dark-600 bg-white dark:bg-dark-800 text-gray-900 dark:text-white px-3 text-sm"
+              className="vp-input"
             >
               <option value="">Todos os pacientes</option>
               {patients.map((patient) => (
@@ -147,8 +157,36 @@ const Appointments = ({
         </div>
       </section>
 
-      {filteredAppointments.length > 0 ? (
-        <section className="space-y-3">
+      {hasError && (
+        <section className="shell-surface rounded-2xl border border-red-300 bg-red-50 p-4 subtle-fade">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm font-semibold text-red-800">
+              {errorMessage || "Falha ao carregar agendamentos."}
+            </p>
+            <button type="button" onClick={onRetry} className="btn btn-danger-soft btn-md">
+              Recarregar
+            </button>
+          </div>
+        </section>
+      )}
+
+      {isLoading && (
+        <section className="space-y-3 subtle-fade">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <article
+              key={`appointment-skeleton-${index}`}
+              className="shell-surface rounded-3xl border border-gray-200/80 dark:border-dark-700/70 p-4 animate-pulse"
+            >
+              <div className="h-4 w-40 rounded bg-gray-200 dark:bg-dark-700" />
+              <div className="mt-2 h-3 w-52 rounded bg-gray-200 dark:bg-dark-700" />
+              <div className="mt-4 h-9 rounded bg-gray-200 dark:bg-dark-700" />
+            </article>
+          ))}
+        </section>
+      )}
+
+      {!isLoading && filteredAppointments.length > 0 ? (
+        <section className="space-y-3 subtle-fade">
           {filteredAppointments.map((appointment) => {
             const patient = getPatientById(appointment.patientId);
             if (!patient) return null;
@@ -206,7 +244,7 @@ const Appointments = ({
                       onClick={() =>
                         onEditAppointment && onEditAppointment(appointment)
                       }
-                      className="btn btn-neutral btn-sm btn-block"
+                      className="btn btn-neutral btn-md btn-block"
                     >
                       <AppIcon name="edit" className="h-3.5 w-3.5" />
                       Editar
@@ -215,12 +253,12 @@ const Appointments = ({
                       onClick={() =>
                         onDeleteAppointment && onDeleteAppointment(appointment.id)
                       }
-                      className="btn btn-danger-soft btn-sm btn-block"
+                      className="btn btn-danger-soft btn-md btn-block"
                     >
                       <AppIcon name="delete" className="h-3.5 w-3.5" />
                       Excluir
                     </button>
-                    <button className="btn btn-info-soft btn-sm btn-block">
+                    <button className="btn btn-info-soft btn-md btn-block">
                       <AppIcon name="confirm" className="h-3.5 w-3.5" />
                       Confirmar
                     </button>
@@ -230,17 +268,17 @@ const Appointments = ({
             );
           })}
         </section>
-      ) : (
-        <section className="shell-surface rounded-3xl border border-dashed border-gray-300 dark:border-dark-600 p-8 sm:p-10 text-center">
+      ) : !isLoading ? (
+        <section className="shell-surface rounded-3xl border border-dashed border-gray-300 dark:border-dark-600 p-8 sm:p-10 text-center subtle-fade">
           <div className="mx-auto mb-3 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-gray-100 dark:bg-dark-700 text-gray-700 dark:text-gray-300">
             <AppIcon name="appointments" />
           </div>
-          <h3 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white mb-2">
+          <h3 className="vp-h2 text-gray-900 dark:text-white mb-2">
             {filterDate || filterPatient
               ? "Nenhuma consulta encontrada"
               : "Nenhuma consulta agendada"}
           </h3>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mb-5 max-w-md mx-auto">
+          <p className="vp-subtitle text-gray-500 dark:text-gray-400 mb-5 max-w-md mx-auto">
             {filterDate || filterPatient
               ? "Nenhuma consulta corresponde aos filtros selecionados."
               : "Voce ainda nao tem consultas agendadas. Comece com a primeira."}
@@ -249,7 +287,7 @@ const Appointments = ({
             Agendar primeira consulta
           </button>
         </section>
-      )}
+      ) : null}
     </div>
   );
 };

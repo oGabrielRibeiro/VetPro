@@ -117,6 +117,7 @@ function normalizeConsultationData(data = {}) {
     returnRecommendation: data.returnRecommendation || null,
     veterinarianName: data.veterinarianName || null,
     veterinarianCrmv: data.veterinarianCrmv || data.veterinarianCRMV || null,
+    customFormData: data.customFormData || null,
   };
 
   const weight =

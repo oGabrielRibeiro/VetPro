@@ -4,6 +4,7 @@ import AppIcon from './AppIcon';
 const Table = ({
   columns = [],
   data = [],
+  caption = "",
   onRowClick,
   emptyMessage = 'Nenhum registro encontrado',
   emptyIcon = 'search',
@@ -22,7 +23,7 @@ const Table = ({
 
   if (loading) {
     return (
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+      <div className="vp-card vp-card--flat overflow-hidden">
         <div className="animate-pulse p-4">
           <div className="h-4 bg-gray-200 rounded w-1/4 mb-4"></div>
           {[...Array(5)].map((_, i) => (
@@ -35,7 +36,7 @@ const Table = ({
 
   if (data.length === 0) {
     return (
-      <div className="bg-white rounded-xl border border-dashed border-gray-300 p-8 text-center">
+      <div className="vp-card vp-card--dashed p-8 text-center">
         <div className="mx-auto mb-3 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-gray-100 text-gray-400">
           <AppIcon name={emptyIcon} />
         </div>
@@ -48,11 +49,13 @@ const Table = ({
 
   const TableContent = () => (
     <table className="w-full">
+      {caption ? <caption className="sr-only">{caption}</caption> : null}
       <thead>
         <tr className="border-b border-gray-200 bg-gray-50">
           {columns.map((column, index) => (
             <th
               key={column.key || index}
+              scope="col"
               className={`
                 px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider
                 ${column.align === 'right' ? 'text-right' : column.align === 'center' ? 'text-center' : 'text-left'}
@@ -69,12 +72,21 @@ const Table = ({
         {data.map((row, rowIndex) => (
           <tr
             key={row.id || rowIndex}
+            role={onRowClick ? "button" : undefined}
+            tabIndex={onRowClick ? 0 : undefined}
             className={`
               ${striped && rowIndex % 2 === 1 ? 'bg-gray-50' : 'bg-white'}
               ${hoverable ? 'hover:bg-emerald-50 transition-colors' : ''}
               ${onRowClick ? 'cursor-pointer' : ''}
             `}
             onClick={() => onRowClick && onRowClick(row)}
+            onKeyDown={(event) => {
+              if (!onRowClick) return;
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                onRowClick(row);
+              }
+            }}
           >
             {columns.map((column, colIndex) => (
               <td
@@ -96,14 +108,14 @@ const Table = ({
 
   if (responsive) {
     return (
-      <div className={`bg-white rounded-xl border border-gray-200 shadow-sm overflow-x-auto ${className}`}>
+      <div className={`vp-card vp-card--flat overflow-x-auto ${className}`}>
         <TableContent />
       </div>
     );
   }
 
   return (
-    <div className={`bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden ${className}`}>
+    <div className={`vp-card vp-card--flat overflow-hidden ${className}`}>
       <TableContent />
     </div>
   );

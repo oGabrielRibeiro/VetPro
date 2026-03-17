@@ -219,7 +219,7 @@ export const AnimatedCard = ({
       whileTap={{ scale: onClick ? 0.98 : 1 }}
       transition={{ type: 'spring', stiffness: 400, damping: 25 }}
       className={`
-        bg-white rounded-xl border border-gray-200 shadow-sm
+        vp-card
         ${onClick ? 'cursor-pointer' : ''}
         ${className}
       `}
@@ -286,8 +286,7 @@ export const AnimatedInput = ({
         value={value}
         onChange={onChange}
         className={`
-          w-full px-3 pt-5 pb-2 border rounded-lg outline-none
-          focus:ring-2 focus:ring-emerald-500
+          vp-input-field pt-5 pb-2
           ${error ? 'border-red-300' : 'border-gray-300'}
         `}
         {...props}

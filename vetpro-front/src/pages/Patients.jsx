@@ -1,24 +1,34 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import AppIcon from "../components/AppIcon";
 import SpeciesIcon from "../components/SpeciesIcon";
+import useDebouncedValue from "../hooks/useDebouncedValue";
 
 const Patients = ({
   patients,
+  isLoading = false,
+  errorMessage = "",
+  onRetry,
   onEditPatient,
   onAddPatient,
   onViewConsultations,
   onBack,
 }) => {
   const [searchQuery, setSearchQuery] = useState("");
+  const debouncedQuery = useDebouncedValue(searchQuery, 250);
 
-  const filteredPatients = patients.filter(
-    (patient) =>
-      patient.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      patient.ownerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      patient.species.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (patient.subcategory &&
-        patient.subcategory.toLowerCase().includes(searchQuery.toLowerCase())),
-  );
+  const filteredPatients = useMemo(() => {
+    const term = String(debouncedQuery || "").toLowerCase().trim();
+    if (!term) return patients;
+    return patients.filter(
+      (patient) =>
+        patient.name.toLowerCase().includes(term) ||
+        patient.ownerName.toLowerCase().includes(term) ||
+        patient.species.toLowerCase().includes(term) ||
+        (patient.subcategory &&
+          patient.subcategory.toLowerCase().includes(term)),
+    );
+  }, [patients, debouncedQuery]);
+  const hasError = Boolean(String(errorMessage || "").trim());
 
   return (
     <div className="w-full max-w-7xl mx-auto space-y-3 sm:space-y-4 subtle-enter">
@@ -37,13 +47,13 @@ const Patients = ({
       <section className="shell-surface rounded-3xl border border-gray-200/80 dark:border-dark-700/70 p-3 sm:p-5 lg:p-6">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-gray-500 dark:text-gray-400">
+            <p className="vp-overline">
               Cadastro clinico
             </p>
-            <h1 className="shell-title mt-1 text-xl sm:text-3xl font-extrabold text-gray-900 dark:text-white">
+            <h1 className="vp-h1 mt-1">
               Pacientes
             </h1>
-            <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
+            <p className="vp-subtitle mt-1">
               Gerencie fichas com identificacao, tutor e acesso direto ao prontuario.
             </p>
           </div>
@@ -55,7 +65,7 @@ const Patients = ({
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Buscar por nome, tutor ou especie"
-                className="h-11 sm:h-10 w-full rounded-xl border border-gray-300 dark:border-dark-600 bg-white dark:bg-dark-800 pl-10 pr-3 text-sm"
+                className="vp-input pl-10 pr-3"
               />
               <span className="absolute left-3 top-2.5 text-gray-400">
                 <AppIcon name="search" className="h-4 w-4" />
@@ -70,13 +80,41 @@ const Patients = ({
       </section>
 
       <div className="flex items-center justify-between">
-        <p className="text-xs font-medium text-gray-500 dark:text-gray-400">
+        <p className="vp-helper text-gray-500 dark:text-gray-400">
           {filteredPatients.length} resultado(s)
         </p>
       </div>
 
-      {filteredPatients.length > 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+      {hasError && (
+        <div className="shell-surface rounded-2xl border border-red-300 bg-red-50 p-4 subtle-fade">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm font-semibold text-red-800">
+              {errorMessage || "Falha ao carregar pacientes."}
+            </p>
+            <button type="button" onClick={onRetry} className="btn btn-danger-soft btn-md">
+              Recarregar
+            </button>
+          </div>
+        </div>
+      )}
+
+      {isLoading && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 subtle-fade">
+          {Array.from({ length: 6 }).map((_, index) => (
+            <div
+              key={`patient-skeleton-${index}`}
+              className="shell-surface rounded-2xl border border-gray-200/80 dark:border-dark-700/70 p-4 animate-pulse"
+            >
+              <div className="h-4 w-32 rounded bg-gray-200 dark:bg-dark-700" />
+              <div className="mt-2 h-3 w-24 rounded bg-gray-200 dark:bg-dark-700" />
+              <div className="mt-4 h-9 rounded bg-gray-200 dark:bg-dark-700" />
+            </div>
+          ))}
+        </div>
+      )}
+
+      {!isLoading && filteredPatients.length > 0 ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 subtle-fade">
           {filteredPatients.map((patient) => (
             <div
               key={patient.id}
@@ -135,15 +173,15 @@ const Patients = ({
             </div>
           ))}
         </div>
-      ) : (
-        <div className="text-center py-10 shell-surface rounded-3xl border border-dashed border-gray-300 dark:border-dark-600">
+      ) : !isLoading ? (
+        <div className="text-center py-10 shell-surface rounded-3xl border border-dashed border-gray-300 dark:border-dark-600 subtle-fade">
           <div className="mx-auto mb-3 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-gray-100 dark:bg-dark-700 text-gray-700 dark:text-gray-300">
             <AppIcon name="patients" />
           </div>
-          <h3 className="text-lg sm:text-xl font-bold text-gray-800 dark:text-white mb-2">
+          <h3 className="vp-h2 text-gray-800 dark:text-white mb-2">
             {searchQuery ? "Nenhum paciente encontrado" : "Nenhum paciente cadastrado"}
           </h3>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mb-5 max-w-md mx-auto px-2">
+          <p className="vp-subtitle text-gray-500 dark:text-gray-400 mb-5 max-w-md mx-auto px-2">
             {searchQuery
               ? "Nenhum paciente corresponde a sua busca. Tente outros termos."
               : "Voce ainda nao cadastrou nenhum paciente. Comece adicionando seu primeiro paciente."}
@@ -155,7 +193,7 @@ const Patients = ({
             Adicionar Paciente
           </button>
         </div>
-      )}
+      ) : null}
     </div>
   );
 };

@@ -75,6 +75,8 @@ const calculateAge = (birthDate) => {
 
 const PatientForm = ({ patient, onSubmit, onCancel, isEditing }) => {
   const [calculatedAge, setCalculatedAge] = useState(null);
+  const [ownerGeoLoading, setOwnerGeoLoading] = useState(false);
+  const [ownerGeoError, setOwnerGeoError] = useState("");
 
   const speciesOptions = [
     { value: "Mamífero", label: "Mamífero" },
@@ -155,6 +157,32 @@ const PatientForm = ({ patient, onSubmit, onCancel, isEditing }) => {
       setValue("age", ageResult.numeric, { shouldValidate: true });
     }
   }, [birthDateValue, setValue]);
+
+  const handleOwnerGeolocation = () => {
+    if (!navigator.geolocation) {
+      setOwnerGeoError("Geolocalizacao nao suportada neste navegador.");
+      return;
+    }
+    setOwnerGeoLoading(true);
+    setOwnerGeoError("");
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const lat = position.coords.latitude.toFixed(6);
+        const lng = position.coords.longitude.toFixed(6);
+        setValue("ownerAddress", `Lat ${lat}, Long ${lng}`, {
+          shouldValidate: true,
+        });
+        setOwnerGeoLoading(false);
+      },
+      () => {
+        setOwnerGeoError(
+          "Nao foi possivel obter a localizacao. Verifique as permissoes.",
+        );
+        setOwnerGeoLoading(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000 },
+    );
+  };
 
   useEffect(() => {
     if (selectedSubcategory && porteMap[selectedSubcategory]) {
@@ -375,12 +403,33 @@ const PatientForm = ({ patient, onSubmit, onCancel, isEditing }) => {
               />
 
               <div className="md:col-span-2">
-                <Input
-                  label="Endereço"
+                <div className="flex items-center justify-between gap-2 mb-1">
+                  <label className="vp-label">Endereço</label>
+                  <button
+                    type="button"
+                    onClick={handleOwnerGeolocation}
+                    disabled={ownerGeoLoading}
+                    className="btn btn-neutral btn-xs"
+                  >
+                    {ownerGeoLoading ? "Localizando..." : "Usar geolocalizacao"}
+                  </button>
+                </div>
+                <input
+                  className={`vp-input ${
+                    errors.ownerAddress?.message
+                      ? "border-red-300 focus:border-red-400 focus:shadow-[0_0_0_3px_rgba(248,113,113,0.22)]"
+                      : ""
+                  }`}
                   placeholder="Endereço completo"
-                  error={errors.ownerAddress?.message}
-                  {...register("ownerAddress")}
+                  {...register("ownerAddress", {
+                    onChange: () => ownerGeoError && setOwnerGeoError(""),
+                  })}
                 />
+                {(errors.ownerAddress?.message || ownerGeoError) && (
+                  <p className="mt-1 text-xs text-red-500">
+                    {errors.ownerAddress?.message || ownerGeoError}
+                  </p>
+                )}
               </div>
             </div>
           </div>

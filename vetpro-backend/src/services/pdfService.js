@@ -99,6 +99,294 @@ function drawKeyValue(doc, label, value) {
     .text(safe(value));
 }
 
+function drawKeyValueInline(doc, label, value) {
+  doc
+    .font('Helvetica-Bold')
+    .fontSize(9)
+    .fillColor('#111827')
+    .text(`${label}: `, { continued: true })
+    .font('Helvetica')
+    .fillColor('#374151')
+    .text(safe(value), { continued: true })
+    .text('  ');
+}
+
+function formatMedicationRows(rows = []) {
+  return rows
+    .filter((row) => row?.name || row?.dose || row?.route)
+    .map((row) => {
+      const parts = [
+        row.name || '',
+        row.dose ? `Dose: ${row.dose}` : '',
+        row.route ? `Via: ${row.route}` : '',
+      ].filter(Boolean);
+      return parts.join(' | ');
+    })
+    .join('\n');
+}
+
+function formatPrescriptionItems(items = []) {
+  return items
+    .filter((row) => row?.name || row?.dose || row?.route || row?.frequency || row?.duration)
+    .map((row) => {
+      const parts = [
+        row.name || '',
+        row.dose ? `Dose: ${row.dose}` : '',
+        row.route ? `Via: ${row.route}` : '',
+        row.frequency ? `Freq: ${row.frequency}` : '',
+        row.duration ? `Duracao: ${row.duration}` : '',
+      ].filter(Boolean);
+      return parts.join(' | ');
+    })
+    .join('\n');
+}
+
+function decodeDataUrlImage(dataUrl = '') {
+  if (!dataUrl || typeof dataUrl !== 'string') return null;
+  const match = dataUrl.match(/^data:image\/\w+;base64,(.+)$/);
+  if (!match) return null;
+  try {
+    return Buffer.from(match[1], 'base64');
+  } catch {
+    return null;
+  }
+}
+
+function renderAnesthesiaPdf(doc, consultation, accent) {
+  const anesthesia = consultation.customFormData?.anesthesia || {};
+
+  drawSectionTitle(doc, 'Ficha anestesica', accent);
+  drawKeyValue(doc, 'Nome animal', anesthesia.animalName);
+  drawKeyValue(doc, 'Nome proprietario', anesthesia.ownerName);
+  drawKeyValue(doc, 'Prontuario', anesthesia.recordNumber);
+  drawKeyValue(doc, 'Especie', anesthesia.species);
+  drawKeyValue(doc, 'Raca', anesthesia.breed);
+  drawKeyValue(doc, 'Peso (kg)', anesthesia.weight);
+  drawKeyValue(doc, 'Idade', anesthesia.age);
+  drawKeyValue(doc, 'Sexo', anesthesia.sex);
+
+  drawSectionTitle(doc, 'Procedimento e equipe', accent);
+  drawKeyValue(doc, 'Cirurgia', anesthesia.surgeryName);
+  drawKeyValue(doc, 'Diagnostico pre-op', anesthesia.preOpDiagnosis);
+  drawKeyValue(doc, 'Cirurgiao', anesthesia.surgeon);
+  drawKeyValue(doc, 'Anestesista', anesthesia.anesthetist);
+  drawKeyValue(doc, 'Auxiliar', anesthesia.assistant);
+  drawKeyValue(doc, 'ASA', anesthesia.asaClass);
+  drawKeyValue(doc, 'Inicio anestesia', anesthesia.anesthesiaStart);
+  drawKeyValue(doc, 'Fim anestesia', anesthesia.anesthesiaEnd);
+  drawKeyValue(doc, 'Inicio cirurgia', anesthesia.surgeryStart);
+  drawKeyValue(doc, 'Fim cirurgia', anesthesia.surgeryEnd);
+  drawKeyValue(doc, 'Data', anesthesia.procedureDate);
+  if (anesthesia.consentSignature) {
+    drawKeyValue(doc, 'Consentimento tutor', 'Assinatura anexada');
+    if (anesthesia.consentMeta?.capturedAt || anesthesia.consentMeta?.capturedByName) {
+      drawKeyValue(
+        doc,
+        'Consentimento capturado em',
+        formatDateTime(anesthesia.consentMeta.capturedAt),
+      );
+      drawKeyValue(
+        doc,
+        'Responsavel pela captura',
+        anesthesia.consentMeta.capturedByName || anesthesia.consentMeta.capturedByUserId,
+      );
+    }
+    const buffer = decodeDataUrlImage(anesthesia.consentSignature);
+    if (buffer) {
+      doc.image(buffer, { width: 140 });
+      doc.moveDown(0.3);
+    }
+  }
+
+  drawSectionTitle(doc, 'EPA', accent);
+  drawKeyValueInline(doc, 'Hidratacao', anesthesia.hydration);
+  drawKeyValueInline(doc, 'Temp', anesthesia.preOpTemperature);
+  drawKeyValueInline(doc, 'FC', anesthesia.preOpHeartRate);
+  drawKeyValueInline(doc, 'FR', anesthesia.preOpRespiratoryRate);
+  drawKeyValueInline(doc, 'Mucosas', anesthesia.mucosaColor);
+  drawKeyValueInline(doc, 'TPC', anesthesia.tpc);
+  drawKeyValueInline(doc, 'TGO/AST', anesthesia.tgoAst);
+  drawKeyValueInline(doc, 'TP', anesthesia.tp);
+  drawKeyValueInline(doc, 'Prot totais', anesthesia.totalProteins);
+  drawKeyValueInline(doc, 'Hematocrito', anesthesia.hematocrit);
+  drawKeyValueInline(doc, 'Ureia', anesthesia.urea);
+  drawKeyValueInline(doc, 'Creatinina', anesthesia.creatinine);
+  drawKeyValueInline(doc, 'Fibrinogenio', anesthesia.fibrinogen);
+  drawKeyValueInline(doc, 'FA', anesthesia.fa);
+  doc.moveDown(0.4);
+
+  drawSectionTitle(doc, 'Protocolos', accent);
+  const premed = formatMedicationRows(anesthesia.premedication || []);
+  const induction = formatMedicationRows(anesthesia.induction || []);
+  const maintenance = formatMedicationRows(anesthesia.maintenance || []);
+  const analgesia = formatMedicationRows(anesthesia.analgesia || []);
+  const rescue = formatMedicationRows(anesthesia.rescue || []);
+  drawKeyValue(doc, 'Premedicacao', premed);
+  drawKeyValue(doc, 'Inducao', induction);
+  drawKeyValue(doc, 'Manutencao', maintenance);
+  drawKeyValue(doc, 'Analgesia', analgesia);
+  drawKeyValue(doc, 'Resgate', rescue);
+
+  drawSectionTitle(doc, 'Monitorizacao', accent);
+  const legendText = (anesthesia.legendMarkers || [])
+    .filter((item) => item?.code || item?.label)
+    .map((item) => `${item.code || ''} ${item.label || ''}`.trim())
+    .join(' | ');
+  drawKeyValue(doc, 'Legenda', legendText);
+  const gridLines = (anesthesia.vitalsGrid || [])
+    .filter((row) =>
+      Object.values(row || {}).some((value) => String(value || '').trim()),
+    )
+    .map(
+      (row) =>
+        `T=${row.time || '-'} | FC=${row.fc || '-'} | FR=${row.fr || '-'} | Temp=${row.temp || '-'} | SpO2=${row.spo2 || '-'} | PAM=${row.pa || '-'} | EtCO2=${row.co2 || '-'}`,
+    );
+  if (gridLines.length) {
+    drawKeyValue(doc, 'Tabela', gridLines.join('\n'));
+  }
+
+  drawSectionTitle(doc, 'Respiracao e suporte', accent);
+  drawKeyValue(doc, 'Resp espontanea', anesthesia.respSpontaneous);
+  drawKeyValue(doc, 'Resp assistida', anesthesia.respAssisted);
+  drawKeyValue(doc, 'Anestesia local', anesthesia.localAnesthesia);
+  drawKeyValue(doc, 'Anestesia geral', anesthesia.generalAnesthesia);
+  drawKeyValue(doc, 'Intubacao', anesthesia.intubation);
+  drawKeyValue(doc, 'Sonda', anesthesia.tubeProbe);
+  drawKeyValue(doc, 'Numero sonda', anesthesia.tubeProbeNumber);
+  drawKeyValue(doc, 'Tubo / numero', anesthesia.tubeNumber);
+  drawKeyValue(doc, 'Oxigenio', anesthesia.oxygen);
+  drawKeyValue(doc, 'Ventilacao', anesthesia.ventilation);
+  drawKeyValue(doc, 'Posicao', anesthesia.animalPosition);
+  drawKeyValue(doc, 'Circuito', anesthesia.circuit);
+  drawKeyValue(doc, 'Fluidoterapia', anesthesia.fluidTherapy);
+  drawKeyValue(doc, 'Resultado final', anesthesia.finalOutcome);
+  drawKeyValue(doc, 'Condicoes', anesthesia.conditions);
+
+  if (anesthesia.notes) {
+    drawKeyValue(doc, 'Observacoes', anesthesia.notes);
+  }
+}
+
+function renderPatientSummary(doc, consultation, accent) {
+  const patient = consultation.patient || {};
+  drawSectionTitle(doc, 'Paciente e tutor', accent);
+  drawKeyValue(doc, 'Paciente', patient.name);
+  drawKeyValue(doc, 'Especie', patient.specie || patient.species);
+  drawKeyValue(doc, 'Raca', patient.breed);
+  drawKeyValue(doc, 'Idade', patient.age);
+  drawKeyValue(doc, 'Tutor', patient.ownerName);
+  drawKeyValue(doc, 'Telefone', patient.ownerPhone);
+}
+
+function renderMedicationPdf(doc, consultation, accent) {
+  const medication = consultation.customFormData?.medication || {};
+
+  renderPatientSummary(doc, consultation, accent);
+  drawSectionTitle(doc, 'Prescricao / Medicacao', accent);
+  drawKeyValue(doc, 'Diagnostico', medication.diagnosis);
+  drawKeyValue(doc, 'Itens prescritos', formatPrescriptionItems(medication.items || []));
+  drawKeyValue(doc, 'Observacoes', medication.notes);
+}
+
+function renderProcedurePdf(doc, consultation, accent) {
+  const procedure = consultation.customFormData?.procedure || {};
+  renderPatientSummary(doc, consultation, accent);
+  drawSectionTitle(doc, 'Procedimento cirurgico', accent);
+  drawKeyValue(doc, 'Procedimento', procedure.procedureName);
+  drawKeyValue(doc, 'Indicacao', procedure.indication);
+  drawKeyValue(doc, 'Tecnica', procedure.technique);
+  drawKeyValue(doc, 'Anestesia utilizada', procedure.anesthesiaUsed);
+  drawKeyValue(doc, 'Cirurgiao', procedure.surgeon);
+  drawKeyValue(doc, 'Auxiliar', procedure.assistant);
+  drawKeyValue(doc, 'Consentimento', procedure.consentGiven);
+  drawKeyValue(doc, 'Data do consentimento', procedure.consentDate);
+  if (procedure.consentSignature) {
+    drawKeyValue(doc, 'Assinatura do tutor', 'Assinatura anexada');
+    if (procedure.consentMeta?.capturedAt || procedure.consentMeta?.capturedByName) {
+      drawKeyValue(
+        doc,
+        'Consentimento capturado em',
+        formatDateTime(procedure.consentMeta.capturedAt),
+      );
+      drawKeyValue(
+        doc,
+        'Responsavel pela captura',
+        procedure.consentMeta.capturedByName || procedure.consentMeta.capturedByUserId,
+      );
+    }
+    const buffer = decodeDataUrlImage(procedure.consentSignature);
+    if (buffer) {
+      doc.image(buffer, { width: 140 });
+      doc.moveDown(0.3);
+    }
+  }
+  drawKeyValue(doc, 'Achados', procedure.findings);
+  drawKeyValue(doc, 'Complicacoes', procedure.complications);
+  drawKeyValue(doc, 'Plano pos-operatorio', procedure.postOpPlan);
+  drawKeyValue(doc, 'Medicacoes', formatMedicationRows(procedure.medications || []));
+}
+
+function renderHospitalizationPdf(doc, consultation, accent) {
+  const hospitalization = consultation.customFormData?.hospitalization || {};
+  renderPatientSummary(doc, consultation, accent);
+  drawSectionTitle(doc, 'Evolucao / Internacao', accent);
+  drawKeyValue(doc, 'Admissao', hospitalization.admissionDate);
+  drawKeyValue(doc, 'Alta', hospitalization.dischargeDate);
+  drawKeyValue(doc, 'Diagnostico principal', hospitalization.mainDiagnosis);
+  drawKeyValue(doc, 'Responsavel', hospitalization.responsible);
+  drawKeyValue(doc, 'Evolucao diaria', hospitalization.dailyEvolution);
+  drawKeyValue(doc, 'Sinais vitais', hospitalization.vitalsNotes);
+  drawKeyValue(doc, 'Medicacoes', formatMedicationRows(hospitalization.medications || []));
+  drawKeyValue(doc, 'Alimentacao', hospitalization.feeding);
+  drawKeyValue(doc, 'Hidratacao', hospitalization.hydration);
+  drawKeyValue(doc, 'Eliminacoes', hospitalization.elimination);
+  drawKeyValue(doc, 'Observacoes', hospitalization.observations);
+}
+
+function renderVaccinationPdf(doc, consultation, accent) {
+  const vaccination = consultation.customFormData?.vaccination || {};
+  renderPatientSummary(doc, consultation, accent);
+  drawSectionTitle(doc, 'Vacinacao e vermifugacao', accent);
+  drawKeyValue(doc, 'Vacina', vaccination.vaccineName);
+  drawKeyValue(doc, 'Fabricante', vaccination.vaccineManufacturer);
+  drawKeyValue(doc, 'Lote', vaccination.vaccineLot);
+  drawKeyValue(doc, 'Validade', vaccination.vaccineExpiry);
+  drawKeyValue(doc, 'Dose', vaccination.vaccineDose);
+  drawKeyValue(doc, 'Via', vaccination.vaccineRoute);
+  drawKeyValue(doc, 'Data de aplicacao', vaccination.vaccineDate);
+  drawKeyValue(doc, 'Proxima dose', vaccination.vaccineNextDate);
+  drawKeyValue(doc, 'Vermifugo', vaccination.dewormerName);
+  drawKeyValue(doc, 'Fabricante vermifugo', vaccination.dewormerManufacturer);
+  drawKeyValue(doc, 'Lote vermifugo', vaccination.dewormerLot);
+  drawKeyValue(doc, 'Data de aplicacao', vaccination.dewormerDate);
+  drawKeyValue(doc, 'Proxima dose', vaccination.dewormerNextDate);
+  drawKeyValue(doc, 'Observacoes', vaccination.notes);
+}
+
+function renderFollowUpPdf(doc, consultation, accent) {
+  const followUp = consultation.customFormData?.followUp || {};
+  renderPatientSummary(doc, consultation, accent);
+  drawSectionTitle(doc, 'Retorno / Follow-up', accent);
+  drawKeyValue(doc, 'Diagnostico anterior', followUp.previousDiagnosis);
+  drawKeyValue(doc, 'Status atual', followUp.currentStatus);
+  drawKeyValue(doc, 'Resposta ao tratamento', followUp.responseToTreatment);
+  drawKeyValue(doc, 'Ajustes', followUp.adjustments);
+  drawKeyValue(doc, 'Proximo retorno', followUp.nextVisitDate);
+  drawKeyValue(doc, 'Observacoes', followUp.notes);
+}
+
+function renderReportPdf(doc, consultation, accent) {
+  const report = consultation.customFormData?.report || {};
+  renderPatientSummary(doc, consultation, accent);
+  drawSectionTitle(doc, 'Laudo / Atestado', accent);
+  drawKeyValue(doc, 'Titulo', report.title);
+  drawKeyValue(doc, 'Data', report.reportDate);
+  drawKeyValue(doc, 'Resumo', report.summary);
+  drawKeyValue(doc, 'Achados', report.findings);
+  drawKeyValue(doc, 'Conclusao', report.conclusion);
+  drawKeyValue(doc, 'Recomendacoes', report.recommendations);
+}
+
 function resolveClinicalParameters(consultation = {}) {
   const patient = consultation?.patient || {};
   const previous = consultation?.previousConsultation || {};
@@ -469,6 +757,79 @@ function generateConsultationPDF(consultation, res) {
 
   doc.y = 140;
 
+  if (consultation.consultationType === 'anestesia' && consultation.customFormData) {
+    renderAnesthesiaPdf(doc, consultation, accent);
+    doc.moveDown(1.2);
+    const signaturePath = path.join(
+      __dirname,
+      `../assets/signatures/${consultation.userId}.png`,
+    );
+    try {
+      doc.image(signaturePath, { width: 130 });
+      doc.moveDown(0.4);
+    } catch {
+      // no signature file
+    }
+    doc
+      .font('Helvetica-Bold')
+      .fontSize(10)
+      .fillColor('#111827')
+      .text('________________________________________')
+      .text(safe(consultation.veterinarianName, vet.name || 'Veterinario(a)'))
+      .font('Helvetica')
+      .text(`CRMV: ${safe(consultation.veterinarianCrmv || vet.crmv, '-')}`);
+    doc.end();
+    return;
+  }
+
+  if (consultation.customFormData) {
+    const type = consultation.consultationType;
+    if (type === 'medicacao') {
+      renderMedicationPdf(doc, consultation, accent);
+    } else if (type === 'procedimento') {
+      renderProcedurePdf(doc, consultation, accent);
+    } else if (type === 'internacao') {
+      renderHospitalizationPdf(doc, consultation, accent);
+    } else if (type === 'vacinacao') {
+      renderVaccinationPdf(doc, consultation, accent);
+    } else if (type === 'retorno') {
+      renderFollowUpPdf(doc, consultation, accent);
+    } else if (type === 'laudo') {
+      renderReportPdf(doc, consultation, accent);
+    }
+
+    if (
+      type === 'medicacao' ||
+      type === 'procedimento' ||
+      type === 'internacao' ||
+      type === 'vacinacao' ||
+      type === 'retorno' ||
+      type === 'laudo'
+    ) {
+      doc.moveDown(1.2);
+      const signaturePath = path.join(
+        __dirname,
+        `../assets/signatures/${consultation.userId}.png`,
+      );
+      try {
+        doc.image(signaturePath, { width: 130 });
+        doc.moveDown(0.4);
+      } catch {
+        // no signature file
+      }
+      doc
+        .font('Helvetica-Bold')
+        .fontSize(10)
+        .fillColor('#111827')
+        .text('________________________________________')
+        .text(safe(consultation.veterinarianName, vet.name || 'Veterinario(a)'))
+        .font('Helvetica')
+        .text(`CRMV: ${safe(consultation.veterinarianCrmv || vet.crmv, '-')}`);
+      doc.end();
+      return;
+    }
+  }
+
   drawSectionTitle(doc, 'Paciente e tutor', accent);
   drawKeyValue(doc, 'Paciente', patient.name);
   drawKeyValue(doc, 'Especie', patient.specie || patient.species);
@@ -523,6 +884,41 @@ function generateConsultationPDF(consultation, res) {
     'Recomendacao de retorno',
     consultation.returnRecommendation,
   );
+
+  if (consultation.consultationType === 'anestesia' && consultation.customFormData) {
+    const anesthesia = consultation.customFormData?.anesthesia || {};
+    drawSectionTitle(doc, 'Ficha anestesica (resumo)', accent);
+    drawKeyValue(doc, 'Animal', anesthesia.animalName);
+    drawKeyValue(doc, 'Tutor', anesthesia.ownerName);
+    drawKeyValue(doc, 'Procedimento', anesthesia.surgeryName);
+    drawKeyValue(doc, 'Diagnostico pre-op', anesthesia.preOpDiagnosis);
+    drawKeyValue(doc, 'Anestesista', anesthesia.anesthetist);
+    drawKeyValue(doc, 'Cirurgiao', anesthesia.surgeon);
+    drawKeyValue(doc, 'ASA', anesthesia.asaClass);
+    drawKeyValue(doc, 'Inicio anestesia', anesthesia.anesthesiaStart);
+    drawKeyValue(doc, 'Fim anestesia', anesthesia.anesthesiaEnd);
+    drawKeyValue(doc, 'Data', anesthesia.procedureDate);
+
+    const legendText = (anesthesia.legendMarkers || [])
+      .filter((item) => item?.code || item?.label)
+      .map((item) => `${item.code || ''} ${item.label || ''}`.trim())
+      .join(' | ');
+    if (legendText) {
+      drawKeyValue(doc, 'Legenda', legendText);
+    }
+
+    const gridLines = (anesthesia.vitalsGrid || [])
+      .filter((row) =>
+        Object.values(row || {}).some((value) => String(value || '').trim()),
+      )
+      .map(
+        (row) =>
+          `T=${row.time || '-'} | FC=${row.fc || '-'} | FR=${row.fr || '-'} | Temp=${row.temp || '-'} | SpO2=${row.spo2 || '-'} | PAM=${row.pa || '-'} | EtCO2=${row.co2 || '-'}`,
+      );
+    if (gridLines.length) {
+      drawKeyValue(doc, 'Monitorizacao', gridLines.join('\n'));
+    }
+  }
   const porteData = parsePorteDataFromNotes(consultation.notes);
   if (porteData) {
     drawSectionTitle(

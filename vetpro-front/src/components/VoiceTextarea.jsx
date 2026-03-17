@@ -121,7 +121,7 @@ const VoiceTextarea = ({
         onChange={(e) => onChange(e.target.value)}
         rows={rows}
         placeholder={placeholder}
-        className={`w-full rounded-lg border border-gray-300 px-3 py-3 text-base sm:text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 ${className}`}
+        className={`vp-input-field text-base sm:text-sm py-3 ${className}`}
       />
       <FeedbackBanner className="mt-2" type="error" message={feedback} onClose={() => setFeedback("")} />
     </div>

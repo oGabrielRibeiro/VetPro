@@ -1,0 +1,670 @@
+{
+  "executedAt": "2026-03-11T19:20:41.152Z",
+  "datasetPath": "C:\\Cliente\\HSS\\VetPro\\dataset_treinamento_veterinario_apolo\\dataset_prontuario_apolo.json",
+  "wavPath": "C:\\Cliente\\HSS\\VetPro\\dataset_treinamento_veterinario_apolo\\vet_dialogo_treinamento_realista.wav",
+  "transcriptOnly": true,
+  "simulateAsr": true,
+  "runs": [
+    {
+      "run": 1,
+      "transcriptLength": 749,
+      "metrics": {
+        "diagnosisScore": 1,
+        "treatmentScore": 0.357,
+        "examScore": 0.333,
+        "globalScore": 0.563,
+        "specificCoverage": 0.6,
+        "checks": {
+          "hasDiagnosis": true,
+          "hasTreatmentEvidence": true,
+          "hasExamEvidence": false
+        },
+        "specificChecks": [
+          {
+            "key": "vacinacao",
+            "expected": "Em dia",
+            "predicted": "Vermifugação com Ivermectina.",
+            "match": false
+          },
+          {
+            "key": "vermifugacao",
+            "expected": "Ivermectina",
+            "predicted": "Vermifugação com Ivermectina.",
+            "match": true
+          },
+          {
+            "key": "temperatura",
+            "expected": "39.8",
+            "predicted": "39,8 graus",
+            "match": false
+          },
+          {
+            "key": "frequencia_cardiaca",
+            "expected": "88",
+            "predicted": "88 bpm",
+            "match": true
+          },
+          {
+            "key": "mucosas",
+            "expected": "Discretamente congestas",
+            "predicted": "Discretamente congestas, tempo de preenchimento capilar de 3 segundos.",
+            "match": true
+          }
+        ]
+      }
+    },
+    {
+      "run": 2,
+      "transcriptLength": 803,
+      "metrics": {
+        "diagnosisScore": 1,
+        "treatmentScore": 0.429,
+        "examScore": 0.333,
+        "globalScore": 0.587,
+        "specificCoverage": 1,
+        "checks": {
+          "hasDiagnosis": true,
+          "hasTreatmentEvidence": false,
+          "hasExamEvidence": true
+        },
+        "specificChecks": [
+          {
+            "key": "vacinacao",
+            "expected": "Em dia",
+            "predicted": "Em dia",
+            "match": true
+          },
+          {
+            "key": "vermifugacao",
+            "expected": "Ivermectina",
+            "predicted": "Ivermectina",
+            "match": true
+          },
+          {
+            "key": "temperatura",
+            "expected": "39.8",
+            "predicted": "39.8 graus",
+            "match": true
+          },
+          {
+            "key": "frequencia_cardiaca",
+            "expected": "88",
+            "predicted": "88 bpm",
+            "match": true
+          },
+          {
+            "key": "mucosas",
+            "expected": "Discretamente congestas",
+            "predicted": "discretamente congestas",
+            "match": true
+          }
+        ]
+      }
+    },
+    {
+      "run": 3,
+      "transcriptLength": 718,
+      "metrics": {
+        "diagnosisScore": 1,
+        "treatmentScore": 0.5,
+        "examScore": 0.167,
+        "globalScore": 0.556,
+        "specificCoverage": 0.8,
+        "checks": {
+          "hasDiagnosis": true,
+          "hasTreatmentEvidence": true,
+          "hasExamEvidence": true
+        },
+        "specificChecks": [
+          {
+            "key": "vacinacao",
+            "expected": "Em dia",
+            "predicted": "Em dia",
+            "match": true
+          },
+          {
+            "key": "vermifugacao",
+            "expected": "Ivermectina",
+            "predicted": "Ivermectina",
+            "match": true
+          },
+          {
+            "key": "temperatura",
+            "expected": "39.8",
+            "predicted": "39.8",
+            "match": true
+          },
+          {
+            "key": "frequencia_cardiaca",
+            "expected": "88",
+            "predicted": "88 bpm",
+            "match": true
+          },
+          {
+            "key": "mucosas",
+            "expected": "Discretamente congestas",
+            "predicted": "congestas",
+            "match": false
+          }
+        ]
+      }
+    },
+    {
+      "run": 4,
+      "transcriptLength": 779,
+      "metrics": {
+        "diagnosisScore": 0.5,
+        "treatmentScore": 0.571,
+        "examScore": 0.333,
+        "globalScore": 0.468,
+        "specificCoverage": 1,
+        "checks": {
+          "hasDiagnosis": false,
+          "hasTreatmentEvidence": true,
+          "hasExamEvidence": true
+        },
+        "specificChecks": [
+          {
+            "key": "vacinacao",
+            "expected": "Em dia",
+            "predicted": "Em dia",
+            "match": true
+          },
+          {
+            "key": "vermifugacao",
+            "expected": "Ivermectina",
+            "predicted": "Ivermectina",
+            "match": true
+          },
+          {
+            "key": "temperatura",
+            "expected": "39.8",
+            "predicted": "39.8 graus",
+            "match": true
+          },
+          {
+            "key": "frequencia_cardiaca",
+            "expected": "88",
+            "predicted": "88 bpm",
+            "match": true
+          },
+          {
+            "key": "mucosas",
+            "expected": "Discretamente congestas",
+            "predicted": "Discretamente congestas",
+            "match": true
+          }
+        ]
+      }
+    },
+    {
+      "run": 5,
+      "transcriptLength": 810,
+      "metrics": {
+        "diagnosisScore": 0.5,
+        "treatmentScore": 0.357,
+        "examScore": 0.333,
+        "globalScore": 0.397,
+        "specificCoverage": 1,
+        "checks": {
+          "hasDiagnosis": false,
+          "hasTreatmentEvidence": true,
+          "hasExamEvidence": true
+        },
+        "specificChecks": [
+          {
+            "key": "vacinacao",
+            "expected": "Em dia",
+            "predicted": "Vacinação em dia.",
+            "match": true
+          },
+          {
+            "key": "vermifugacao",
+            "expected": "Ivermectina",
+            "predicted": "Vermifugação com Ivermectina.",
+            "match": true
+          },
+          {
+            "key": "temperatura",
+            "expected": "39.8",
+            "predicted": "39.8 graus",
+            "match": true
+          },
+          {
+            "key": "frequencia_cardiaca",
+            "expected": "88",
+            "predicted": "88 bpm",
+            "match": true
+          },
+          {
+            "key": "mucosas",
+            "expected": "Discretamente congestas",
+            "predicted": "Discretamente congestas",
+            "match": true
+          }
+        ]
+      }
+    },
+    {
+      "run": 6,
+      "transcriptLength": 771,
+      "metrics": {
+        "diagnosisScore": 1,
+        "treatmentScore": 0.5,
+        "examScore": 0.333,
+        "globalScore": 0.611,
+        "specificCoverage": 1,
+        "checks": {
+          "hasDiagnosis": true,
+          "hasTreatmentEvidence": true,
+          "hasExamEvidence": true
+        },
+        "specificChecks": [
+          {
+            "key": "vacinacao",
+            "expected": "Em dia",
+            "predicted": "Vacinação em dia.",
+            "match": true
+          },
+          {
+            "key": "vermifugacao",
+            "expected": "Ivermectina",
+            "predicted": "Ivermectina.",
+            "match": true
+          },
+          {
+            "key": "temperatura",
+            "expected": "39.8",
+            "predicted": "39.8 graus",
+            "match": true
+          },
+          {
+            "key": "frequencia_cardiaca",
+            "expected": "88",
+            "predicted": "88 bpm",
+            "match": true
+          },
+          {
+            "key": "mucosas",
+            "expected": "Discretamente congestas",
+            "predicted": "Discretamente congestas",
+            "match": true
+          }
+        ]
+      }
+    },
+    {
+      "run": 7,
+      "transcriptLength": 773,
+      "metrics": {
+        "diagnosisScore": 0.5,
+        "treatmentScore": 0.357,
+        "examScore": 0.583,
+        "globalScore": 0.48,
+        "specificCoverage": 1,
+        "checks": {
+          "hasDiagnosis": false,
+          "hasTreatmentEvidence": true,
+          "hasExamEvidence": true
+        },
+        "specificChecks": [
+          {
+            "key": "vacinacao",
+            "expected": "Em dia",
+            "predicted": "Em dia",
+            "match": true
+          },
+          {
+            "key": "vermifugacao",
+            "expected": "Ivermectina",
+            "predicted": "Ivermectina",
+            "match": true
+          },
+          {
+            "key": "temperatura",
+            "expected": "39.8",
+            "predicted": "39.8 graus",
+            "match": true
+          },
+          {
+            "key": "frequencia_cardiaca",
+            "expected": "88",
+            "predicted": "88 bpm",
+            "match": true
+          },
+          {
+            "key": "mucosas",
+            "expected": "Discretamente congestas",
+            "predicted": "discretamente congestas, TPC 3 segundos",
+            "match": true
+          }
+        ]
+      }
+    },
+    {
+      "run": 8,
+      "transcriptLength": 797,
+      "metrics": {
+        "diagnosisScore": 1,
+        "treatmentScore": 0.571,
+        "examScore": 0.333,
+        "globalScore": 0.635,
+        "specificCoverage": 0.6,
+        "checks": {
+          "hasDiagnosis": true,
+          "hasTreatmentEvidence": true,
+          "hasExamEvidence": false
+        },
+        "specificChecks": [
+          {
+            "key": "vacinacao",
+            "expected": "Em dia",
+            "predicted": "Não informado na consulta",
+            "match": false
+          },
+          {
+            "key": "vermifugacao",
+            "expected": "Ivermectina",
+            "predicted": "Ivermectina.",
+            "match": true
+          },
+          {
+            "key": "temperatura",
+            "expected": "39.8",
+            "predicted": "Não informado na consulta",
+            "match": false
+          },
+          {
+            "key": "frequencia_cardiaca",
+            "expected": "88",
+            "predicted": "88 bpm",
+            "match": true
+          },
+          {
+            "key": "mucosas",
+            "expected": "Discretamente congestas",
+            "predicted": "Discretamente congestas.",
+            "match": true
+          }
+        ]
+      }
+    },
+    {
+      "run": 9,
+      "transcriptLength": 771,
+      "metrics": {
+        "diagnosisScore": 1,
+        "treatmentScore": 0.286,
+        "examScore": 0.333,
+        "globalScore": 0.54,
+        "specificCoverage": 1,
+        "checks": {
+          "hasDiagnosis": true,
+          "hasTreatmentEvidence": false,
+          "hasExamEvidence": true
+        },
+        "specificChecks": [
+          {
+            "key": "vacinacao",
+            "expected": "Em dia",
+            "predicted": "Em dia",
+            "match": true
+          },
+          {
+            "key": "vermifugacao",
+            "expected": "Ivermectina",
+            "predicted": "Ivermectina",
+            "match": true
+          },
+          {
+            "key": "temperatura",
+            "expected": "39.8",
+            "predicted": "39.8 graus",
+            "match": true
+          },
+          {
+            "key": "frequencia_cardiaca",
+            "expected": "88",
+            "predicted": "88 bpm",
+            "match": true
+          },
+          {
+            "key": "mucosas",
+            "expected": "Discretamente congestas",
+            "predicted": "discretamente congestas",
+            "match": true
+          }
+        ]
+      }
+    },
+    {
+      "run": 10,
+      "transcriptLength": 760,
+      "metrics": {
+        "diagnosisScore": 1,
+        "treatmentScore": 0.429,
+        "examScore": 0.333,
+        "globalScore": 0.587,
+        "specificCoverage": 0.8,
+        "checks": {
+          "hasDiagnosis": true,
+          "hasTreatmentEvidence": true,
+          "hasExamEvidence": false
+        },
+        "specificChecks": [
+          {
+            "key": "vacinacao",
+            "expected": "Em dia",
+            "predicted": "Em dia",
+            "match": true
+          },
+          {
+            "key": "vermifugacao",
+            "expected": "Ivermectina",
+            "predicted": "Ivermectina",
+            "match": true
+          },
+          {
+            "key": "temperatura",
+            "expected": "39.8",
+            "predicted": "39.8 graus",
+            "match": true
+          },
+          {
+            "key": "frequencia_cardiaca",
+            "expected": "88",
+            "predicted": "Não informado na consulta",
+            "match": false
+          },
+          {
+            "key": "mucosas",
+            "expected": "Discretamente congestas",
+            "predicted": "Discretamente congestas",
+            "match": true
+          }
+        ]
+      }
+    },
+    {
+      "run": 11,
+      "transcriptLength": 729,
+      "metrics": {
+        "diagnosisScore": 1,
+        "treatmentScore": 0.286,
+        "examScore": 0.25,
+        "globalScore": 0.512,
+        "specificCoverage": 0.4,
+        "checks": {
+          "hasDiagnosis": true,
+          "hasTreatmentEvidence": true,
+          "hasExamEvidence": false
+        },
+        "specificChecks": [
+          {
+            "key": "vacinacao",
+            "expected": "Em dia",
+            "predicted": "Em dia",
+            "match": true
+          },
+          {
+            "key": "vermifugacao",
+            "expected": "Ivermectina",
+            "predicted": "Ivermectina",
+            "match": true
+          },
+          {
+            "key": "temperatura",
+            "expected": "39.8",
+            "predicted": "Não informado na consulta",
+            "match": false
+          },
+          {
+            "key": "frequencia_cardiaca",
+            "expected": "88",
+            "predicted": "Não informado na consulta",
+            "match": false
+          },
+          {
+            "key": "mucosas",
+            "expected": "Discretamente congestas",
+            "predicted": "Discretamente TPC segundos",
+            "match": false
+          }
+        ]
+      }
+    },
+    {
+      "run": 12,
+      "transcriptLength": 772,
+      "metrics": {
+        "diagnosisScore": 0.5,
+        "treatmentScore": 0.429,
+        "examScore": 0.333,
+        "globalScore": 0.421,
+        "specificCoverage": 1,
+        "checks": {
+          "hasDiagnosis": false,
+          "hasTreatmentEvidence": true,
+          "hasExamEvidence": true
+        },
+        "specificChecks": [
+          {
+            "key": "vacinacao",
+            "expected": "Em dia",
+            "predicted": "Em dia.",
+            "match": true
+          },
+          {
+            "key": "vermifugacao",
+            "expected": "Ivermectina",
+            "predicted": "Ivermectina.",
+            "match": true
+          },
+          {
+            "key": "temperatura",
+            "expected": "39.8",
+            "predicted": "39.8 graus",
+            "match": true
+          },
+          {
+            "key": "frequencia_cardiaca",
+            "expected": "88",
+            "predicted": "88 bpm",
+            "match": true
+          },
+          {
+            "key": "mucosas",
+            "expected": "Discretamente congestas",
+            "predicted": "Discretamente congestas",
+            "match": true
+          }
+        ]
+      }
+    }
+  ],
+  "simulatedSummary": {
+    "runs": 12,
+    "avgGlobalScore": 0.53,
+    "bestGlobalScore": 0.635,
+    "worstGlobalScore": 0.397,
+    "diagnosisConsistency": 0.879,
+    "treatmentConsistency": 0.667,
+    "examConsistency": 0.818
+  },
+  "metrics": {
+    "diagnosisScore": 1,
+    "treatmentScore": 0.357,
+    "examScore": 0.333,
+    "globalScore": 0.563,
+    "specificCoverage": 0.6,
+    "checks": {
+      "hasDiagnosis": true,
+      "hasTreatmentEvidence": true,
+      "hasExamEvidence": false
+    },
+    "specificChecks": [
+      {
+        "key": "vacinacao",
+        "expected": "Em dia",
+        "predicted": "Vermifugação com Ivermectina.",
+        "match": false
+      },
+      {
+        "key": "vermifugacao",
+        "expected": "Ivermectina",
+        "predicted": "Vermifugação com Ivermectina.",
+        "match": true
+      },
+      {
+        "key": "temperatura",
+        "expected": "39.8",
+        "predicted": "39,8 graus",
+        "match": false
+      },
+      {
+        "key": "frequencia_cardiaca",
+        "expected": "88",
+        "predicted": "88 bpm",
+        "match": true
+      },
+      {
+        "key": "mucosas",
+        "expected": "Discretamente congestas",
+        "predicted": "Discretamente congestas, tempo de preenchimento capilar de 3 segundos.",
+        "match": true
+      }
+    ]
+  },
+  "parsed": {
+    "nome_animal": "Apolo",
+    "especie": "bovino",
+    "raca": "Não informado na consulta",
+    "idade": "Não informado na consulta",
+    "sexo": "Não informado na consulta",
+    "peso": "Não informado na consulta",
+    "chiefComplaint": "Dor abdominal abdominal Leve a moderada",
+    "anamnese": "Diagnostico diferenciais Acidose ruminal Peritonite inespecífica. Diagnostico principal Reticuloperitonite traumática",
+    "anamnesis": "Diagnostico diferenciais Acidose ruminal Peritonite inespecífica. Diagnostico principal Reticuloperitonite traumática",
+    "alimentacao": "Não informado na consulta",
+    "ambiente": "Sistema de produção semi-intensivo, lote 7.",
+    "vacinacao": "Vermifugação com Ivermectina.",
+    "vermifugacao": "Vermifugação com Ivermectina.",
+    "doencas_previas": "Não informado na consulta",
+    "uso_medicacao": "Não informado na consulta",
+    "physicalExam": "No exame fisico temperaturaa 39. Mucosas Discretamente congestas",
+    "estado_geral": "Não informado na consulta",
+    "temperatura": "39,8 graus",
+    "frequencia_cardiaca": "88 bpm",
+    "frequencia_respiratoria": "36 irpm",
+    "mucosas": "Discretamente congestas, tempo de preenchimento capilar de 3 segundos.",
+    "hidratacao": "Desidratação de 6 por cento.",
+    "diagnosis": "Diagnostico diferenciais Acidose ruminal Peritonite inespecífica. Diagnostico principal Reticuloperitonite traumática",
+    "suspeitas_clinicas": "Reticuloperitonite traumática.",
+    "treatment": "Tratamento proposto Ringerr 20 L IV. e monitoramento 2x dia",
+    "medications": "Oxitetraciclina mg/kg IM qh 3 Imã ruminal dose única. Desidratacao 6 por cento",
+    "examDetails": "",
+    "returnRecommendation": "Diagnostico diferenciais Acidose ruminal Peritonite inespecífica. Consumo agua Consumo reduzido 24h",
+    "transcricao_organizada": "[VETERINÁRIO]: ... [TUTOR]: Nome do animal Apolo. Especie Bovino. Ricardo Alves. Propriedade Haras Santo Antônio. Sistema Sistema de producao Semi-intensivo. Lote 7. Escore corporal 2/5. Vacinacao Vermifugacao Ivermectina. Consumo agua Consumo reduzido 24h. [INDEFINIDO]: No exame fisico temperaturaa 39.8 graus. Frequencia 88 bpm. Frequencia respiratoria 36 irpm. Mucosas Discretamente congestas. 3 segundos. Desidratacao 6 por cento. Dor abdominal abdominal Leve a moderada. Diagnostico principal Reticuloperitonite traumática. Diagnostico diferenciais Acidose ruminal Peritonite inespecífica. Prognostico Reservado. Tratamento proposto Ringerr 20 L IV; Flunixin meglumine 1.1 mg/kg IV SID 3 dias; Oxitetraciclina mg/kg IM qh 3 Imã ruminal dose única; e monitoramento 2x dia.",
+    "porte": "grande"
+  }
+}

@@ -42,7 +42,12 @@ const ToastContainer = ({ toasts, onRemove }) => {
   if (toasts.length === 0) return null;
 
   return (
-    <div className="fixed top-4 right-4 z-50 flex flex-col gap-2 max-w-sm w-full">
+    <div
+      className="fixed top-4 right-4 z-50 flex flex-col gap-2 max-w-sm w-full"
+      role="region"
+      aria-label="Notificacoes"
+      aria-live="polite"
+    >
       {toasts.map((toast) => (
         <Toast key={toast.id} toast={toast} onRemove={onRemove} />
       ))}
@@ -100,6 +105,8 @@ const Toast = ({ toast, onRemove }) => {
 
   return (
     <div
+      role={toast.type === "error" ? "alert" : "status"}
+      aria-live={toast.type === "error" ? "assertive" : "polite"}
       className={`
         flex items-center gap-3 px-4 py-3 rounded-xl border shadow-lg
         transform transition-all duration-300 ease-in-out
@@ -113,6 +120,7 @@ const Toast = ({ toast, onRemove }) => {
       <p className="flex-1 text-sm font-medium">{toast.message}</p>
       <button
         onClick={handleClose}
+        aria-label="Fechar notificacao"
         className="flex-shrink-0 p-1 rounded-lg hover:bg-black/5 transition-colors"
       >
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

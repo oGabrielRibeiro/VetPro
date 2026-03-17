@@ -1,8 +1,16 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import api from "../services/api";
 import FeedbackBanner from "./FeedbackBanner";
 import LoadingDot from "./LoadingDot";
 import FloatingFormActions from "./FloatingFormActions";
+import AnesthesiaFormFields from "./AnesthesiaFormFields";
+import MedicationFormFields from "./MedicationFormFields";
+import ProcedureFormFields from "./ProcedureFormFields";
+import HospitalizationFormFields from "./HospitalizationFormFields";
+import VaccinationFormFields from "./VaccinationFormFields";
+import FollowUpFormFields from "./FollowUpFormFields";
+import ReportFormFields from "./ReportFormFields";
+import SignatureModal from "./SignatureModal";
 import {
   extractFirstValidationField,
   toUserFriendlyError,
@@ -153,6 +161,159 @@ const FieldModeConsultation = ({
   const [consultationType, setConsultationType] = useState(
     initialData?.consultationType || "nova",
   );
+  const [anesthesiaForm, setAnesthesiaForm] = useState(() => ({
+    surgeryName: "",
+    preOpDiagnosis: "",
+    surgeon: "",
+    anesthetist: "",
+    assistant: "",
+    asaClass: "",
+    anesthesiaStart: "",
+    anesthesiaEnd: "",
+    surgeryStart: "",
+    surgeryEnd: "",
+    procedureDate: "",
+    premedication: [],
+    induction: [],
+    maintenance: [],
+    analgesia: [],
+    rescue: [],
+    vitals: [],
+    vitalsGrid: [],
+    animalName: "",
+    ownerName: "",
+    recordNumber: "",
+    species: "",
+    breed: "",
+    weight: "",
+    age: "",
+    sex: "",
+    hydration: "",
+    preOpTemperature: "",
+    preOpHeartRate: "",
+    preOpRespiratoryRate: "",
+    mucosaColor: "",
+    tpc: "",
+    tgoAst: "",
+    tp: "",
+    totalProteins: "",
+    hematocrit: "",
+    urea: "",
+    creatinine: "",
+    fibrinogen: "",
+    fa: "",
+    respSpontaneous: "",
+    respAssisted: "",
+    localAnesthesia: "",
+    generalAnesthesia: "",
+    intubation: "",
+    tubeProbe: "",
+    tubeProbeNumber: "",
+    oxygen: "",
+    ventilation: "",
+    consentSignature: "",
+    animalPosition: "",
+    circuit: "",
+    fluidTherapy: "",
+    finalOutcome: "",
+    conditions: "",
+    legendMarkers: [
+      { code: "FC*", label: "Frequencia cardiaca" },
+      { code: "FR*", label: "Frequencia respiratoria" },
+      { code: "Temp*", label: "Temperatura" },
+      { code: "SpO2*", label: "Saturacao" },
+      { code: "PAM*", label: "Pressao arterial media" },
+      { code: "PASV*", label: "Pressao arterial sistolica" },
+      { code: "EtCO2*", label: "CO2 expirado" },
+    ],
+    notes: "",
+  }));
+  const [medicationForm, setMedicationForm] = useState(() => ({
+    diagnosis: "",
+    items: [],
+    notes: "",
+  }));
+  const [procedureForm, setProcedureForm] = useState(() => ({
+    procedureName: "",
+    indication: "",
+    technique: "",
+    anesthesiaUsed: "",
+    surgeon: "",
+    assistant: "",
+    consentGiven: "",
+    consentDate: "",
+    consentSignature: "",
+    findings: "",
+    complications: "",
+    postOpPlan: "",
+    medications: [],
+  }));
+  const [hospitalizationForm, setHospitalizationForm] = useState(() => ({
+    admissionDate: "",
+    dischargeDate: "",
+    mainDiagnosis: "",
+    responsible: "",
+    dailyEvolution: "",
+    vitalsNotes: "",
+    medications: [],
+    feeding: "",
+    hydration: "",
+    elimination: "",
+    observations: "",
+  }));
+  const [vaccinationForm, setVaccinationForm] = useState(() => ({
+    vaccineName: "",
+    vaccineManufacturer: "",
+    vaccineLot: "",
+    vaccineExpiry: "",
+    vaccineDose: "",
+    vaccineRoute: "",
+    vaccineDate: "",
+    vaccineNextDate: "",
+    dewormerName: "",
+    dewormerManufacturer: "",
+    dewormerLot: "",
+    dewormerDate: "",
+    dewormerNextDate: "",
+    notes: "",
+  }));
+  const [followUpForm, setFollowUpForm] = useState(() => ({
+    previousDiagnosis: "",
+    currentStatus: "",
+    responseToTreatment: "",
+    adjustments: "",
+    nextVisitDate: "",
+    notes: "",
+  }));
+  const [reportForm, setReportForm] = useState(() => ({
+    title: "",
+    reportDate: "",
+    summary: "",
+    findings: "",
+    conclusion: "",
+    recommendations: "",
+  }));
+  const [isSignatureModalOpen, setIsSignatureModalOpen] = useState(false);
+  const [signatureTarget, setSignatureTarget] = useState(null);
+
+  const openSignatureModal = (target) => {
+    setSignatureTarget(target);
+    setIsSignatureModalOpen(true);
+  };
+
+  const closeSignatureModal = () => {
+    setIsSignatureModalOpen(false);
+    setSignatureTarget(null);
+  };
+
+  const saveSignature = (dataUrl) => {
+    if (signatureTarget === "anesthesia") {
+      setAnesthesiaForm((prev) => ({ ...prev, consentSignature: dataUrl }));
+    } else if (signatureTarget === "procedure") {
+      setProcedureForm((prev) => ({ ...prev, consentSignature: dataUrl }));
+    }
+    closeSignatureModal();
+  };
 
   const [isRecording, setIsRecording] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
@@ -176,6 +337,16 @@ const FieldModeConsultation = ({
   const [analysisSource, setAnalysisSource] = useState("local");
   const [analyzing, setAnalyzing] = useState(false);
   const [feedback, setFeedback] = useState(null);
+  const [fieldAssistQuality, setFieldAssistQuality] = useState(null);
+  const [fieldReviewDecisions, setFieldReviewDecisions] = useState({});
+  const [fieldDecisionLoading, setFieldDecisionLoading] = useState({});
+  const [feedbackCorrectionNote, setFeedbackCorrectionNote] = useState("");
+  const [feedbackTelemetryEnabled, setFeedbackTelemetryEnabled] = useState(() => {
+    if (typeof window === "undefined") return true;
+    const stored = window.localStorage.getItem("vetpro_feedback_telemetry_enabled");
+    if (!stored) return true;
+    return stored !== "false";
+  });
   const [showPorteChoiceModal, setShowPorteChoiceModal] = useState(false);
   const [manualPorteOverride, setManualPorteOverride] = useState(null);
   const [porteDetectionState, setPorteDetectionState] = useState({
@@ -202,6 +373,8 @@ const FieldModeConsultation = ({
   const [uploadedAudioName, setUploadedAudioName] = useState("");
   const [isMobile, setIsMobile] = useState(false);
   const [mobileStep, setMobileStep] = useState("captura");
+  const porteChoiceTitleId = useId();
+  const porteChoiceDescriptionId = useId();
   const captureSectionRef = useRef(null);
   const reviewSectionRef = useRef(null);
   const saveSectionRef = useRef(null);
@@ -219,6 +392,21 @@ const FieldModeConsultation = ({
     [consultationType],
   );
   const consultationTypeLabel = consultationContext.label;
+  const isAnesthesiaType = consultationType === "anestesia";
+  const isMedicationType = consultationType === "medicacao";
+  const isProcedureType = consultationType === "procedimento";
+  const isHospitalizationType = consultationType === "internacao";
+  const isVaccinationType = consultationType === "vacinacao";
+  const isFollowUpType = consultationType === "retorno";
+  const isReportType = consultationType === "laudo";
+  const isCustomFormType =
+    isAnesthesiaType ||
+    isMedicationType ||
+    isProcedureType ||
+    isHospitalizationType ||
+    isVaccinationType ||
+    isFollowUpType ||
+    isReportType;
   const draftKey = useMemo(() => {
     if (!patient?.id) return "";
     const suffix =
@@ -234,6 +422,25 @@ const FieldModeConsultation = ({
     media.addEventListener("change", apply);
     return () => media.removeEventListener("change", apply);
   }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(
+      "vetpro_feedback_telemetry_enabled",
+      feedbackTelemetryEnabled ? "true" : "false",
+    );
+  }, [feedbackTelemetryEnabled]);
+
+  useEffect(() => {
+    if (!showPorteChoiceModal) return undefined;
+    const onKeyDown = (event) => {
+      if (event.key === "Escape") {
+        setShowPorteChoiceModal(false);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [showPorteChoiceModal]);
 
   const showFeedback = (type, message) => {
     setFeedback({ type, message });
@@ -306,6 +513,10 @@ const FieldModeConsultation = ({
     setStructuredDraft(null);
     setParsedConfidence(null);
     setParsedConfidenceComposite(null);
+    setFieldAssistQuality(null);
+    setFieldReviewDecisions({});
+    setFieldDecisionLoading({});
+    setFeedbackCorrectionNote("");
     setRuleAlerts([]);
     setRoleReliability(null);
     setManualPorteOverride(null);
@@ -390,6 +601,30 @@ const FieldModeConsultation = ({
     if (initialData.weight !== undefined && initialData.weight !== null) {
       setWeight(String(initialData.weight));
     }
+    if (initialData.customFormData?.anesthesia) {
+      setAnesthesiaForm((prev) => ({ ...prev, ...initialData.customFormData.anesthesia }));
+    }
+    if (initialData.customFormData?.medication) {
+      setMedicationForm((prev) => ({ ...prev, ...initialData.customFormData.medication }));
+    }
+    if (initialData.customFormData?.procedure) {
+      setProcedureForm((prev) => ({ ...prev, ...initialData.customFormData.procedure }));
+    }
+    if (initialData.customFormData?.hospitalization) {
+      setHospitalizationForm((prev) => ({
+        ...prev,
+        ...initialData.customFormData.hospitalization,
+      }));
+    }
+    if (initialData.customFormData?.vaccination) {
+      setVaccinationForm((prev) => ({ ...prev, ...initialData.customFormData.vaccination }));
+    }
+    if (initialData.customFormData?.followUp) {
+      setFollowUpForm((prev) => ({ ...prev, ...initialData.customFormData.followUp }));
+    }
+    if (initialData.customFormData?.report) {
+      setReportForm((prev) => ({ ...prev, ...initialData.customFormData.report }));
+    }
   }, [initialData]);
 
   useEffect(() => {
@@ -404,6 +639,30 @@ const FieldModeConsultation = ({
       setHeartRate(draft.heartRate || "");
       setRespiratoryRate(draft.respiratoryRate || "");
       setConsultationType(draft.consultationType || "nova");
+      if (draft.customFormData?.anesthesia) {
+        setAnesthesiaForm((prev) => ({ ...prev, ...draft.customFormData.anesthesia }));
+      }
+      if (draft.customFormData?.medication) {
+        setMedicationForm((prev) => ({ ...prev, ...draft.customFormData.medication }));
+      }
+      if (draft.customFormData?.procedure) {
+        setProcedureForm((prev) => ({ ...prev, ...draft.customFormData.procedure }));
+      }
+      if (draft.customFormData?.hospitalization) {
+        setHospitalizationForm((prev) => ({
+          ...prev,
+          ...draft.customFormData.hospitalization,
+        }));
+      }
+      if (draft.customFormData?.vaccination) {
+        setVaccinationForm((prev) => ({ ...prev, ...draft.customFormData.vaccination }));
+      }
+      if (draft.customFormData?.followUp) {
+        setFollowUpForm((prev) => ({ ...prev, ...draft.customFormData.followUp }));
+      }
+      if (draft.customFormData?.report) {
+        setReportForm((prev) => ({ ...prev, ...draft.customFormData.report }));
+      }
       setSegments(Array.isArray(draft.segments) ? draft.segments : []);
       setParsedData(draft.parsedData || null);
       setStructuredDraft(draft.structuredDraft || null);
@@ -442,6 +701,15 @@ const FieldModeConsultation = ({
         heartRate,
         respiratoryRate,
         consultationType,
+        customFormData: {
+          anesthesia: anesthesiaForm,
+          medication: medicationForm,
+          procedure: procedureForm,
+          hospitalization: hospitalizationForm,
+          vaccination: vaccinationForm,
+          followUp: followUpForm,
+          report: reportForm,
+        },
         segments,
         parsedData,
         structuredDraft,
@@ -476,6 +744,13 @@ const FieldModeConsultation = ({
     heartRate,
     respiratoryRate,
     consultationType,
+    anesthesiaForm,
+    medicationForm,
+    procedureForm,
+    hospitalizationForm,
+    vaccinationForm,
+    followUpForm,
+    reportForm,
     segments,
     parsedData,
     structuredDraft,
@@ -1323,6 +1598,20 @@ const FieldModeConsultation = ({
     return "bg-rose-100 text-rose-700";
   };
 
+  const sourceBadgeClass = (source) => {
+    if (source === "evidence") return "bg-cyan-100 text-cyan-800";
+    if (source === "heuristic") return "bg-violet-100 text-violet-800";
+    if (source === "ai") return "bg-blue-100 text-blue-800";
+    return "bg-slate-200 text-slate-700";
+  };
+
+  const sourceLabel = (source) => {
+    if (source === "evidence") return "Regra";
+    if (source === "heuristic") return "Heuristica";
+    if (source === "ai") return "IA";
+    return "Desconhecida";
+  };
+
   const ensureAudioStream = async () => {
     const existing = mediaStreamRef.current;
     if (existing && existing.active) return existing;
@@ -1431,9 +1720,20 @@ const FieldModeConsultation = ({
       });
 
       const result = response.data || {};
+      setFieldAssistQuality(result?.quality || null);
+      setFieldReviewDecisions({});
       setRoleReliability(result?.context?.roleReliability || null);
-      setParsedConfidenceComposite(result?.parsedConfidenceComposite || null);
-      setRuleAlerts(result?.pipeline?.semanticRules?.alerts || []);
+      const qualityConfidence = mapConfidenceByFieldFromDraft(
+        result?.quality?.fieldConfidence || {},
+      );
+      setParsedConfidenceComposite(
+        result?.parsedConfidenceComposite || qualityConfidence || null,
+      );
+      setRuleAlerts(
+        Array.isArray(result?.quality?.contradictions)
+          ? result.quality.contradictions
+          : result?.pipeline?.semanticRules?.alerts || [],
+      );
       if (Array.isArray(result.segments) && result.segments.length > 0) {
         setSegments(result.segments);
       }
@@ -1589,6 +1889,8 @@ const FieldModeConsultation = ({
       setParsedData(parsed);
       setParsedConfidence(buildLocalConfidence(parsed, candidateSegments));
       setParsedConfidenceComposite(null);
+      setFieldAssistQuality(null);
+      setFieldReviewDecisions({});
       setRuleAlerts([]);
       setRoleReliability({ reliable: false, score: 0.3, reason: "fallback_local" });
       setAnalysisSource("local");
@@ -1603,6 +1905,65 @@ const FieldModeConsultation = ({
       }
     } finally {
       setAnalyzing(false);
+    }
+  };
+
+  const sendFieldReviewDecision = async (fieldKey, decision) => {
+    const field = String(fieldKey || "").trim();
+    const normalizedDecision = decision === "accepted" ? "accepted" : "rejected";
+    const suggestion = String(parsedData?.[field] || "").trim();
+    if (!field || !suggestion) {
+      showFeedback("error", "Nao ha sugestao para registrar neste campo.");
+      return;
+    }
+    if (fieldDecisionLoading[field]) return;
+
+    setFieldReviewDecisions((prev) => ({ ...prev, [field]: normalizedDecision }));
+    if (!feedbackTelemetryEnabled) {
+      showFeedback("success", `Campo ${field} marcado como ${normalizedDecision}.`);
+      return;
+    }
+
+    const conf = parsedConfidenceComposite?.[field] || parsedConfidence?.[field] || {};
+    const reconciliationSource =
+      String(fieldAssistQuality?.reconciliation?.[field]?.source || "").trim() ||
+      "unknown";
+    const payload = {
+      requestId: fieldAssistQuality?.pipeline?.requestId || "",
+      consultationId: initialData?.id || "",
+      patientId: patient?.id || "",
+      field,
+      suggestion,
+      decision: normalizedDecision,
+      finalValue:
+        normalizedDecision === "rejected" ? String(feedbackCorrectionNote || "").trim() : "",
+      source: reconciliationSource || analysisSource || "unknown",
+      telemetryEnabled: feedbackTelemetryEnabled,
+      quality: {
+        score: Number(conf?.score || 0),
+        label: String(conf?.label || ""),
+        reconciliationSource,
+        needsReview: Boolean(fieldAssistQuality?.needsReview),
+        contradictionsCount: Array.isArray(fieldAssistQuality?.contradictions)
+          ? fieldAssistQuality.contradictions.length
+          : 0,
+      },
+    };
+
+    try {
+      setFieldDecisionLoading((prev) => ({ ...prev, [field]: true }));
+      await api.post("/consultations/field-assist/feedback", payload);
+      showFeedback(
+        "success",
+        `Feedback ${normalizedDecision === "accepted" ? "aceito" : "rejeitado"} registrado para ${field}.`,
+      );
+    } catch (error) {
+      showFeedback(
+        "error",
+        toUserFriendlyError(error, "Nao foi possivel registrar feedback do campo."),
+      );
+    } finally {
+      setFieldDecisionLoading((prev) => ({ ...prev, [field]: false }));
     }
   };
 
@@ -1716,12 +2077,12 @@ const FieldModeConsultation = ({
     if (!file) return;
 
     if (!String(file.type || "").startsWith("audio/")) {
-      showFeedback("error", "Selecione um arquivo de audio valido.");
+      showFeedback("error", "Selecione um arquivo de audio valido (MP3, WAV ou M4A).");
       return;
     }
 
     if (file.size > 25 * 1024 * 1024) {
-      showFeedback("error", "Arquivo maior que 25MB. Reduza o audio e tente novamente.");
+      showFeedback("error", "Arquivo maior que 25MB. Reduza a duracao do audio e tente novamente.");
       return;
     }
 
@@ -1734,6 +2095,10 @@ const FieldModeConsultation = ({
     setStructuredDraft(null);
     setParsedConfidence(null);
     setParsedConfidenceComposite(null);
+    setFieldAssistQuality(null);
+    setFieldReviewDecisions({});
+    setFieldDecisionLoading({});
+    setFeedbackCorrectionNote("");
     setRuleAlerts([]);
     setRoleReliability(null);
     setManualPorteOverride(null);
@@ -1754,7 +2119,7 @@ const FieldModeConsultation = ({
       // noop
     }
 
-    showFeedback("success", "Audio carregado. Processando com IA de campo...");
+    showFeedback("success", "Audio carregado. A IA de campo esta processando e preenchendo os campos.");
     await runFieldAssist([], { fromUploadedAudio: true });
     if (isMobile) {
       setMobileStep("revisao");
@@ -1806,6 +2171,10 @@ const FieldModeConsultation = ({
       setStructuredDraft(null);
       setParsedConfidence(null);
       setParsedConfidenceComposite(null);
+      setFieldAssistQuality(null);
+      setFieldReviewDecisions({});
+      setFieldDecisionLoading({});
+      setFeedbackCorrectionNote("");
       setRuleAlerts([]);
       setRoleReliability(null);
       setManualPorteOverride(null);
@@ -1905,6 +2274,10 @@ const FieldModeConsultation = ({
     setStructuredDraft(null);
     setParsedConfidence(null);
     setParsedConfidenceComposite(null);
+    setFieldAssistQuality(null);
+    setFieldReviewDecisions({});
+    setFieldDecisionLoading({});
+    setFeedbackCorrectionNote("");
     setRuleAlerts([]);
     setRoleReliability(null);
     setManualPorteOverride(null);
@@ -2017,6 +2390,62 @@ const FieldModeConsultation = ({
     const treatment = String(draft.treatment || parsed.treatment || "").trim();
     const procedures = String(draft.procedures || "").trim();
     const medications = String(draft.medications || parsed.medications || "").trim();
+    const medicationSummary = isMedicationType
+      ? (medicationForm.items || [])
+          .filter((item) => String(item.name || "").trim())
+          .map(
+            (item) =>
+              `${item.name}${item.dose ? ` - ${item.dose}` : ""}${
+                item.route ? ` - ${item.route}` : ""
+              }${item.frequency ? ` - ${item.frequency}` : ""}${
+                item.duration ? ` - ${item.duration}` : ""
+              }`,
+          )
+          .join("\n")
+      : "";
+    const procedureMedicationSummary = (procedureForm.medications || [])
+      .filter((item) => String(item.name || "").trim())
+      .map(
+        (item) =>
+          `${item.name}${item.dose ? ` - ${item.dose}` : ""}${
+            item.route ? ` - ${item.route}` : ""
+          }`,
+      )
+      .join("\n");
+    const hospitalizationMedicationSummary = (hospitalizationForm.medications || [])
+      .filter((item) => String(item.name || "").trim())
+      .map(
+        (item) =>
+          `${item.name}${item.dose ? ` - ${item.dose}` : ""}${
+            item.route ? ` - ${item.route}` : ""
+          }`,
+      )
+      .join("\n");
+    const resolvedDiagnosis = isAnesthesiaType
+      ? anesthesiaForm.preOpDiagnosis || diagnosis
+      : isMedicationType
+        ? medicationForm.diagnosis || diagnosis
+        : isFollowUpType
+          ? followUpForm.previousDiagnosis || diagnosis
+        : diagnosis;
+    const resolvedProcedures = isAnesthesiaType
+      ? anesthesiaForm.surgeryName || procedures
+      : isProcedureType
+        ? procedureForm.procedureName || procedures
+        : isHospitalizationType
+          ? "Evolucao / Internacao"
+          : isVaccinationType
+            ? "Vacinacao / Vermifugacao"
+            : isReportType
+              ? "Laudo / Atestado"
+              : procedures;
+    const resolvedMedications = isMedicationType
+      ? medicationSummary || medications
+      : isProcedureType
+        ? procedureMedicationSummary || medications
+        : isHospitalizationType
+          ? hospitalizationMedicationSummary || medications
+          : medications;
     const examDetails = String(draft.examDetails || "").trim();
     const returnRecommendation = String(draft.returnRecommendation || "").trim();
     const persistentFields = filledSpecificItems.reduce((acc, item) => {
@@ -2037,9 +2466,15 @@ const FieldModeConsultation = ({
       chiefComplaint,
       anamnesis,
       physicalExam,
-      diagnosis,
+      resolvedDiagnosis,
       treatment,
-      medications,
+      resolvedMedications,
+      anesthesiaForm.surgeryName,
+      medicationForm.diagnosis,
+      procedureForm.procedureName,
+      hospitalizationForm.dailyEvolution,
+      vaccinationForm.vaccineName,
+      reportForm.title,
       transcriptRef.current,
     ].some((value) => String(value || "").trim());
 
@@ -2059,12 +2494,23 @@ const FieldModeConsultation = ({
         chiefComplaint,
         anamnesis,
         physicalExam,
-        diagnosis,
+        diagnosis: resolvedDiagnosis,
         treatment,
-        procedures,
-        medications,
+        procedures: resolvedProcedures,
+        medications: resolvedMedications,
         examDetails,
         returnRecommendation,
+        customFormData: isCustomFormType
+          ? {
+              anesthesia: isAnesthesiaType ? anesthesiaForm : null,
+              medication: isMedicationType ? medicationForm : null,
+              procedure: isProcedureType ? procedureForm : null,
+              hospitalization: isHospitalizationType ? hospitalizationForm : null,
+              vaccination: isVaccinationType ? vaccinationForm : null,
+              followUp: isFollowUpType ? followUpForm : null,
+              report: isReportType ? reportForm : null,
+            }
+          : null,
         persistentProfileUpdate: Object.keys(persistentFields).length
           ? {
               porte,
@@ -2082,9 +2528,27 @@ const FieldModeConsultation = ({
           chiefComplaint ? `Queixa: ${chiefComplaint}` : "",
           anamnesis ? `Anamnese: ${anamnesis}` : "",
           physicalExam ? `Exame fisico: ${physicalExam}` : "",
-          diagnosis ? `Diagnostico: ${diagnosis}` : "",
+          resolvedDiagnosis ? `Diagnostico: ${resolvedDiagnosis}` : "",
           treatment ? `Conduta: ${treatment}` : "",
-          medications ? `Medicacao: ${medications}` : "",
+          resolvedMedications ? `Medicacao: ${resolvedMedications}` : "",
+          isAnesthesiaType && anesthesiaForm.notes
+            ? `Anestesia: ${anesthesiaForm.notes}`
+            : "",
+          isMedicationType && medicationForm.notes
+            ? `Medicacao: ${medicationForm.notes}`
+            : "",
+          isProcedureType && procedureForm.postOpPlan
+            ? `Plano pos-operatorio: ${procedureForm.postOpPlan}`
+            : "",
+          isHospitalizationType && hospitalizationForm.observations
+            ? `Internacao: ${hospitalizationForm.observations}`
+            : "",
+          isVaccinationType && vaccinationForm.notes
+            ? `Vacinacao: ${vaccinationForm.notes}`
+            : "",
+          isFollowUpType && followUpForm.notes
+            ? `Retorno: ${followUpForm.notes}`
+            : "",
           timestampedTranscript ? `Transcricao:\n${timestampedTranscript}` : "",
         ]
           .filter(Boolean)
@@ -2153,15 +2617,22 @@ const FieldModeConsultation = ({
       treatment: manualPayload.treatment || "Nao informado",
       procedures: manualPayload.procedures || "Nao realizado",
       medications: manualPayload.medications || "Nao prescrita",
+      customFormData: manualPayload.customFormData || null,
       notes: [
         `Registro gerado em Modo Campo (${consultationTypeLabel}).`,
         `Origem da analise: ${analysisSource}.`,
         manualPayload.examDetails ? `Detalhes do exame: ${manualPayload.examDetails}` : "",
-        specificSummary,
+        !isCustomFormType && specificSummary,
+        isAnesthesiaType && manualPayload.customFormData?.anesthesia?.notes
+          ? `Anestesia: ${manualPayload.customFormData.anesthesia.notes}`
+          : "",
+        isMedicationType && manualPayload.customFormData?.medication?.notes
+          ? `Medicacao: ${manualPayload.customFormData.medication.notes}`
+          : "",
         timestampedTranscript
           ? `Transcricao com minutagem:\n${timestampedTranscript}`
           : "Transcricao indisponivel.",
-        structuredPorteBlock,
+        !isCustomFormType && structuredPorteBlock,
       ]
         .filter(Boolean)
         .join("\n\n"),
@@ -2639,35 +3110,194 @@ const FieldModeConsultation = ({
         )}
       </div>
 
+      {isCustomFormType ? (
+        <div className="space-y-4">
+          {isAnesthesiaType && (
+            <AnesthesiaFormFields
+              value={anesthesiaForm}
+              onChange={setAnesthesiaForm}
+              onRequestSignature={() => openSignatureModal("anesthesia")}
+            />
+          )}
+          {isMedicationType && (
+            <MedicationFormFields
+              value={medicationForm}
+              onChange={setMedicationForm}
+            />
+          )}
+          {isProcedureType && (
+            <ProcedureFormFields
+              value={procedureForm}
+              onChange={setProcedureForm}
+              onRequestSignature={() => openSignatureModal("procedure")}
+            />
+          )}
+          {isHospitalizationType && (
+            <HospitalizationFormFields
+              value={hospitalizationForm}
+              onChange={setHospitalizationForm}
+            />
+          )}
+          {isVaccinationType && (
+            <VaccinationFormFields
+              value={vaccinationForm}
+              onChange={setVaccinationForm}
+            />
+          )}
+          {isFollowUpType && (
+            <FollowUpFormFields value={followUpForm} onChange={setFollowUpForm} />
+          )}
+          {isReportType && (
+            <ReportFormFields value={reportForm} onChange={setReportForm} />
+          )}
+        </div>
+      ) : (
+      <>
       <div
         ref={reviewSectionRef}
-        className="rounded-xl border border-emerald-200 dark:border-emerald-800 bg-white dark:bg-dark-800/80 p-3 sm:p-5 lg:p-6 space-y-3"
+        className="rounded-xl border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900/70 p-3 sm:p-5 lg:p-6 space-y-3"
       >
         <div className="flex items-center justify-between gap-2">
-          <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200 uppercase tracking-wide">
+          <h2 className="text-sm font-semibold text-slate-800 dark:text-slate-100 uppercase tracking-wide">
             Revisao rapida do prontuario
           </h2>
           <button
             type="button"
             onClick={analyzeCurrentConversation}
             disabled={analyzing || !segments.length}
-            className="rounded-md border border-emerald-300 bg-emerald-50 px-2 py-1 text-[11px] font-semibold text-emerald-800 disabled:opacity-50"
+            className="rounded-md border border-cyan-300 bg-cyan-50 px-2 py-1 text-[11px] font-semibold text-cyan-900 disabled:opacity-50"
           >
             {analyzing ? "Analisando..." : "Atualizar"}
           </button>
         </div>
+        <div className="rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2">
+          <label className="flex items-center gap-2 text-xs font-medium text-slate-700 dark:text-slate-200">
+            <input
+              type="checkbox"
+              checked={feedbackTelemetryEnabled}
+              onChange={(e) => setFeedbackTelemetryEnabled(e.target.checked)}
+              className="h-4 w-4 rounded border-slate-300"
+            />
+            Capturar feedback supervisionado (telemetria anonima)
+          </label>
+          <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-300">
+            Quando ativo, aceite/rejeicao por campo alimenta melhoria continua do parser/IA.
+          </p>
+        </div>
+        {parsedData &&
+          (Boolean(fieldAssistQuality?.needsReview) ||
+            (fieldAssistQuality?.lowConfidenceFields || []).length > 0 ||
+            ruleAlerts.length > 0) && (
+            <div className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-amber-900">
+              <p className="text-xs font-semibold">Revisao manual recomendada</p>
+              <p className="text-[11px]">
+                {(fieldAssistQuality?.lowConfidenceFields || []).length > 0
+                  ? `Campos com baixa confianca: ${(fieldAssistQuality?.lowConfidenceFields || []).join(", ")}. `
+                  : ""}
+                {ruleAlerts.length > 0
+                  ? `Conflitos clinicos detectados: ${ruleAlerts.length}. `
+                  : ""}
+                Confirme os campos antes de salvar.
+              </p>
+            </div>
+          )}
         {!parsedData ? (
-          <p className="text-sm text-gray-600 dark:text-gray-300">
+          <p className="text-sm text-slate-700 dark:text-slate-200">
             Inicie a captura e pause para revisar os campos preenchidos automaticamente.
           </p>
         ) : (
-          <div className="grid grid-cols-1 gap-2 text-sm text-gray-800 dark:text-gray-100">
-            <p><strong>Queixa:</strong> {parsedData.chiefComplaint || "-"}</p>
-            <p><strong>Anamnese:</strong> {parsedData.anamnesis || "-"}</p>
-            <p><strong>Exame fisico:</strong> {parsedData.physicalExam || "-"}</p>
-            <p><strong>Diagnostico:</strong> {parsedData.diagnosis || "-"}</p>
-            <p><strong>Conduta:</strong> {parsedData.treatment || "-"}</p>
-            <p><strong>Medicacao:</strong> {parsedData.medications || "-"}</p>
+          <div className="grid grid-cols-1 gap-2 text-sm">
+            {[
+              ["chiefComplaint", "Queixa", parsedData.chiefComplaint],
+              ["anamnesis", "Anamnese", parsedData.anamnesis],
+              ["physicalExam", "Exame fisico", parsedData.physicalExam],
+              ["diagnosis", "Diagnostico", parsedData.diagnosis],
+              ["treatment", "Conduta", parsedData.treatment],
+              ["medications", "Medicacao", parsedData.medications],
+            ].map(([key, label, value]) => {
+              const conf = parsedConfidenceComposite?.[key] || parsedConfidence?.[key];
+              const reconciliationSource = String(
+                fieldAssistQuality?.reconciliation?.[key]?.source || "",
+              ).trim();
+              const decision = fieldReviewDecisions[key];
+              const isLoading = Boolean(fieldDecisionLoading[key]);
+              const pct = Math.round((Number(conf?.score || 0) || 0) * 100);
+              const lowConfidence = (fieldAssistQuality?.lowConfidenceFields || []).includes(
+                key,
+              );
+
+              return (
+                <div
+                  key={key}
+                  className={`rounded-lg border px-3 py-2 ${
+                    decision === "accepted"
+                      ? "border-emerald-300 bg-emerald-50"
+                      : decision === "rejected"
+                        ? "border-rose-300 bg-rose-50"
+                        : lowConfidence
+                          ? "border-amber-300 bg-amber-50"
+                          : "border-slate-300 bg-white dark:border-slate-600 dark:bg-slate-800"
+                  }`}
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="font-semibold text-slate-800 dark:text-slate-100">{label}</p>
+                    <div className="flex flex-wrap items-center gap-1">
+                      {conf?.label && (
+                        <span
+                          className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${confidenceBadgeClass(
+                            conf.label,
+                          )}`}
+                        >
+                          {conf.label.toUpperCase()} ({pct}%)
+                        </span>
+                      )}
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${sourceBadgeClass(
+                          reconciliationSource,
+                        )}`}
+                      >
+                        {sourceLabel(reconciliationSource)}
+                      </span>
+                    </div>
+                  </div>
+                  <p className="mt-1 text-xs text-slate-800 dark:text-slate-100">{value || "-"}</p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => sendFieldReviewDecision(key, "accepted")}
+                      disabled={isLoading || !String(value || "").trim()}
+                      className="rounded-md border border-emerald-400 bg-emerald-100 px-2 py-1 text-[11px] font-bold text-emerald-900 disabled:opacity-50"
+                    >
+                      {isLoading && decision === "accepted" ? "Salvando..." : "Aceitar"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => sendFieldReviewDecision(key, "rejected")}
+                      disabled={isLoading || !String(value || "").trim()}
+                      className="rounded-md border border-rose-400 bg-rose-100 px-2 py-1 text-[11px] font-bold text-rose-900 disabled:opacity-50"
+                    >
+                      {isLoading && decision === "rejected" ? "Salvando..." : "Rejeitar"}
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+            <div className="rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 p-2">
+              <label
+                htmlFor="fieldFeedbackCorrectionNote"
+                className="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-200"
+              >
+                Observacao de correcao (opcional para campos rejeitados)
+              </label>
+              <textarea
+                id="fieldFeedbackCorrectionNote"
+                value={feedbackCorrectionNote}
+                onChange={(e) => setFeedbackCorrectionNote(e.target.value)}
+                rows={2}
+                className="w-full rounded-md border border-slate-300 bg-white px-2 py-1 text-xs text-slate-800 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+                placeholder="Ex.: ajustar diagnostico para sindrome colica em observacao..."
+              />
+            </div>
           </div>
         )}
         {isMobile && (
@@ -2710,7 +3340,7 @@ const FieldModeConsultation = ({
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Frequencia cardiaca</label>
+            <label className="mb-1 block text-sm font-medium text-gray-700">Frequencia cardiaca (bpm)</label>
             <input
               id="fieldHeartRate"
               type="number"
@@ -2720,7 +3350,7 @@ const FieldModeConsultation = ({
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Frequencia respiratoria</label>
+            <label className="mb-1 block text-sm font-medium text-gray-700">Frequencia respiratoria (mpm)</label>
             <input
               id="fieldRespiratoryRate"
               type="number"
@@ -2733,6 +3363,9 @@ const FieldModeConsultation = ({
 
         <div className="h-3" />
       </div>
+
+      </>
+      )}
 
       <FloatingFormActions
         maxWidthClass="max-w-4xl"
@@ -2747,7 +3380,7 @@ const FieldModeConsultation = ({
             className="btn btn-success btn-lg btn-block min-h-[48px] sm:min-h-[52px] text-sm sm:text-base"
           >
             {saving && <LoadingDot />}
-            {saving ? "Salvando..." : "Salvar Campo"}
+            {saving ? "Salvando..." : "Salvar consulta"}
           </button>
           <button
             type="button"
@@ -2756,14 +3389,14 @@ const FieldModeConsultation = ({
             className="btn btn-primary btn-lg btn-block min-h-[48px] sm:min-h-[52px] text-sm sm:text-base"
           >
             {saving && <LoadingDot />}
-            {saving ? "Processando..." : "Salvar + Receita"}
+            {saving ? "Processando..." : "Salvar + gerar receita"}
           </button>
           <button
             type="button"
             onClick={goToManualEditor}
             className="btn btn-neutral btn-lg btn-block min-h-[48px] sm:min-h-[52px] text-sm sm:text-base"
           >
-            Consulta manual
+            Editar manualmente
           </button>
           <button
             type="button"
@@ -2777,9 +3410,15 @@ const FieldModeConsultation = ({
 
       {showPorteChoiceModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4">
-          <div className="w-full max-w-sm rounded-2xl border border-gray-200 bg-white p-4 shadow-xl">
-            <h3 className="text-base font-bold text-gray-900">Confirmar porte do paciente</h3>
-            <p className="mt-1 text-sm text-gray-600">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={porteChoiceTitleId}
+            aria-describedby={porteChoiceDescriptionId}
+            className="w-full max-w-sm rounded-2xl border border-gray-200 bg-white p-4 shadow-xl"
+          >
+            <h3 id={porteChoiceTitleId} className="text-base font-bold text-gray-900">Confirmar porte do paciente</h3>
+            <p id={porteChoiceDescriptionId} className="mt-1 text-sm text-gray-600">
               A transcricao nao trouxe evidencia suficiente para detectar o porte com seguranca.
             </p>
             <div className="mt-4 grid grid-cols-2 gap-2">
@@ -2808,6 +3447,13 @@ const FieldModeConsultation = ({
           </div>
         </div>
       )}
+
+      <SignatureModal
+        isOpen={isSignatureModalOpen}
+        onClose={closeSignatureModal}
+        onSave={saveSignature}
+        title="Assinatura do tutor"
+      />
     </div>
   );
 };

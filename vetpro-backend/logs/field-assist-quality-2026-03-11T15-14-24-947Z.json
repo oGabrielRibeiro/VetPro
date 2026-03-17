@@ -1,0 +1,18 @@
+{
+  "generatedAt": "2026-03-11T15:14:24.945Z",
+  "totalRequests": 0,
+  "metrics": {
+    "needsReviewRate": 0,
+    "lowConfidenceAvgCount": 0,
+    "aiSelfCheckAvgScore": 0,
+    "transcriptionFallbackRate": 0,
+    "totalLatency": {
+      "avgMs": 0,
+      "p95Ms": 0
+    },
+    "stageLatency": {}
+  },
+  "breakdown": {
+    "byContextMode": {}
+  }
+}

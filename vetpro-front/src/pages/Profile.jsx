@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import FeedbackBanner from "../components/FeedbackBanner";
 import AppIcon from "../components/AppIcon";
 import ConfirmDialog from "../components/ConfirmDialog";
+import { VpButton } from "../components/ui";
 
 const emptyForm = {
   name: "",
@@ -67,13 +68,17 @@ const Profile = ({ profile, onSave, onCancel, onDeleteAccount, onBack }) => {
   const [form, setForm] = useState(buildInitialForm(profile));
   const [clinicLogoFileName, setClinicLogoFileName] = useState("");
   const [formError, setFormError] = useState("");
+  const [saveLoading, setSaveLoading] = useState(false);
   const [deleteError, setDeleteError] = useState("");
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [clinicGeoLoading, setClinicGeoLoading] = useState(false);
+  const [clinicGeoError, setClinicGeoError] = useState("");
 
   useEffect(() => {
     setForm(buildInitialForm(profile));
     setClinicLogoFileName("");
+    setClinicGeoError("");
   }, [profile]);
 
   const initials = useMemo(() => {
@@ -81,6 +86,33 @@ const Profile = ({ profile, onSave, onCancel, onDeleteAccount, onBack }) => {
     if (!safeName) return "U";
     return safeName.charAt(0).toUpperCase();
   }, [form.name]);
+
+  const handleClinicGeolocation = () => {
+    if (!navigator.geolocation) {
+      setClinicGeoError("Geolocalizacao nao suportada neste navegador.");
+      return;
+    }
+    setClinicGeoLoading(true);
+    setClinicGeoError("");
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const lat = position.coords.latitude.toFixed(6);
+        const lng = position.coords.longitude.toFixed(6);
+        setForm((prev) => ({
+          ...prev,
+          clinicAddress: `Lat ${lat}, Long ${lng}`,
+        }));
+        setClinicGeoLoading(false);
+      },
+      () => {
+        setClinicGeoError(
+          "Nao foi possivel obter a localizacao. Verifique as permissoes.",
+        );
+        setClinicGeoLoading(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000 },
+    );
+  };
 
   const handleProfilePhotoChange = (e) => {
     const file = e.target.files?.[0];
@@ -125,7 +157,7 @@ const Profile = ({ profile, onSave, onCancel, onDeleteAccount, onBack }) => {
     reader.readAsDataURL(file);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setFormError("");
 
@@ -141,13 +173,20 @@ const Profile = ({ profile, onSave, onCancel, onDeleteAccount, onBack }) => {
       return;
     }
 
-    onSave?.({
-      ...form,
-      name,
-      email,
-      crmvNumber,
-      crmvState,
-    });
+    setSaveLoading(true);
+    try {
+      await onSave?.({
+        ...form,
+        name,
+        email,
+        crmvNumber,
+        crmvState,
+      });
+    } catch (err) {
+      setFormError("Nao foi possivel salvar o perfil. Verifique os dados e tente novamente.");
+    } finally {
+      setSaveLoading(false);
+    }
   };
 
   const handleDeleteAccount = async () => {
@@ -169,44 +208,49 @@ const Profile = ({ profile, onSave, onCancel, onDeleteAccount, onBack }) => {
     <div className="w-full max-w-7xl mx-auto space-y-3 sm:space-y-4 subtle-enter">
       {onBack && (
         <div className="flex justify-end">
-          <button
+          <VpButton
             onClick={onBack}
-            className="inline-flex items-center gap-1 rounded-lg border border-gray-200 dark:border-dark-600 bg-white/70 dark:bg-dark-800/60 px-2.5 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-300"
+            variant="neutral"
+            size="sm"
+            icon={<AppIcon name="back" className="h-3.5 w-3.5" />}
+            className="text-xs"
           >
-            <AppIcon name="back" className="h-3.5 w-3.5" />
             Voltar
-          </button>
+          </VpButton>
         </div>
       )}
 
       <section className="shell-surface rounded-3xl border border-gray-200/80 dark:border-dark-700/70 p-3 sm:p-5 lg:p-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-gray-500 dark:text-gray-400">
+            <p className="vp-overline">
               Configuracoes
             </p>
-            <h1 className="shell-title mt-1 text-xl sm:text-3xl font-extrabold text-gray-900 dark:text-white">
+            <h1 className="vp-h1 mt-1">
               Meu perfil
             </h1>
-            <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
+            <p className="vp-subtitle mt-1">
               Ajuste dados pessoais, assinatura e informacoes da clinica.
             </p>
           </div>
           <div className="grid grid-cols-2 gap-2 sm:flex sm:space-x-3 sm:gap-0 w-full sm:w-auto">
-          <button
+          <VpButton
             onClick={onCancel}
-            className="btn btn-danger-soft btn-md"
+            disabled={saveLoading}
+            variant="danger"
+            icon={<AppIcon name="cancel" className="h-4 w-4" />}
           >
-            <AppIcon name="cancel" className="h-4 w-4" />
             Cancelar
-          </button>
-          <button
+          </VpButton>
+          <VpButton
+            type="button"
             onClick={handleSubmit}
-            className="btn btn-success btn-md"
+            loading={saveLoading}
+            variant="success"
+            icon={<AppIcon name="save" className="h-4 w-4" />}
           >
-            <AppIcon name="save" className="h-4 w-4" />
             Salvar
-          </button>
+          </VpButton>
           </div>
         </div>
       </section>
@@ -228,7 +272,7 @@ const Profile = ({ profile, onSave, onCancel, onDeleteAccount, onBack }) => {
         {/* Personal Data */}
         <div className="shell-surface rounded-3xl border border-gray-200/80 dark:border-dark-700/70 overflow-hidden">
           <div className="bg-white/65 dark:bg-dark-900/45 px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200 dark:border-dark-700">
-            <h2 className="font-bold text-lg text-gray-800 dark:text-white">Dados Pessoais</h2>
+            <h2 className="vp-h2 text-gray-800 dark:text-white">Dados Pessoais</h2>
           </div>
           <div className="p-4 sm:p-6">
             <div className="flex flex-col sm:flex-row sm:items-start sm:space-x-6">
@@ -268,7 +312,7 @@ const Profile = ({ profile, onSave, onCancel, onDeleteAccount, onBack }) => {
                     type="text"
                     value={form.name}
                     onChange={(e) => setForm({ ...form, name: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-dark-600 bg-white dark:bg-dark-800 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
+                    className="vp-input-field text-sm"
                     required
                   />
                 </div>
@@ -284,7 +328,7 @@ const Profile = ({ profile, onSave, onCancel, onDeleteAccount, onBack }) => {
                       onChange={(e) =>
                         setForm({ ...form, email: e.target.value })
                       }
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-dark-600 bg-white dark:bg-dark-800 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
+                      className="vp-input-field text-sm"
                       required
                     />
                   </div>
@@ -299,7 +343,7 @@ const Profile = ({ profile, onSave, onCancel, onDeleteAccount, onBack }) => {
                       onChange={(e) =>
                         setForm({ ...form, phone: e.target.value })
                       }
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-dark-600 bg-white dark:bg-dark-800 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
+                      className="vp-input-field text-sm"
                       placeholder="(11) 99999-9999"
                     />
                   </div>
@@ -312,7 +356,7 @@ const Profile = ({ profile, onSave, onCancel, onDeleteAccount, onBack }) => {
         {/* Professional Data */}
         <div className="shell-surface rounded-3xl border border-gray-200/80 dark:border-dark-700/70 overflow-hidden">
           <div className="bg-white/65 dark:bg-dark-900/45 px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200 dark:border-dark-700">
-            <h2 className="font-bold text-lg text-gray-800 dark:text-white">Dados Profissionais</h2>
+            <h2 className="vp-h2 text-gray-800 dark:text-white">Dados Profissionais</h2>
           </div>
           <div className="p-4 sm:p-6 space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -326,7 +370,7 @@ const Profile = ({ profile, onSave, onCancel, onDeleteAccount, onBack }) => {
                   onChange={(e) =>
                     setForm({ ...form, crmvNumber: e.target.value })
                   }
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-dark-600 bg-white dark:bg-dark-800 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
+                  className="vp-input-field text-sm"
                   required
                 />
               </div>
@@ -340,7 +384,7 @@ const Profile = ({ profile, onSave, onCancel, onDeleteAccount, onBack }) => {
                   onChange={(e) =>
                     setForm({ ...form, crmvState: e.target.value })
                   }
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-dark-600 bg-white dark:bg-dark-800 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
+                  className="vp-input-field text-sm"
                   required
                 >
                   <option value="">Selecione</option>
@@ -391,14 +435,14 @@ const Profile = ({ profile, onSave, onCancel, onDeleteAccount, onBack }) => {
                 onChange={(e) =>
                   setForm({ ...form, specialty: e.target.value })
                 }
-                className="w-full px-3 py-2 border border-gray-300 dark:border-dark-600 bg-white dark:bg-dark-800 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
+                className="vp-input-field text-sm"
                 placeholder="Ex: Clinica Geral, Dermatologia, Cardiologia"
               />
             </div>
 
             <div className="border-t border-gray-200 dark:border-dark-700 pt-4 mt-4 space-y-4">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <h3 className="font-bold text-gray-800 dark:text-white">Dados da Clinica</h3>
+                <h3 className="vp-h3 text-gray-800 dark:text-white">Dados da Clinica</h3>
                 <div className="flex items-center space-x-3">
                   <div className="w-16 h-16 rounded-lg bg-gray-50 dark:bg-dark-800 border border-gray-200 dark:border-dark-600 flex items-center justify-center overflow-hidden">
                     {form.clinicLogoPreview ? (
@@ -428,7 +472,7 @@ const Profile = ({ profile, onSave, onCancel, onDeleteAccount, onBack }) => {
                     >
                       Selecionar logo
                     </label>
-                    <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
+                    <p className="vp-helper mt-1 text-gray-500 dark:text-gray-400">
                       {clinicLogoFileName || (form.clinicLogoPreview ? "Logo carregada" : "Nenhum arquivo selecionado")}
                     </p>
                   </div>
@@ -446,7 +490,7 @@ const Profile = ({ profile, onSave, onCancel, onDeleteAccount, onBack }) => {
                     onChange={(e) =>
                       setForm({ ...form, clinicName: e.target.value })
                     }
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-dark-600 bg-white dark:bg-dark-800 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
+                    className="vp-input-field text-sm"
                     required
                   />
                 </div>
@@ -461,7 +505,7 @@ const Profile = ({ profile, onSave, onCancel, onDeleteAccount, onBack }) => {
                     onChange={(e) =>
                       setForm({ ...form, clinicCNPJ: e.target.value })
                     }
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-dark-600 bg-white dark:bg-dark-800 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
+                    className="vp-input-field text-sm"
                     placeholder="00.000.000/0001-00"
                   />
                 </div>
@@ -478,7 +522,7 @@ const Profile = ({ profile, onSave, onCancel, onDeleteAccount, onBack }) => {
                     onChange={(e) =>
                       setForm({ ...form, clinicPhone: e.target.value })
                     }
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-dark-600 bg-white dark:bg-dark-800 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
+                    className="vp-input-field text-sm"
                     placeholder="(11) 3333-4444"
                   />
                 </div>
@@ -492,24 +536,37 @@ const Profile = ({ profile, onSave, onCancel, onDeleteAccount, onBack }) => {
                     onChange={(e) =>
                       setForm({ ...form, clinicEmail: e.target.value })
                     }
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-dark-600 bg-white dark:bg-dark-800 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
+                    className="vp-input-field text-sm"
                     placeholder="contato@clinica.com"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Endereco da clinica
-                </label>
+                <div className="flex items-center justify-between gap-2 mb-1">
+                  <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Endereco da clinica
+                  </label>
+                  <button
+                    type="button"
+                    onClick={handleClinicGeolocation}
+                    disabled={clinicGeoLoading}
+                    className="btn btn-neutral btn-xs"
+                  >
+                    {clinicGeoLoading ? "Localizando..." : "Usar geolocalizacao"}
+                  </button>
+                </div>
                 <textarea
                   value={form.clinicAddress}
                   onChange={(e) =>
                     setForm({ ...form, clinicAddress: e.target.value })
                   }
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-dark-600 bg-white dark:bg-dark-800 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 min-h-[60px] text-sm"
+                  className="vp-input-field text-sm min-h-[60px]"
                   placeholder="Rua, numero, bairro, cidade e estado"
                 />
+                {clinicGeoError && (
+                  <p className="mt-1 text-xs text-red-500">{clinicGeoError}</p>
+                )}
               </div>
             </div>
           </div>
@@ -518,10 +575,10 @@ const Profile = ({ profile, onSave, onCancel, onDeleteAccount, onBack }) => {
         {/* Signature */}
         <div className="shell-surface rounded-3xl border border-gray-200/80 dark:border-dark-700/70 overflow-hidden">
           <div className="bg-white/65 dark:bg-dark-900/45 px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200 dark:border-dark-700">
-            <h2 className="font-bold text-lg text-gray-800 dark:text-white">Assinatura Digital</h2>
+            <h2 className="vp-h2 text-gray-800 dark:text-white">Assinatura Digital</h2>
           </div>
           <div className="p-4 sm:p-6">
-            <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+            <p className="vp-subtitle text-gray-600 dark:text-gray-300 mb-4">
               Esta assinatura sera usada automaticamente na exportacao dos prontuarios em PDF.
             </p>
 
@@ -581,29 +638,30 @@ const Profile = ({ profile, onSave, onCancel, onDeleteAccount, onBack }) => {
         {/* Danger Zone */}
         <div className="shell-surface rounded-3xl border border-red-200 dark:border-red-800 overflow-hidden">
           <div className="bg-red-50 dark:bg-red-900/20 px-4 sm:px-6 py-3 sm:py-4 border-b border-red-200 dark:border-red-800">
-            <h2 className="font-bold text-lg text-red-700">Zona de Risco</h2>
+            <h2 className="vp-h2 text-red-700">Zona de Risco</h2>
           </div>
           <div className="p-4 sm:p-6 space-y-4">
             <div className="rounded-xl border border-red-200 dark:border-red-800 bg-red-50/60 dark:bg-red-900/15 p-4">
-              <p className="text-sm text-red-700 dark:text-red-300 font-semibold mb-1">
+              <p className="vp-h3 text-red-700 dark:text-red-300 mb-1">
                 Exclusao permanente
               </p>
-              <p className="text-sm text-gray-700 dark:text-gray-300">
+              <p className="vp-subtitle text-gray-700 dark:text-gray-300">
                 Ao excluir sua conta, todos os dados vinculados a voce serao
                 removidos permanentemente.
               </p>
             </div>
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-              <p className="text-xs text-gray-600 dark:text-gray-400">
+              <p className="vp-helper text-gray-600 dark:text-gray-400">
                 Esta acao nao pode ser desfeita.
               </p>
-              <button
+              <VpButton
                 type="button"
                 onClick={() => setShowDeleteModal(true)}
-                className="btn btn-danger-soft btn-md"
+                disabled={saveLoading}
+                variant="danger"
               >
                 Excluir minha conta
-              </button>
+              </VpButton>
             </div>
           </div>
         </div>
@@ -626,3 +684,4 @@ const Profile = ({ profile, onSave, onCancel, onDeleteAccount, onBack }) => {
 };
 
 export default Profile;
+

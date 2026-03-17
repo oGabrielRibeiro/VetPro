@@ -1,0 +1,15 @@
+{
+  "generatedAt": "2026-03-11T16:14:47.849Z",
+  "monthKey": "2026-03",
+  "sourcePath": "C:\\Cliente\\HSS\\VetPro\\vetpro-backend\\logs\\field-assist-feedback\\feedback-2026-03.jsonl",
+  "totals": {
+    "count": 0,
+    "byDecision": {
+      "accepted": 0,
+      "rejected": 0
+    },
+    "needsReviewCount": 0
+  },
+  "byField": {},
+  "bySource": {}
+}

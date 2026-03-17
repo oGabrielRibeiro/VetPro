@@ -42,6 +42,26 @@ git tag v1.1.0
 ```
 Se usar `-WithGit`, esse passo ja e feito automaticamente.
 
+## Checklist de release 1.0
+Antes de publicar `1.0.0`, garantir:
+- `TODO-UI-UX.md` concluido e validado.
+- `TODO-AUDIO-IA-PARSER.md` com validacao final clinica multi-especie.
+- Roteiro de uso real executado (login -> paciente -> consulta -> receita/PDF).
+- Treinamento do time para registrar mudancas no `CHANGELOG.md` por PR.
+- Rodar validacoes:
+```powershell
+cd vetpro-backend
+npm run verify:local
+
+cd ..\vetpro-front
+npm run build
+npm run test
+```
+Para finalizar a publicacao:
+- Mover `Unreleased` para `1.0.0` (data atual).
+- Atualizar versoes em `package.json`.
+- Executar `scripts/release.ps1 -Version 1.0.0 -WithGit`.
+
 ## Dicas
 - Patch (`1.0.x`): bugfix sem quebrar compatibilidade.
 - Minor (`1.x.0`): nova funcionalidade compatível.

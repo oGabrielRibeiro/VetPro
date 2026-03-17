@@ -1,6 +1,7 @@
-import React, { forwardRef, useState } from "react";
+import React, { forwardRef, useId, useState } from "react";
 
 const DatePicker = forwardRef(({
+  id,
   label,
   error,
   helperText,
@@ -19,6 +20,9 @@ const DatePicker = forwardRef(({
   ...props
 }, ref) => {
   const [isOpen, setIsOpen] = useState(false);
+  const generatedId = useId();
+  const inputId = id || props.name || `date-picker-${generatedId}`;
+  const dropdownId = `${inputId}-dialog`;
 
   // Data de hoje formatada
   const today = new Date().toISOString().split("T")[0];
@@ -39,18 +43,14 @@ const DatePicker = forwardRef(({
   };
 
   const baseInputClasses = `
-    w-full px-3 py-2 sm:px-4 sm:py-3 
-    border rounded-lg text-sm
+    vp-input-field text-sm sm:px-4 sm:py-3 pr-10
     transition-all duration-200
-    focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500
     disabled:bg-gray-100 disabled:cursor-not-allowed
   `;
 
   const errorInputClasses = error
     ? "border-red-300 focus:ring-red-500 focus:border-red-500"
     : "border-gray-300 dark:border-dark-600";
-
-  const darkClasses = "dark:bg-dark-800 dark:text-white";
 
   // Gera 100 anos (ano atual até 99 anos atrás)
   const currentYear = new Date().getFullYear();
@@ -119,7 +119,7 @@ const DatePicker = forwardRef(({
   return (
     <div className={`relative ${containerClassName}`}>
       {label && (
-        <label className={`block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 ${labelClassName}`}>
+        <label htmlFor={inputId} className={`block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 ${labelClassName}`}>
           {label}
           {required && <span className="text-red-500 ml-0.5">*</span>}
         </label>
@@ -128,17 +128,31 @@ const DatePicker = forwardRef(({
       <div className="relative">
         <input
           ref={ref}
+          id={inputId}
           type="text"
           value={value ? new Date(value).toLocaleDateString("pt-BR") : ""}
           onChange={() => {}}
-          onFocus={() => !disabled && setIsOpen(!isOpen)}
+          onFocus={() => !disabled && setIsOpen(true)}
+          onKeyDown={(event) => {
+            if (disabled) return;
+            if (event.key === "Enter" || event.key === " " || event.key === "ArrowDown") {
+              event.preventDefault();
+              setIsOpen(true);
+            }
+            if (event.key === "Escape") {
+              setIsOpen(false);
+            }
+          }}
           placeholder="Selecione uma data"
           disabled={disabled}
           readOnly
+          aria-haspopup="dialog"
+          aria-expanded={isOpen ? "true" : "false"}
+          aria-controls={dropdownId}
+          aria-invalid={error ? "true" : "false"}
           className={`
             ${baseInputClasses}
             ${errorInputClasses}
-            ${darkClasses}
             cursor-pointer
             ${inputClassName}
           `}
@@ -154,7 +168,12 @@ const DatePicker = forwardRef(({
 
         {/* Dropdown do calendário */}
         {isOpen && (
-          <div className="absolute z-50 left-0 right-0 mt-1 w-full sm:w-80 max-w-[calc(100vw-1rem)] bg-white dark:bg-dark-800 border border-gray-200 dark:border-dark-700 rounded-lg shadow-lg p-2 sm:p-3">
+          <div
+            id={dropdownId}
+            role="dialog"
+            aria-modal="false"
+            className="absolute z-50 left-0 right-0 mt-1 w-full sm:w-80 max-w-[calc(100vw-1rem)] bg-white dark:bg-dark-800 border border-gray-200 dark:border-dark-700 rounded-lg shadow-lg p-2 sm:p-3"
+          >
             <div className="grid grid-cols-3 gap-1 sm:gap-2">
               {/* Dia */}
               <div>
