@@ -57,6 +57,11 @@ model Patient {
   ownerEmail          String?
   ownerCpf            String?
   ownerAddress        String?
+  ownerPhoneEncrypted String?
+  ownerAltPhoneEncrypted String?
+  ownerEmailEncrypted String?
+  ownerCpfEncrypted String?
+  ownerAddressEncrypted String?
   ownerNotes          String?
   emergencyFlag       Boolean   @default(false)
   responsibleVet      String?
