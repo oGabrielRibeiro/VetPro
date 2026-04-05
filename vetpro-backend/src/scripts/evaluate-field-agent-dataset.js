@@ -352,7 +352,7 @@ async function main() {
   const repoRoot = path.resolve(__dirname, '..', '..', '..');
   const datasetDir = args.datasetDir
     ? path.resolve(repoRoot, args.datasetDir)
-    : path.join(repoRoot, 'dataset_treinamento_veterinario_apolo');
+    : path.join(repoRoot, 'datasets', 'field-assist-apolo');
 
   const datasetPath = path.join(datasetDir, 'dataset_prontuario_apolo.json');
   const wavPath = path.join(datasetDir, 'vet_dialogo_treinamento_realista.wav');

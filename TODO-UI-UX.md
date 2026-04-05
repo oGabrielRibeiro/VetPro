@@ -66,6 +66,20 @@ Melhorar consistencia visual, legibilidade, usabilidade e fluidez das telas desk
 - [x] Melhorar transicoes (sutis) em mudancas de estado sem poluir UX.
 - [x] Revisar bundle CSS utilitario e estilos nao usados.
 
+## QoL (qualidade de vida) - backlog rapido
+- [x] Revisar estados vazios com mensagens claras e acoes rapidas (ex.: "Adicionar paciente", "Criar consulta").
+- [x] Inserir feedback visual consistente em acoes longas (loader + texto de progresso).
+- [x] Padronizar mensagens de erro/sucesso em um unico componente (cores, icones, tom).
+- [x] Melhorar foco/teclado: `Tab` logico, `Enter` para submit, `Esc` para fechar modais.
+- [x] Adicionar atalho para abrir "Nova consulta" e "Novo paciente".
+- [x] Ajustar espacamento em cards e formularios para evitar sensacao de conteudo "encavalado".
+- [x] Melhorar contraste no modo escuro (revisao rapida e campos secundarios).
+- [x] Exibir dica de salvamento automatico / rascunho ativo quando houver.
+- [x] Mostrar status do upload de anexos com contador restante (limite de fotos).
+- [x] Adicionar indicador de "ultima atualizacao" no prontuario e consultas recentes.
+- [x] Revisar icones/emoji dos cards (remover fundo, deixar transparente e ampliar tamanho do emoji).
+- [x] Possibilidade de escolher o que vai ser impresso junto com o prontuario dos anexos.
+
 ## Auditoria por tela (checklist rapido)
 - [x] `Login.jsx`
 - [x] `Dashboard.jsx`

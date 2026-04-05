@@ -15,6 +15,8 @@ $ProjectRoot = $PSScriptRoot
 $EnvFilePath = Join-Path $ProjectRoot ".env"
 $FrontendDir = Join-Path $ProjectRoot "vetpro-front"
 $FrontendPackageJsonPath = Join-Path $FrontendDir "package.json"
+$CacheDir = Join-Path $ProjectRoot ".vetpro-cache"
+$FrontendNginxConfigPath = Join-Path $FrontendDir "nginx.conf"
 $BackendHealthUrl = "http://localhost:5000/health"
 $FrontendUrl = "http://localhost:3000"
 
@@ -53,6 +55,30 @@ function Invoke-Compose {
 function Test-DockerDaemon {
   docker info *> $null
   return ($LASTEXITCODE -eq 0)
+}
+
+function Should-ForceFrontendNoCacheBuild {
+  if (-not (Test-Path $FrontendNginxConfigPath)) {
+    return $false
+  }
+
+  if (-not (Test-Path $CacheDir)) {
+    New-Item -ItemType Directory -Path $CacheDir | Out-Null
+  }
+
+  $hashPath = Join-Path $CacheDir "frontend-nginx.hash"
+  $currentHash = (Get-FileHash -Path $FrontendNginxConfigPath -Algorithm SHA256).Hash
+  $previousHash = $null
+  if (Test-Path $hashPath) {
+    $previousHash = (Get-Content -Path $hashPath -ErrorAction SilentlyContinue | Select-Object -First 1).Trim()
+  }
+
+  if ($currentHash -ne $previousHash) {
+    Set-Content -Path $hashPath -Value $currentHash
+    return $true
+  }
+
+  return $false
 }
 
 function Get-NodeMajorVersion {
@@ -353,6 +379,12 @@ try {
     if (-not $NoBuild) {
       $composeArgs += "--build"
     }
+
+    if (-not $NoBuild -and (Should-ForceFrontendNoCacheBuild)) {
+      Write-Host "Detectada alteracao no nginx.conf do frontend. Forcando rebuild sem cache..." -ForegroundColor Yellow
+      Invoke-Compose -Args @("build", "--no-cache", "frontend") -ErrorMessage "Falha ao rebuildar frontend sem cache."
+    }
+
     Invoke-Compose -Args $composeArgs -ErrorMessage "Falha ao subir stack completa via Docker Compose."
   }
   else {

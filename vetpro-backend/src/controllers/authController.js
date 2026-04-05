@@ -7,6 +7,14 @@ const prisma = require('../lib/prisma');
 const logger = require('../utils/logger');
 const { refreshAccessToken } = require('../services/authService');
 const { getJwtSecret } = require('../config/jwtConfig');
+const { verifyCaptcha } = require('../services/captchaService');
+const {
+  isLockedOut,
+  registerFailure,
+  registerSuccess,
+  getLockoutMeta,
+} = require('../services/authSecurityService');
+const { recordSecurityEvent } = require('../services/securityEventService');
 
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '15m';
 
@@ -60,6 +68,7 @@ function serializeUser(user) {
           cnpj: user.clinic.cnpj,
           phone: user.clinic.phone,
           email: user.clinic.email,
+          prescriptionTemplate: user.clinic.prescriptionTemplate || null,
           logoUrl: normalizeLogo(user.clinic.logoUrl || null),
         }
       : null,
@@ -74,6 +83,19 @@ async function register(req, res) {
       .toLowerCase();
     const password = String(req.body?.password || '');
     const clinicName = String(req.body?.clinicName || '').trim();
+
+    if (isLockedOut(email, req.ip)) {
+      const meta = getLockoutMeta(email, req.ip);
+      recordSecurityEvent('auth.register.locked', {
+        email,
+        ip: req.ip,
+        ...meta,
+      });
+      return res.status(429).json({
+        error: `Muitas tentativas. Tente novamente em ${meta?.remainingMinutes || 15} minutos.`,
+        lockoutUntil: meta?.lockoutUntil,
+      });
+    }
 
     if (!name || !email || !password) {
       return res
@@ -103,8 +125,25 @@ async function register(req, res) {
       });
     }
 
+    if (process.env.CAPTCHA_ENABLED === 'true') {
+      const captchaToken = String(req.body?.captchaToken || '');
+      const captchaValid = await verifyCaptcha(captchaToken, req.ip);
+      if (!captchaValid) {
+        recordSecurityEvent('auth.register.captcha_failed', {
+          email,
+          ip: req.ip,
+        });
+        return res.status(400).json({ error: 'Captcha invalido.' });
+      }
+    }
+
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) {
+      registerFailure(email, req.ip);
+      recordSecurityEvent('auth.register.email_exists', {
+        email,
+        ip: req.ip,
+      });
       return res.status(409).json({ error: 'Este e-mail ja esta cadastrado.' });
     }
 
@@ -127,6 +166,12 @@ async function register(req, res) {
     });
 
     const token = signToken(user);
+    registerSuccess(email, req.ip);
+    recordSecurityEvent('auth.register.success', {
+      email,
+      ip: req.ip,
+      userId: user.id,
+    });
 
     return res.status(201).json({
       message: 'Cadastro realizado com sucesso.',
@@ -138,6 +183,11 @@ async function register(req, res) {
     });
   } catch (err) {
     logger.error('register error:', err);
+    registerFailure(req.body?.email, req.ip);
+    recordSecurityEvent('auth.register.error', {
+      email: req.body?.email,
+      ip: req.ip,
+    });
     const details =
       process.env.NODE_ENV === 'production'
         ? undefined
@@ -156,6 +206,19 @@ async function login(req, res) {
       .toLowerCase();
     const password = String(req.body?.password || '');
 
+    if (isLockedOut(email, req.ip)) {
+      const meta = getLockoutMeta(email, req.ip);
+      recordSecurityEvent('auth.login.locked', {
+        email,
+        ip: req.ip,
+        ...meta,
+      });
+      return res.status(429).json({
+        error: `Muitas tentativas. Tente novamente em ${meta?.remainingMinutes || 15} minutos.`,
+        lockoutUntil: meta?.lockoutUntil,
+      });
+    }
+
     if (!email || !password) {
       return res
         .status(400)
@@ -172,21 +235,51 @@ async function login(req, res) {
       });
     }
 
+    if (process.env.CAPTCHA_ENABLED === 'true') {
+      const captchaToken = String(req.body?.captchaToken || '');
+      const captchaValid = await verifyCaptcha(captchaToken, req.ip);
+      if (!captchaValid) {
+        registerFailure(email, req.ip);
+        recordSecurityEvent('auth.login.captcha_failed', {
+          email,
+          ip: req.ip,
+        });
+        return res.status(400).json({ error: 'Captcha invalido.' });
+      }
+    }
+
     const user = await prisma.user.findUnique({
       where: { email },
       include: { clinic: true },
     });
 
     if (!user) {
+      registerFailure(email, req.ip);
+      recordSecurityEvent('auth.login.invalid_user', {
+        email,
+        ip: req.ip,
+      });
       return res.status(401).json({ error: 'E-mail ou senha incorretos.' });
     }
 
     const matched = await bcrypt.compare(password, user.password);
     if (!matched) {
+      const state = registerFailure(email, req.ip);
+      recordSecurityEvent('auth.login.invalid_password', {
+        email,
+        ip: req.ip,
+        attempts: state?.list?.length || null,
+      });
       return res.status(401).json({ error: 'E-mail ou senha incorretos.' });
     }
 
     const token = signToken(user);
+    registerSuccess(email, req.ip);
+    recordSecurityEvent('auth.login.success', {
+      email,
+      ip: req.ip,
+      userId: user.id,
+    });
 
     return res.json({
       message: 'Login realizado com sucesso.',
@@ -198,9 +291,57 @@ async function login(req, res) {
     });
   } catch (err) {
     logger.error('login error:', err);
+    registerFailure(req.body?.email, req.ip);
+    recordSecurityEvent('auth.login.error', {
+      email: req.body?.email,
+      ip: req.ip,
+    });
     return res
       .status(500)
       .json({ error: 'Nao foi possivel concluir o login. Tente novamente.' });
+  }
+}
+
+async function recoverPassword(req, res) {
+  try {
+    const email = String(req.body?.email || '')
+      .trim()
+      .toLowerCase();
+
+    if (!email || !isValidEmail(email)) {
+      return res.status(400).json({ error: 'Informe um e-mail valido.' });
+    }
+
+    if (process.env.CAPTCHA_ENABLED === 'true') {
+      const captchaToken = String(req.body?.captchaToken || '');
+      const captchaValid = await verifyCaptcha(captchaToken, req.ip);
+      if (!captchaValid) {
+        recordSecurityEvent('auth.recover.captcha_failed', {
+          email,
+          ip: req.ip,
+        });
+        return res.status(400).json({ error: 'Captcha invalido.' });
+      }
+    }
+
+    recordSecurityEvent('auth.recover.request', {
+      email,
+      ip: req.ip,
+    });
+
+    return res.json({
+      message:
+        'Se o e-mail existir, enviaremos instrucoes para redefinicao da senha.',
+    });
+  } catch (err) {
+    logger.error('recover error:', err);
+    recordSecurityEvent('auth.recover.error', {
+      email: req.body?.email,
+      ip: req.ip,
+    });
+    return res.status(500).json({
+      error: 'Nao foi possivel processar a recuperacao no momento.',
+    });
   }
 }
 
@@ -236,6 +377,7 @@ async function updateProfile(req, res) {
       clinicCNPJ,
       clinicPhone,
       clinicEmail,
+      clinicPrescriptionTemplate,
       phone,
       specialty,
       profilePhoto,
@@ -272,6 +414,8 @@ async function updateProfile(req, res) {
         cnpj: clinicCNPJ ?? user.clinic.cnpj,
         phone: clinicPhone ?? user.clinic.phone,
         email: clinicEmail ?? user.clinic.email,
+        prescriptionTemplate:
+          clinicPrescriptionTemplate ?? user.clinic.prescriptionTemplate,
       },
     });
 
@@ -294,6 +438,7 @@ async function updateProfile(req, res) {
         cnpj: clinic.cnpj,
         phone: clinic.phone,
         email: clinic.email,
+        prescriptionTemplate: clinic.prescriptionTemplate || null,
         logoUrl: absoluteLogo,
       },
       profilePhoto: profilePhoto || user.profilePhoto || null,
@@ -435,6 +580,7 @@ async function refreshToken(req, res) {
 module.exports = {
   register,
   login,
+  recoverPassword,
   me,
   updateProfile,
   deleteAccount,

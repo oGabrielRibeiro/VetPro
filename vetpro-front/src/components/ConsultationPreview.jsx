@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import api from "../services/api";
 import { useAuth } from "../contexts/AuthContext";
 import BeforeAfterSlider from "../components/BeforeAfterSlider";
@@ -75,7 +75,34 @@ const ConsultationPreview = ({
   const [compareMode, setCompareMode] = useState(false);
   const [selectedCompareFiles, setSelectedCompareFiles] = useState([]);
   const [feedback, setFeedback] = useState(null);
+  const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
+  const [selectedPrintFileIds, setSelectedPrintFileIds] = useState([]);
   const dialogTitleId = useId();
+  const maxClinicalPhotos = Number(
+    import.meta.env.VITE_MAX_CLINICAL_PHOTOS || 8,
+  );
+  const printModalTitleId = useId();
+  const printModalDescriptionId = useId();
+
+  const imageCount = useMemo(() => {
+    if (!files) return 0;
+    return Object.values(files)
+      .flat()
+      .filter((file) => String(file?.mimeType || "").startsWith("image/"))
+      .length;
+  }, [files]);
+
+  const allFiles = useMemo(() => {
+    if (!files) return [];
+    return Object.values(files).flat();
+  }, [files]);
+
+  const hasFiles = allFiles.length > 0;
+
+  const remainingImages =
+    Number.isFinite(maxClinicalPhotos) && maxClinicalPhotos > 0
+      ? Math.max(maxClinicalPhotos - imageCount, 0)
+      : null;
 
   const showFeedback = (type, message) => {
     setFeedback({ type, message });
@@ -112,6 +139,8 @@ const ConsultationPreview = ({
   if (!consultation) return null;
   const patientData = patient || consultation.patient || {};
   const consultationDate = consultation.date || consultation.createdAt;
+  const consultationUpdatedAt =
+    consultation.updatedAt || consultation.updated_at || consultationDate;
   const consultationNumber =
     consultation.recordNumber || consultation.numeroProntuario || consultation.id;
   const consultationTemplate =
@@ -188,6 +217,47 @@ const ConsultationPreview = ({
     }
   };
 
+  const buildPdfUrl = (fileIds) => {
+    const params = new URLSearchParams();
+    if (Array.isArray(fileIds) && fileIds.length) {
+      params.set("files", fileIds.join(","));
+    }
+    const query = params.toString();
+    return query
+      ? `/consultations/${consultation.id}/pdf?${query}`
+      : `/consultations/${consultation.id}/pdf`;
+  };
+
+  const handleDownloadConsultationPDFWithFiles = async (fileIds) => {
+    try {
+      await openApiBlobInNewTab(buildPdfUrl(fileIds));
+      showFeedback("success", "PDF aberto em nova aba.");
+    } catch (error) {
+      console.error("Erro ao abrir PDF:", error);
+      showFeedback(
+        "error",
+        "Nao foi possivel abrir o PDF. Verifique bloqueio de popup no navegador e tente novamente.",
+      );
+    }
+  };
+
+  const openPrintModal = () => {
+    if (!hasFiles) {
+      handleDownloadConsultationPDF();
+      return;
+    }
+    setSelectedPrintFileIds(allFiles.map((file) => file.id));
+    setIsPrintModalOpen(true);
+  };
+
+  const togglePrintFile = (fileId) => {
+    setSelectedPrintFileIds((prev) =>
+      prev.includes(fileId)
+        ? prev.filter((id) => id !== fileId)
+        : [...prev, fileId],
+    );
+  };
+
   const handlePreviewFile = async (fileId) => {
     try {
       await openApiBlobInNewTab(`/consultations/files/${fileId}/view`);
@@ -245,6 +315,9 @@ const ConsultationPreview = ({
                 Nº {consultationNumber}
               </p>
               <p className="text-sm text-gray-600">{formatDateBR(consultationDate)}</p>
+              <p className="text-xs text-gray-500 mt-1">
+                Atualizado em {formatDateTimeBR(consultationUpdatedAt)}
+              </p>
             </div>
           </div>
         </div>
@@ -538,9 +611,17 @@ const ConsultationPreview = ({
         </div>
 
         <div className="bg-gray-50 p-3 sm:p-4 rounded-xl mb-6">
-          <h3 className="font-semibold text-sm text-gray-700 mb-3">
-            ➕ Anexar novo exame
-          </h3>
+          <div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+            <h3 className="font-semibold text-sm text-gray-700">
+              ➕ Anexar novo exame
+            </h3>
+            {remainingImages !== null && (
+              <p className="text-xs text-gray-500">
+                Fotos clinicas: {imageCount}/{maxClinicalPhotos} (restam{" "}
+                {remainingImages})
+              </p>
+            )}
+          </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-[1fr_1.3fr_auto] gap-3">
             <select
@@ -682,7 +763,7 @@ const ConsultationPreview = ({
             Fechar
           </button>
           <button
-            onClick={handleDownloadConsultationPDF}
+            onClick={openPrintModal}
             className="btn btn-success btn-md btn-block sm:w-auto"
           >
             <span className="mr-2">
@@ -693,6 +774,100 @@ const ConsultationPreview = ({
           </div>
         </div>
       </div>
+
+      {isPrintModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={printModalTitleId}
+            aria-describedby={printModalDescriptionId}
+            className="w-full max-w-lg rounded-2xl border border-gray-200 bg-white p-4 shadow-xl"
+          >
+            <h3 id={printModalTitleId} className="text-base font-bold text-gray-900">
+              Selecionar anexos para imprimir
+            </h3>
+            <p id={printModalDescriptionId} className="mt-1 text-sm text-gray-600">
+              Escolha quais anexos devem acompanhar o prontuario em PDF.
+            </p>
+
+            <div className="mt-4 flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => setSelectedPrintFileIds(allFiles.map((file) => file.id))}
+                className="btn btn-info-soft btn-sm"
+              >
+                Selecionar todos
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedPrintFileIds([])}
+                className="btn btn-neutral btn-sm"
+              >
+                Limpar selecao
+              </button>
+            </div>
+
+            <div className="mt-3 max-h-64 overflow-y-auto rounded-xl border border-gray-200 bg-gray-50 p-2">
+              {hasFiles ? (
+                <div className="space-y-2">
+                  {allFiles.map((file) => (
+                    <label
+                      key={file.id}
+                      className="flex items-center gap-3 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedPrintFileIds.includes(file.id)}
+                        onChange={() => togglePrintFile(file.id)}
+                        className="h-4 w-4 rounded border-gray-300"
+                      />
+                      <span className="flex-1 truncate">{file.originalName}</span>
+                      <span className="text-xs text-gray-400">{file.examType || "ANEXO"}</span>
+                    </label>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-gray-500">Nenhum anexo encontrado.</p>
+              )}
+            </div>
+
+            <div className="mt-3 text-xs text-gray-500">
+              Selecionados: {selectedPrintFileIds.length} de {allFiles.length}
+            </div>
+
+            <div className="mt-4 grid grid-cols-2 gap-2 sm:flex sm:justify-end sm:gap-3">
+              <button
+                type="button"
+                onClick={() => setIsPrintModalOpen(false)}
+                className="btn btn-neutral btn-sm btn-block sm:w-auto"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  setIsPrintModalOpen(false);
+                  await handleDownloadConsultationPDFWithFiles([]);
+                }}
+                className="btn btn-info-soft btn-sm btn-block sm:w-auto"
+              >
+                Imprimir sem anexos
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  setIsPrintModalOpen(false);
+                  await handleDownloadConsultationPDFWithFiles(selectedPrintFileIds);
+                }}
+                className="btn btn-success btn-sm btn-block sm:w-auto"
+              >
+                Imprimir
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

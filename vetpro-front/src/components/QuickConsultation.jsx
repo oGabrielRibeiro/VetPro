@@ -506,6 +506,7 @@ const QuickConsultation = ({ patient, onSave, onBack, initialData = null }) => {
   const [saving, setSaving] = useState(false);
   const [showMobileMoreActions, setShowMobileMoreActions] = useState(false);
   const [showClearConfirmModal, setShowClearConfirmModal] = useState(false);
+  const [draftUpdatedAt, setDraftUpdatedAt] = useState(null);
 
   const [conversationTranscript, setConversationTranscript] = useState("");
   const [conversationRecognition, setConversationRecognition] = useState(null);
@@ -581,6 +582,15 @@ const QuickConsultation = ({ patient, onSave, onBack, initialData = null }) => {
       percent: Math.round((filled / total) * 100),
     };
   }, [specificData, specificFields]);
+  const draftInfo = useMemo(() => {
+    if (!draftUpdatedAt) return null;
+    const date = new Date(draftUpdatedAt);
+    if (Number.isNaN(date.getTime())) return null;
+    return {
+      date: date.toLocaleDateString("pt-BR"),
+      time: date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
+    };
+  }, [draftUpdatedAt]);
 
   const showFeedback = (type, message) => {
     setFeedback({ type, message });
@@ -1479,6 +1489,7 @@ const QuickConsultation = ({ patient, onSave, onBack, initialData = null }) => {
       if (!raw) return;
 
       const draft = JSON.parse(raw);
+      setDraftUpdatedAt(draft.updatedAt || null);
       setWeight(draft.weight || patient?.weight || "");
       setTemperature(draft.temperature || "");
       setHeartRate(draft.heartRate || "");
@@ -1598,6 +1609,7 @@ const QuickConsultation = ({ patient, onSave, onBack, initialData = null }) => {
 
     try {
       localStorage.setItem(draftKey, JSON.stringify(draft));
+      setDraftUpdatedAt(draft.updatedAt);
     } catch (error) {
       console.error("Erro ao salvar rascunho da consulta:", error);
     }
@@ -3062,6 +3074,7 @@ const QuickConsultation = ({ patient, onSave, onBack, initialData = null }) => {
 
     if (draftKey) {
       localStorage.removeItem(draftKey);
+      setDraftUpdatedAt(null);
     }
   };
 
@@ -3102,7 +3115,10 @@ const QuickConsultation = ({ patient, onSave, onBack, initialData = null }) => {
         : medicationPrescribed === "sim" && medicationDetails.trim().length > 0;
 
       if (!shouldGeneratePrescription) {
-        if (draftKey) localStorage.removeItem(draftKey);
+        if (draftKey) {
+          localStorage.removeItem(draftKey);
+        }
+        setDraftUpdatedAt(null);
         showFeedback(
           "success",
           "Prontuario salvo com sucesso. Nao ha nova medicacao para gerar receita.",
@@ -3134,6 +3150,7 @@ const QuickConsultation = ({ patient, onSave, onBack, initialData = null }) => {
 
       if (draftKey) {
         localStorage.removeItem(draftKey);
+        setDraftUpdatedAt(null);
       }
       showFeedback(
         "success",
@@ -3169,7 +3186,7 @@ const QuickConsultation = ({ patient, onSave, onBack, initialData = null }) => {
   }
 
   return (
-    <div className="w-full max-w-4xl mx-auto space-y-3 sm:space-y-4 pb-36 sm:pb-28">
+    <div className="w-full max-w-4xl mx-auto space-y-4 sm:space-y-5 pb-36 sm:pb-28">
       <button
         type="button"
         onClick={onBack}
@@ -3188,10 +3205,15 @@ const QuickConsultation = ({ patient, onSave, onBack, initialData = null }) => {
         <p className="text-xs text-emerald-800 dark:text-emerald-300 mt-1 font-semibold">
           Contexto ativo: {consultationContext.label}
         </p>
+        {draftInfo && (
+          <p className="text-[11px] text-emerald-700 dark:text-emerald-200 mt-2 font-semibold">
+            Rascunho salvo automaticamente em {draftInfo.date} às {draftInfo.time}
+          </p>
+        )}
         <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-2">
           <label className="text-xs font-semibold text-gray-700 flex flex-col">
-            Tipo de consulta
-          <select
+            <span>Tipo de consulta</span>
+            <select
               id="consultationType"
               value={consultationType}
               onChange={(e) => setConsultationType(e.target.value)}
@@ -3258,39 +3280,39 @@ const QuickConsultation = ({ patient, onSave, onBack, initialData = null }) => {
           )}
         </div>
       ) : (
-      <>
-      <div className="md:hidden sticky top-0 z-20 -mx-1 rounded-xl border border-gray-200 bg-white/95 px-2 py-2 backdrop-blur">
-        <div className="flex gap-2 overflow-x-auto">
-          <button
-            type="button"
-            onClick={() => scrollToSection("assistant-section")}
-            className="shrink-0 rounded-full border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700"
-          >
-            Assistente
-          </button>
-          <button
-            type="button"
-            onClick={() => scrollToSection("porte-section")}
-            className="shrink-0 rounded-full border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700"
-          >
-            Porte
-          </button>
-          <button
-            type="button"
-            onClick={() => scrollToSection("clinical-section")}
-            className="shrink-0 rounded-full border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700"
-          >
-            Clinico
-          </button>
-          <button
-            type="button"
-            onClick={() => scrollToSection("followup-section")}
-            className="shrink-0 rounded-full border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700"
-          >
-            Retorno
-          </button>
-        </div>
-      </div>
+        <>
+          <div className="md:hidden sticky top-0 z-20 -mx-1 rounded-xl border border-gray-200 bg-white/95 px-2 py-2 backdrop-blur">
+            <div className="flex gap-2 overflow-x-auto">
+              <button
+                type="button"
+                onClick={() => scrollToSection("assistant-section")}
+                className="shrink-0 rounded-full border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700"
+              >
+                Assistente
+              </button>
+              <button
+                type="button"
+                onClick={() => scrollToSection("porte-section")}
+                className="shrink-0 rounded-full border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700"
+              >
+                Porte
+              </button>
+              <button
+                type="button"
+                onClick={() => scrollToSection("clinical-section")}
+                className="shrink-0 rounded-full border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700"
+              >
+                Clinico
+              </button>
+              <button
+                type="button"
+                onClick={() => scrollToSection("followup-section")}
+                className="shrink-0 rounded-full border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700"
+              >
+                Retorno
+              </button>
+            </div>
+          </div>
 
       <FeedbackBanner
         type={feedback?.type || "error"}

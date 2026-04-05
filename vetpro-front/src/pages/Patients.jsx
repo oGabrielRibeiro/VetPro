@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from "react";
 import AppIcon from "../components/AppIcon";
+import FeedbackBanner from "../components/FeedbackBanner";
 import SpeciesIcon from "../components/SpeciesIcon";
 import useDebouncedValue from "../hooks/useDebouncedValue";
 
@@ -86,16 +87,13 @@ const Patients = ({
       </div>
 
       {hasError && (
-        <div className="shell-surface rounded-2xl border border-red-300 bg-red-50 p-4 subtle-fade">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm font-semibold text-red-800">
-              {errorMessage || "Falha ao carregar pacientes."}
-            </p>
-            <button type="button" onClick={onRetry} className="btn btn-danger-soft btn-md">
-              Recarregar
-            </button>
-          </div>
-        </div>
+        <FeedbackBanner
+          type="error"
+          message={errorMessage || "Falha ao carregar pacientes."}
+          actionLabel="Recarregar"
+          onAction={onRetry}
+          className="subtle-fade"
+        />
       )}
 
       {isLoading && (

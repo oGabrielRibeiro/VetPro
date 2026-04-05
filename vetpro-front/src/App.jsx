@@ -322,15 +322,47 @@ const MainApp = () => {
   }, []);
 
   useEffect(() => {
+    const isEditableTarget = (target) => {
+      if (!target) return false;
+      if (target.isContentEditable) return true;
+      const tag = String(target.tagName || "").toLowerCase();
+      return tag === "input" || tag === "textarea" || tag === "select";
+    };
+
+    const onKeyDown = (event) => {
+      if (isEditableTarget(event.target)) return;
+      if (!event.ctrlKey || !event.shiftKey) return;
+
+      const key = String(event.key || "").toLowerCase();
+      if (key === "n") {
+        event.preventDefault();
+        handleGoToNewConsultation(true);
+      }
+      if (key === "p") {
+        event.preventDefault();
+        setEditingPatient(null);
+        setCurrentView("add-patient");
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [handleGoToNewConsultation]);
+
+  useEffect(() => {
     if (!showPatientPicker) return undefined;
     const onKeyDown = (event) => {
       if (event.key === "Escape") {
         setShowPatientPicker(false);
       }
+      if (event.key === "Enter") {
+        event.preventDefault();
+        confirmPatientForConsultation();
+      }
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [showPatientPicker]);
+  }, [showPatientPicker, confirmPatientForConsultation]);
 
   // Funcoes de manipulacao de dados
   const handleAddConsultation = async (consultationData) => {
@@ -597,6 +629,8 @@ const MainApp = () => {
         return "Relatórios";
       case "profile":
         return "Meu Perfil";
+      case "about":
+        return "Sobre o VetPro";
       case "ui-playground":
         return "Laboratorio UI";
       default:
@@ -621,6 +655,8 @@ const MainApp = () => {
         return "Desempenho clinico e produtividade";
       case "profile":
         return "Configuracoes da conta e identidade da clinica";
+      case "about":
+        return "Visao geral da plataforma e recursos";
       case "ui-playground":
         return "Area interna para validar componentes e padroes visuais";
       default:
@@ -628,7 +664,7 @@ const MainApp = () => {
     }
   };
 
-  const handleGoToNewConsultation = (openPicker = false) => {
+  function handleGoToNewConsultation(openPicker = false) {
     if (!patients.length) {
       showActionError("Cadastre um paciente antes de iniciar a consulta.");
       setCurrentView("add-patient");
@@ -646,9 +682,9 @@ const MainApp = () => {
     setFieldModeDraftInitialData(null);
     setReturnSourceConsultation(null);
     setCurrentView(fieldMode || isMobile ? "new-consultation-field" : "new-consultation-quick");
-  };
+  }
 
-  const confirmPatientForConsultation = () => {
+  function confirmPatientForConsultation() {
     const selected = patients.find(
       (p) => String(p.id) === String(selectedConsultationPatientId),
     );
@@ -658,7 +694,7 @@ const MainApp = () => {
     setReturnSourceConsultation(null);
     setShowPatientPicker(false);
     setCurrentView(fieldMode || isMobile ? "new-consultation-field" : "new-consultation-quick");
-  };
+  }
 
   // Renderizar a view atual
   const renderCurrentView = () => {
@@ -1017,6 +1053,9 @@ const MainApp = () => {
             }}
           />
         );
+
+      case "about":
+        return <About />;
 
       case "profile":
         return (
@@ -1386,6 +1425,13 @@ const MainApp = () => {
               }}
             />
           )}
+          {isDataLoading && !dataError && (
+            <FeedbackBanner
+              className="mb-3"
+              type="info"
+              message="Atualizando dados do painel..."
+            />
+          )}
           <GlobalStatusBar
             status={systemStatus.status}
             message={systemStatus.message}
@@ -1409,6 +1455,12 @@ const MainApp = () => {
             aria-modal="true"
             aria-labelledby="patient-picker-title"
             aria-describedby="patient-picker-description"
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+                confirmPatientForConsultation();
+              }
+            }}
             className="w-full max-w-md rounded-2xl bg-white dark:bg-dark-800 p-5 shadow-xl"
           >
             <h2 id="patient-picker-title" className="text-lg font-bold text-gray-800 dark:text-white">

@@ -111,6 +111,13 @@ function drawKeyValueInline(doc, label, value) {
     .text('  ');
 }
 
+function ensurePageSpace(doc, height = 120) {
+  const bottom = doc.page.height - doc.page.margins.bottom;
+  if (doc.y + height > bottom) {
+    doc.addPage();
+  }
+}
+
 function formatMedicationRows(rows = []) {
   return rows
     .filter((row) => row?.name || row?.dose || row?.route)
@@ -127,7 +134,10 @@ function formatMedicationRows(rows = []) {
 
 function formatPrescriptionItems(items = []) {
   return items
-    .filter((row) => row?.name || row?.dose || row?.route || row?.frequency || row?.duration)
+    .filter(
+      (row) =>
+        row?.name || row?.dose || row?.route || row?.frequency || row?.duration,
+    )
     .map((row) => {
       const parts = [
         row.name || '',
@@ -150,6 +160,50 @@ function decodeDataUrlImage(dataUrl = '') {
   } catch {
     return null;
   }
+}
+
+function renderAttachmentsPdf(doc, accent, files = []) {
+  if (!Array.isArray(files) || files.length === 0) return;
+
+  doc.addPage();
+  drawSectionTitle(doc, 'Anexos selecionados', accent);
+
+  files.forEach((file, index) => {
+    ensurePageSpace(doc, 140);
+
+    const name = file?.originalName || file?.filename || `Anexo ${index + 1}`;
+    const mime = file?.mimeType || 'arquivo';
+
+    doc.font('Helvetica-Bold').fontSize(10).fillColor('#111827').text(name);
+    doc.font('Helvetica').fontSize(9).fillColor('#6b7280').text(mime);
+
+    const isImage = String(mime).toLowerCase().startsWith('image/');
+    const filePath = file?.path;
+
+    if (isImage && filePath && fs.existsSync(filePath)) {
+      try {
+        const buffer = fs.readFileSync(filePath);
+        ensurePageSpace(doc, 520);
+        doc.moveDown(0.3);
+        doc.image(buffer, { fit: [480, 640], align: 'center' });
+        doc.moveDown(0.6);
+      } catch {
+        doc
+          .font('Helvetica')
+          .fontSize(9)
+          .fillColor('#6b7280')
+          .text('Nao foi possivel carregar a imagem deste anexo.');
+        doc.moveDown(0.6);
+      }
+    } else {
+      doc
+        .font('Helvetica')
+        .fontSize(9)
+        .fillColor('#6b7280')
+        .text('Anexo nao-imagem. Disponivel para download no prontuario.');
+      doc.moveDown(0.6);
+    }
+  });
 }
 
 function renderAnesthesiaPdf(doc, consultation, accent) {
@@ -179,7 +233,10 @@ function renderAnesthesiaPdf(doc, consultation, accent) {
   drawKeyValue(doc, 'Data', anesthesia.procedureDate);
   if (anesthesia.consentSignature) {
     drawKeyValue(doc, 'Consentimento tutor', 'Assinatura anexada');
-    if (anesthesia.consentMeta?.capturedAt || anesthesia.consentMeta?.capturedByName) {
+    if (
+      anesthesia.consentMeta?.capturedAt ||
+      anesthesia.consentMeta?.capturedByName
+    ) {
       drawKeyValue(
         doc,
         'Consentimento capturado em',
@@ -188,7 +245,8 @@ function renderAnesthesiaPdf(doc, consultation, accent) {
       drawKeyValue(
         doc,
         'Responsavel pela captura',
-        anesthesia.consentMeta.capturedByName || anesthesia.consentMeta.capturedByUserId,
+        anesthesia.consentMeta.capturedByName ||
+          anesthesia.consentMeta.capturedByUserId,
       );
     }
     const buffer = decodeDataUrlImage(anesthesia.consentSignature);
@@ -284,7 +342,11 @@ function renderMedicationPdf(doc, consultation, accent) {
   renderPatientSummary(doc, consultation, accent);
   drawSectionTitle(doc, 'Prescricao / Medicacao', accent);
   drawKeyValue(doc, 'Diagnostico', medication.diagnosis);
-  drawKeyValue(doc, 'Itens prescritos', formatPrescriptionItems(medication.items || []));
+  drawKeyValue(
+    doc,
+    'Itens prescritos',
+    formatPrescriptionItems(medication.items || []),
+  );
   drawKeyValue(doc, 'Observacoes', medication.notes);
 }
 
@@ -302,7 +364,10 @@ function renderProcedurePdf(doc, consultation, accent) {
   drawKeyValue(doc, 'Data do consentimento', procedure.consentDate);
   if (procedure.consentSignature) {
     drawKeyValue(doc, 'Assinatura do tutor', 'Assinatura anexada');
-    if (procedure.consentMeta?.capturedAt || procedure.consentMeta?.capturedByName) {
+    if (
+      procedure.consentMeta?.capturedAt ||
+      procedure.consentMeta?.capturedByName
+    ) {
       drawKeyValue(
         doc,
         'Consentimento capturado em',
@@ -311,7 +376,8 @@ function renderProcedurePdf(doc, consultation, accent) {
       drawKeyValue(
         doc,
         'Responsavel pela captura',
-        procedure.consentMeta.capturedByName || procedure.consentMeta.capturedByUserId,
+        procedure.consentMeta.capturedByName ||
+          procedure.consentMeta.capturedByUserId,
       );
     }
     const buffer = decodeDataUrlImage(procedure.consentSignature);
@@ -323,7 +389,11 @@ function renderProcedurePdf(doc, consultation, accent) {
   drawKeyValue(doc, 'Achados', procedure.findings);
   drawKeyValue(doc, 'Complicacoes', procedure.complications);
   drawKeyValue(doc, 'Plano pos-operatorio', procedure.postOpPlan);
-  drawKeyValue(doc, 'Medicacoes', formatMedicationRows(procedure.medications || []));
+  drawKeyValue(
+    doc,
+    'Medicacoes',
+    formatMedicationRows(procedure.medications || []),
+  );
 }
 
 function renderHospitalizationPdf(doc, consultation, accent) {
@@ -336,7 +406,11 @@ function renderHospitalizationPdf(doc, consultation, accent) {
   drawKeyValue(doc, 'Responsavel', hospitalization.responsible);
   drawKeyValue(doc, 'Evolucao diaria', hospitalization.dailyEvolution);
   drawKeyValue(doc, 'Sinais vitais', hospitalization.vitalsNotes);
-  drawKeyValue(doc, 'Medicacoes', formatMedicationRows(hospitalization.medications || []));
+  drawKeyValue(
+    doc,
+    'Medicacoes',
+    formatMedicationRows(hospitalization.medications || []),
+  );
   drawKeyValue(doc, 'Alimentacao', hospitalization.feeding);
   drawKeyValue(doc, 'Hidratacao', hospitalization.hydration);
   drawKeyValue(doc, 'Eliminacoes', hospitalization.elimination);
@@ -678,7 +752,7 @@ function drawReturnRegistryPage(doc, consultation) {
     });
 }
 
-function generateConsultationPDF(consultation, res) {
+function generateConsultationPDF(consultation, res, options = {}) {
   const doc = new PDFDocument({
     size: 'A4',
     margin: 50,
@@ -757,7 +831,10 @@ function generateConsultationPDF(consultation, res) {
 
   doc.y = 140;
 
-  if (consultation.consultationType === 'anestesia' && consultation.customFormData) {
+  if (
+    consultation.consultationType === 'anestesia' &&
+    consultation.customFormData
+  ) {
     renderAnesthesiaPdf(doc, consultation, accent);
     doc.moveDown(1.2);
     const signaturePath = path.join(
@@ -885,7 +962,10 @@ function generateConsultationPDF(consultation, res) {
     consultation.returnRecommendation,
   );
 
-  if (consultation.consultationType === 'anestesia' && consultation.customFormData) {
+  if (
+    consultation.consultationType === 'anestesia' &&
+    consultation.customFormData
+  ) {
     const anesthesia = consultation.customFormData?.anesthesia || {};
     drawSectionTitle(doc, 'Ficha anestesica (resumo)', accent);
     drawKeyValue(doc, 'Animal', anesthesia.animalName);
@@ -957,6 +1037,8 @@ function generateConsultationPDF(consultation, res) {
   if (consultation.consultationType === 'retorno') {
     drawReturnRegistryPage(doc, consultation);
   }
+
+  renderAttachmentsPdf(doc, options.files || [], accent);
 
   doc.end();
 }

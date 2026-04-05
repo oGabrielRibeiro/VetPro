@@ -33,7 +33,8 @@ class CloudStorageService {
     this.provider = process.env.CLOUD_STORAGE_PROVIDER || 'local';
     this.s3Client = null;
     this.bucket = process.env.CLOUD_BUCKET_NAME || 'vetpro-uploads';
-    this.region = process.env.CLOUD_REGION || 'us-east-1';
+    this.region =
+      process.env.CLOUD_REGION || process.env.AWS_REGION || 'us-east-1';
 
     this.initializeS3();
   }

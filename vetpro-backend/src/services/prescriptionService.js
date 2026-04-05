@@ -1,4 +1,13 @@
 const PDFDocument = require('pdfkit');
+const path = require('path');
+
+function resolveClinicLogoPath(clinic = {}) {
+  const logo = clinic?.logoUrl;
+  if (!logo || typeof logo !== 'string') return null;
+  if (logo.startsWith('http://') || logo.startsWith('https://')) return null;
+  const cleaned = logo.replace(/^\/+/, '');
+  return path.join(process.cwd(), cleaned);
+}
 
 function normalizePrescriptionText(value = '') {
   return String(value || '')
@@ -45,7 +54,7 @@ function fitTextToHeight(doc, text, options = {}) {
   return best || source.slice(0, 180).trim();
 }
 
-function renderPrescription(doc, data) {
+function renderPrescriptionClassic(doc, data) {
   const accent = '#39bdb8';
   const accentDark = '#2ea39f';
   const accentSoft = '#9fe1dc';
@@ -73,6 +82,14 @@ function renderPrescription(doc, data) {
   const headerY = sheetY;
   const headerW = sheetW - bandW;
   doc.rect(headerX, headerY, headerW, headerH).fill(accent);
+  const logoPath = resolveClinicLogoPath(data.clinic || {});
+  if (logoPath) {
+    try {
+      doc.image(logoPath, headerX + 12, headerY + 12, { width: 36 });
+    } catch {
+      // ignore logo errors
+    }
+  }
   doc
     .polygon(
       [headerX + headerW * 0.52, headerY],
@@ -310,6 +327,129 @@ function renderPrescription(doc, data) {
       width: 90,
       align: 'right',
     });
+}
+
+function renderPrescriptionCompact(doc, data) {
+  const dark = '#0f172a';
+  const muted = '#64748b';
+  const pageWidth = doc.page.width;
+  const pageHeight = doc.page.height;
+  const margin = 36;
+  const sheetX = margin;
+  const sheetY = margin;
+  const sheetW = pageWidth - margin * 2;
+  const sheetH = pageHeight - margin * 2;
+
+  doc.rect(sheetX, sheetY, sheetW, sheetH).fill('#ffffff');
+
+  const logoPath = resolveClinicLogoPath(data.clinic || {});
+  if (logoPath) {
+    try {
+      doc.image(logoPath, sheetX, sheetY, { width: 42 });
+    } catch {
+      // ignore logo errors
+    }
+  }
+
+  doc
+    .font('Helvetica-Bold')
+    .fontSize(16)
+    .fillColor(dark)
+    .text(data.clinic?.name || 'Clinica Veterinaria', sheetX + 55, sheetY + 6);
+  doc
+    .font('Helvetica')
+    .fontSize(9)
+    .fillColor(muted)
+    .text(data.clinic?.address || '-', sheetX + 55, sheetY + 26, {
+      width: sheetW - 55,
+    })
+    .text(
+      `Tel: ${data.clinic?.phone || '-'} | Email: ${data.clinic?.email || '-'}`,
+      sheetX + 55,
+      sheetY + 40,
+      { width: sheetW - 55 },
+    );
+
+  const headerBottom = sheetY + 70;
+  doc
+    .moveTo(sheetX, headerBottom)
+    .lineTo(sheetX + sheetW, headerBottom)
+    .lineWidth(1)
+    .strokeColor('#e2e8f0')
+    .stroke();
+
+  doc
+    .font('Helvetica-Bold')
+    .fontSize(12)
+    .fillColor(dark)
+    .text('Prescricao', sheetX, headerBottom + 12);
+
+  doc
+    .font('Helvetica')
+    .fontSize(10)
+    .fillColor(dark)
+    .text(`Paciente: ${data.patient?.name || '-'}`, sheetX, headerBottom + 32)
+    .text(`Tutor: ${data.patient?.ownerName || '-'}`, sheetX, headerBottom + 48)
+    .text(
+      `Data: ${new Date().toLocaleDateString('pt-BR')}`,
+      sheetX,
+      headerBottom + 64,
+    );
+
+  const boxY = headerBottom + 88;
+  const boxH = sheetH - 150;
+  const prescriptionRaw =
+    data.consultation.medications ||
+    data.consultation.treatment ||
+    'Conforme orientacao clinica.';
+  const prescriptionText = fitTextToHeight(doc, prescriptionRaw, {
+    width: sheetW,
+    height: boxH,
+    align: 'left',
+    lineGap: 2,
+  });
+  doc
+    .font('Helvetica')
+    .fontSize(11)
+    .fillColor(dark)
+    .text(prescriptionText, sheetX, boxY, {
+      width: sheetW,
+      align: 'left',
+      lineGap: 2,
+    });
+
+  const footerY = sheetY + sheetH - 45;
+  doc
+    .lineWidth(0.8)
+    .strokeColor('#cbd5f5')
+    .moveTo(sheetX, footerY)
+    .lineTo(sheetX + 180, footerY)
+    .stroke();
+  doc
+    .font('Helvetica')
+    .fontSize(9)
+    .fillColor(muted)
+    .text('Assinatura', sheetX + 185, footerY - 3);
+  doc
+    .font('Helvetica-Bold')
+    .fontSize(11)
+    .fillColor(dark)
+    .text(`${data.vet.name || 'Veterinario'}`, sheetX, footerY + 10);
+  doc
+    .font('Helvetica')
+    .fontSize(10)
+    .fillColor(muted)
+    .text(`CRMV: ${data.vet.crmv || 'Nao informado'}`, sheetX, footerY + 24);
+}
+
+function renderPrescription(doc, data) {
+  const template = String(
+    data?.clinic?.prescriptionTemplate || 'classic',
+  ).toLowerCase();
+  if (template === 'compact') {
+    return renderPrescriptionCompact(doc, data);
+  }
+  return renderPrescriptionClassic(doc, data);
 }
 
 function generatePrescriptionBuffer(data) {

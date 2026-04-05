@@ -7,6 +7,7 @@ const auth = require('../middlewares/authMiddleware');
 const consultationController = require('../controllers/consultationController');
 const upload = require('../middlewares/uploadMiddleware');
 const fileController = require('../controllers/consultationFileController');
+const { uploadLimiter } = require('../middlewares/rateLimitMiddleware');
 const {
   validate,
   createConsultationSchema,
@@ -43,7 +44,12 @@ router.post('/:id/chat-history', consultationController.appendChatHistory);
 router.get('/:id', consultationController.getById);
 router.get('/:id/pdf', consultationController.downloadPDF);
 router.post('/:id/create-return', consultationController.createReturn);
-router.post('/:id/files', upload.single('file'), fileController.uploadFile);
+router.post(
+  '/:id/files',
+  uploadLimiter,
+  upload.single('file'),
+  fileController.uploadFile,
+);
 router.get('/:id/files', fileController.listFiles);
 router.get('/files/:fileId/view', fileController.viewFile);
 router.get('/files/:fileId/thumbnail', fileController.viewThumbnail);

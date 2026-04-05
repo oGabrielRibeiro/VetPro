@@ -1,49 +1,41 @@
-export default function About() {
-  return (
-    <div style={{ padding: "2rem", maxWidth: "900px", margin: "0 auto" }}>
-      <h1>Sobre o VetPro</h1>
+import React from "react";
+import AppIcon from "../components/AppIcon";
 
-      <p>
-        O <strong>VetPro</strong> é uma plataforma desenvolvida para otimizar a
-        rotina de médicos veterinários, especialmente aqueles que atuam em campo.
-        Nosso objetivo é simplificar o registro de atendimentos, melhorar a
-        organização dos dados clínicos e aumentar a produtividade no dia a dia.
+const About = () => (
+  <div className="max-w-4xl mx-auto space-y-6">
+    <div className="shell-surface rounded-3xl border border-gray-200/80 dark:border-dark-700/70 p-6 sm:p-8">
+      <p className="vp-overline">VetPro Platform</p>
+      <h1 className="vp-h1 mt-2">Da conversa ao prontuario em minutos</h1>
+      <p className="vp-subtitle mt-3">
+        Audio inteligente, agenda integrada e relatorios em tempo real para
+        acelerar atendimentos na clinica e no campo.
       </p>
-
-      <h2>🚀 O que o VetPro oferece</h2>
-      <ul>
-        <li>📋 Prontuário veterinário digital intuitivo</li>
-        <li>🎤 Preenchimento por voz (ideal para uso em campo)</li>
-        <li>📄 Geração automática de receitas em PDF</li>
-        <li>📱 Interface otimizada para dispositivos móveis</li>
-        <li>🔄 Sincronização de dados (modo offline em desenvolvimento)</li>
-      </ul>
-
-      <h2>🎯 Nossa missão</h2>
-      <p>
-        Levar tecnologia acessível e eficiente para veterinários, reduzindo o
-        tempo gasto com burocracia e permitindo mais foco no cuidado com os
-        animais.
-      </p>
-
-      <h2>🌱 Visão</h2>
-      <p>
-        Ser referência em soluções digitais para veterinária de campo no Brasil e
-        futuramente expandir para outros mercados.
-      </p>
-
-      <h2>💡 Diferencial</h2>
-      <p>
-        O VetPro é pensado na prática real do veterinário, com foco em rapidez,
-        simplicidade e funcionamento mesmo em ambientes com pouca ou nenhuma
-        conexão com a internet.
-      </p>
-
-      <hr style={{ margin: "2rem 0" }} />
-
-      <p style={{ fontSize: "0.9rem", color: "#666" }}>
-        © {new Date().getFullYear()} VetPro. Todos os direitos reservados.
+      <p className="vp-helper mt-3 text-gray-500 dark:text-gray-400">
+        Padrao SaaS pronto para operacao comercial: produtividade, rastreabilidade
+        e experiencia unica em desktop e mobile.
       </p>
     </div>
-  );
-}
+
+    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      {[
+        { label: "Modo campo", icon: "consultations" },
+        { label: "Agenda", icon: "appointments" },
+        { label: "Relatorios", icon: "reports" },
+      ].map((item) => (
+        <div
+          key={item.label}
+          className="shell-surface rounded-2xl border border-gray-200/80 dark:border-dark-700/70 p-4 text-center"
+        >
+          <span className="mx-auto mb-2 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300">
+            <AppIcon name={item.icon} />
+          </span>
+          <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+            {item.label}
+          </p>
+        </div>
+      ))}
+    </div>
+  </div>
+);
+
+export default About;

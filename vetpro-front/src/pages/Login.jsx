@@ -1,21 +1,31 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import AppIcon from "../components/AppIcon";
 
 const Login = () => {
-  const { login, register, authLoading, error, clearError } = useAuth();
+  const { login, register, recoverPassword, authLoading, error, clearError } =
+    useAuth();
 
   const [isRegisterMode, setIsRegisterMode] = useState(false);
+  const [isRecoveryMode, setIsRecoveryMode] = useState(false);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [formError, setFormError] = useState("");
+  const [recoverySuccess, setRecoverySuccess] = useState("");
   const [loginLogoError, setLoginLogoError] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState("");
+  const [captchaError, setCaptchaError] = useState("");
+  const captchaContainerRef = useRef(null);
+  const captchaWidgetIdRef = useRef(null);
+  const captchaSiteKey = import.meta.env.VITE_CAPTCHA_SITE_KEY;
+  const captchaEnabled = Boolean(captchaSiteKey);
 
   const submitLabel = useMemo(() => {
     if (authLoading) return "Processando...";
+    if (isRecoveryMode) return "Enviar recuperação";
     return isRegisterMode ? "Criar conta" : "Entrar";
-  }, [authLoading, isRegisterMode]);
+  }, [authLoading, isRegisterMode, isRecoveryMode]);
   const activeError = formError || error || "";
   const isConnectionError = useMemo(() => {
     const source = String(activeError || "").toLowerCase();
@@ -39,7 +49,7 @@ const Login = () => {
       return "Informe um e-mail valido.";
     }
 
-    if (String(password || "").length < 6) {
+    if (!isRecoveryMode && String(password || "").length < 6) {
       return "A senha deve ter no minimo 6 caracteres.";
     }
 
@@ -50,6 +60,8 @@ const Login = () => {
     e.preventDefault();
     clearError();
     setFormError("");
+    setCaptchaError("");
+    setRecoverySuccess("");
 
     const validationError = validate();
     if (validationError) {
@@ -57,11 +69,21 @@ const Login = () => {
       return;
     }
 
+    if (captchaEnabled && !captchaToken) {
+      setCaptchaError("Confirme o captcha antes de continuar.");
+      return;
+    }
+
     try {
-      if (isRegisterMode) {
-        await register(name, email, password);
+      if (isRecoveryMode) {
+        await recoverPassword(email, captchaToken);
+        setRecoverySuccess(
+          "Se o e-mail existir, enviaremos instrucoes para redefinir a senha.",
+        );
+      } else if (isRegisterMode) {
+        await register(name, email, password, captchaToken);
       } else {
-        await login(email, password);
+        await login(email, password, captchaToken);
       }
     } catch {
       // erro tratado no contexto
@@ -71,8 +93,57 @@ const Login = () => {
   const toggleMode = (registerMode) => {
     clearError();
     setFormError("");
+    setCaptchaError("");
+    setRecoverySuccess("");
+    setCaptchaToken("");
+    setIsRecoveryMode(false);
     setIsRegisterMode(registerMode);
   };
+
+  const toggleRecovery = () => {
+    clearError();
+    setFormError("");
+    setCaptchaError("");
+    setRecoverySuccess("");
+    setCaptchaToken("");
+    setIsRegisterMode(false);
+    setIsRecoveryMode((prev) => !prev);
+  };
+
+  useEffect(() => {
+    if (!captchaEnabled) return;
+    if (!captchaContainerRef.current) return;
+
+    const renderCaptcha = () => {
+      if (!window.hcaptcha || captchaWidgetIdRef.current !== null) return;
+      captchaWidgetIdRef.current = window.hcaptcha.render(
+        captchaContainerRef.current,
+        {
+          sitekey: captchaSiteKey,
+          callback: (token) => setCaptchaToken(token),
+          "expired-callback": () => setCaptchaToken(""),
+        },
+      );
+    };
+
+    if (window.hcaptcha) {
+      renderCaptcha();
+      return;
+    }
+
+    const scriptId = "hcaptcha-script";
+    if (!document.getElementById(scriptId)) {
+      const script = document.createElement("script");
+      script.id = scriptId;
+      script.src = "https://js.hcaptcha.com/1/api.js?render=explicit";
+      script.async = true;
+      script.defer = true;
+      script.onload = renderCaptcha;
+      document.body.appendChild(script);
+    } else {
+      renderCaptcha();
+    }
+  }, [captchaEnabled, captchaSiteKey]);
 
   return (
     <div className="app-shell-bg min-h-screen flex items-center justify-center p-3 sm:p-4">
@@ -101,30 +172,41 @@ const Login = () => {
 
           <div className="p-5 sm:p-6">
 
-            <div className="mb-5 vp-segment">
-              <button
-                type="button"
-                onClick={() => toggleMode(false)}
-                className={`vp-segment-btn transition ${
-                  !isRegisterMode ? "is-active" : ""
-                }`}
-              >
-                Entrar
-              </button>
-              <button
-                type="button"
-                onClick={() => toggleMode(true)}
-                className={`vp-segment-btn transition ${
-                  isRegisterMode ? "is-active" : ""
-                }`}
-              >
-                Criar conta
-              </button>
-            </div>
+            {!isRecoveryMode ? (
+              <div className="mb-5 vp-segment">
+                <button
+                  type="button"
+                  onClick={() => toggleMode(false)}
+                  className={`vp-segment-btn transition ${
+                    !isRegisterMode ? "is-active" : ""
+                  }`}
+                >
+                  Entrar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => toggleMode(true)}
+                  className={`vp-segment-btn transition ${
+                    isRegisterMode ? "is-active" : ""
+                  }`}
+                >
+                  Criar conta
+                </button>
+              </div>
+            ) : (
+              <div className="mb-5 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-center text-sm font-semibold text-gray-700">
+                Recuperar senha
+              </div>
+            )}
 
             {activeError && (
               <div className="mb-3 vp-alert-error">
                 {activeError}
+              </div>
+            )}
+            {recoverySuccess && (
+              <div className="mb-3 vp-alert-success">
+                {recoverySuccess}
               </div>
             )}
             {isConnectionError && (
@@ -139,7 +221,7 @@ const Login = () => {
             )}
 
             <form onSubmit={handleSubmit} className="space-y-4">
-              {isRegisterMode && (
+              {isRegisterMode && !isRecoveryMode && (
                 <div>
                   <label htmlFor="loginName" className="vp-label">
                     Nome completo
@@ -177,7 +259,8 @@ const Login = () => {
                 />
               </div>
 
-              <div>
+              {!isRecoveryMode && (
+                <div>
                 <label htmlFor="loginPassword" className="vp-label">
                   Senha
                 </label>
@@ -199,7 +282,27 @@ const Login = () => {
                     Dica: use sua conta comercial da clinica para acessar dados compartilhados.
                   </p>
                 )}
+                <button
+                  type="button"
+                  onClick={toggleRecovery}
+                  className="mt-2 text-xs font-semibold text-emerald-700 dark:text-emerald-300"
+                >
+                  Esqueci minha senha
+                </button>
               </div>
+              )}
+
+              {captchaEnabled && (
+                <div className="space-y-2">
+                  <div
+                    ref={captchaContainerRef}
+                    className="flex justify-center"
+                  />
+                  {captchaError && (
+                    <p className="text-xs text-red-500">{captchaError}</p>
+                  )}
+                </div>
+              )}
 
               <button
                 type="submit"
@@ -213,7 +316,15 @@ const Login = () => {
             </form>
 
             <div className="mt-5 text-center text-sm text-gray-600 dark:text-gray-300">
-              {isRegisterMode ? (
+              {isRecoveryMode ? (
+                <button
+                  type="button"
+                  onClick={() => toggleMode(false)}
+                  className="font-semibold text-emerald-700 dark:text-emerald-300"
+                >
+                  Voltar ao login
+                </button>
+              ) : isRegisterMode ? (
                 <>
                   Ja possui conta?{" "}
                   <button

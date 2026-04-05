@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { formatDateTimeBR } from "../utils";
 import AppIcon from "../components/AppIcon";
 import SpeciesIcon from "../components/SpeciesIcon";
+import FeedbackBanner from "../components/FeedbackBanner";
 import { VpButton } from "../components/ui";
 import useDebouncedValue from "../hooks/useDebouncedValue";
 
@@ -244,16 +245,13 @@ const Consultations = ({
       </section>
 
       {hasError && (
-        <section className="shell-surface rounded-2xl border border-red-300 bg-red-50 p-4 subtle-fade">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm font-semibold text-red-800">
-              {errorMessage || "Falha ao carregar consultas."}
-            </p>
-            <VpButton type="button" onClick={onRetry} variant="danger">
-              Recarregar
-            </VpButton>
-          </div>
-        </section>
+        <FeedbackBanner
+          type="error"
+          message={errorMessage || "Falha ao carregar consultas."}
+          actionLabel="Recarregar"
+          onAction={onRetry}
+          className="subtle-fade"
+        />
       )}
 
       {isLoading && (
@@ -401,7 +399,8 @@ const Consultations = ({
                       </VpButton>
                     </div>
                     <span className="text-xs text-gray-500 dark:text-gray-400">
-                      {consultation.veterinarianName || "Veterinario nao informado"}
+                      {consultation.veterinarianName || "Veterinario nao informado"} · Atualizado em{" "}
+                      {formatDateTimeBR(consultation.updatedAt || consultation.createdAt)}
                     </span>
                   </footer>
                 </div>

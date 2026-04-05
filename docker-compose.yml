@@ -82,6 +82,7 @@ services:
       args:
         VITE_API_BASE_URL: ${VITE_API_BASE_URL:-${REACT_APP_API_BASE_URL:-}}
         REACT_APP_API_BASE_URL: ${REACT_APP_API_BASE_URL:-}
+        VITE_MAX_CLINICAL_PHOTOS: ${VITE_MAX_CLINICAL_PHOTOS:-8}
     restart: always
     ports:
       - "${FRONTEND_PORT:-3000}:80"

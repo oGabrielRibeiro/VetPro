@@ -1,6 +1,5 @@
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 generator client {
@@ -174,6 +173,7 @@ model Clinic {
   phone     String?
   email     String?
   logoUrl   String?
+  prescriptionTemplate String? @default("classic")
   createdAt DateTime @default(now())
 
   users         User[]

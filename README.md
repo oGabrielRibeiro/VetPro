@@ -13,8 +13,13 @@ Sistema de prontuarios veterinarios com frontend, backend e Postgres.
 Documentos de apoio:
 - UI/UX: `docs/UIUX-VALIDACAO.md`
 - Design system: `vetpro-front/UI-DESIGN-SYSTEM.md`
-- Release: `RELEASE.md`
-- Riscos: `SECURITY-RISK-REGISTER.md`
+- Release: `docs/RELEASE.md`
+- Riscos: `docs/SECURITY-RISK-REGISTER.md`
+- Migracoes: `docs/DB-MIGRATIONS.md`
+- Atualizacoes: `docs/UPDATE-STRATEGY.md`
+- Compatibilidade: `docs/VERSION-COMPAT.md`
+- Modelos de consulta: `docs/CONSULTATION-MODELS.md`
+- Validacao de release: `docs/RELEASE-VALIDATION.md`
 
 **Subir com Docker**
 1. Copie `.env.example` para `.env` e ajuste as variaveis se necessario.
@@ -73,7 +78,7 @@ Observacao: `dev.ps1` continua disponivel como atalho de compatibilidade e redir
 
 **Changelog e releases**
 - Changelog oficial: `CHANGELOG.md`
-- Guia de release: `RELEASE.md`
+- Guia de release: `docs/RELEASE.md`
 - Script de release (sincroniza versao front/back + cria secao no changelog):
 ```powershell
 pwsh .\scripts\release.ps1 -Version 1.1.0
@@ -83,9 +88,29 @@ pwsh .\scripts\release.ps1 -Version 1.1.0
 pwsh .\scripts\release.ps1 -Version 1.1.0 -WithGit
 ```
 
+**Processo de PR**
+- Toda mudanca relevante deve ser registrada em `CHANGELOG.md` (secao `Unreleased`).
+- Atualize a documentacao quando alterar variaveis de ambiente ou scripts.
+
 **Seguranca (revisao mensal de dependencias)**
-- Registro de riscos aceitos: `SECURITY-RISK-REGISTER.md`
+- Registro de riscos aceitos: `docs/SECURITY-RISK-REGISTER.md`
 - Gerar relatorio mensal de auditoria (frontend + backend):
 ```powershell
 pwsh .\scripts\security-monthly-check.ps1
+```
+
+**Backup e smoke pós-deploy**
+```powershell
+pwsh .\scripts\backup-postgres.ps1
+pwsh .\scripts\smoke-post-deploy.ps1 -BaseUrl http://localhost:5000
+```
+
+**Aplicar migracoes com backup + smoke**
+```powershell
+pwsh .\scripts\apply-migrations.ps1
+```
+
+**Update paralelo (build + migracao + troca rapida)**
+```powershell
+pwsh .\scripts\parallel-update.ps1
 ```

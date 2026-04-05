@@ -5,7 +5,7 @@
 
 ## Plano dedicado IA/Audio
 - [ ] Executar backlog tecnico completo em [`TODO-AUDIO-IA-PARSER.md`](TODO-AUDIO-IA-PARSER.md) para elevar precisao do pipeline de transcricao/parser/IA/heuristica.
-- [x] Integrar dataset real de campo (`dataset_treinamento_veterinario_apolo`) em fluxo de avaliacao local (`npm run ai:evaluate:field-dataset` no backend).
+- [x] Integrar dataset real de campo (`datasets/field-assist-apolo`) em fluxo de avaliacao local (`npm run ai:evaluate:field-dataset` no backend).
 - [x] Reforcar pipeline de transcricao no modo campo com `language=pt`, fallback inteligente para transcript quando Whisper vier com baixo sinal clinico e reclassificacao de speaker por trecho.
 - [x] Criar benchmark sem audio real via simulacao de ruído ASR (`npm run ai:evaluate:field-dataset:simulated`) para validar consistencia do parser/IA somente com transcript.
 - [x] Estabilizar campo de tratamento com selecao por aderencia ao transcript + normalizacao canonica de conduta para reduzir variacao entre rodadas com ruido ASR.
@@ -94,16 +94,17 @@
 - [x] Validar upload de anexos na ficha clinica com limite configuravel de imagens (ex.: 4).
 
 ## P1 - Atualizacoes sem impacto em banco
-- [ ] Definir estrategia de migracoes versionadas (sem breaking change) com rollback seguro.
-- [ ] Adicionar backup automatico antes de atualizar (dump Postgres).
-- [ ] Adicionar `smoke:post-deploy` para validar rotas criticas apos update.
-- [ ] Documentar compatibilidade de versao (frontend/backend) e janela de deprecacao.
+- [x] Definir estrategia de migracoes versionadas (sem breaking change) com rollback seguro.
+- [x] Adicionar backup automatico antes de atualizar (dump Postgres).
+- [x] Adicionar `smoke:post-deploy` para validar rotas criticas apos update.
+- [x] Documentar compatibilidade de versao (frontend/backend) e janela de deprecacao.
+- [x] Adicionar fluxo de update paralelo (build + migracao + troca rapida) com rollback via restore.
 
 ## P1 - Seguranca anti-abuso (captcha e defesas basicas)
-- [ ] Adicionar captcha no login/registro/recuperacao de senha (configuravel por env).
-- [ ] Habilitar rate-limit mais rigoroso em auth e endpoints sensiveis.
-- [ ] Adicionar bloqueio temporario apos N tentativas falhas (lockout progressivo).
-- [ ] Logar eventos de seguranca (login falho, captcha falho, bloqueio).
+- [x] Adicionar captcha no login/registro/recuperacao de senha (configuravel por env).
+- [x] Habilitar rate-limit mais rigoroso em auth e endpoints sensiveis.
+- [x] Adicionar bloqueio temporario apos N tentativas falhas (lockout progressivo).
+- [x] Logar eventos de seguranca (login falho, captcha falho, bloqueio).
 
 ## P0 - Tipos de consulta (novos modelos de formulario)
 - [x] Criar modelo "Consulta Medicamentosa" (prescricao/posologia/tempo/alertas).
@@ -114,23 +115,23 @@
 - [x] Criar modelo "Retorno/Follow-up" (reavaliacao e resposta ao tratamento).
 - [x] Criar modelo "Atestado/Laudo" (documento oficial com assinatura e anexos).
 - [x] Criar modelo "Prescricao isolada" (uso rapido em campo, sem prontuario completo).
-- [ ] Definir campos minimos por modelo com base em boas praticas de registro clinico.
+- [x] Definir campos minimos por modelo com base em boas praticas de registro clinico.
 - [ ] Importar modelo PDF de anestesia do cliente quando disponivel e mapear campos.
 - [ ] Importar modelo de medicamento do cliente quando disponivel e mapear campos.
-- [ ] Personalizacao de templates: logo da clinica, nome, endereco e contatos puxados do perfil do vet.
-- [ ] Permitir escolha de layout de receita (templates diferentes) e salvar preferencia por clinica.
+- [x] Personalizacao de templates: logo da clinica, nome, endereco e contatos puxados do perfil do vet.
+- [x] Permitir escolha de layout de receita (templates diferentes) e salvar preferencia por clinica.
 
 ## P2 - Changelog e atualizacoes
 - [x] Adotar `CHANGELOG.md` como fonte unica de mudancas por release.
-- [ ] Treinar time para registrar mudancas em `Unreleased` a cada PR relevante.
+- [x] Treinar time para registrar mudancas em `Unreleased` a cada PR relevante.
 - [x] Padronizar uso do script `scripts/release.ps1` para preparar versao.
-- [x] Definir checklist de release no `RELEASE.md` como processo oficial.
+- [x] Definir checklist de release no `docs/RELEASE.md` como processo oficial.
 
 ## Release 1.0 - Pendencias finais
-- [ ] Validacao final clinica multi-especie com amostra real (audio/IA) e aceite.
-- [ ] Executar roteiro completo de uso real (login -> paciente -> consulta -> receita/PDF).
-- [ ] Treinar time para registrar mudancas no `CHANGELOG.md` por PR.
-- [ ] Gerar release oficial (mover `Unreleased` para `1.0.0` com data, atualizar versoes e tag).
+- [x] Validacao final clinica multi-especie com amostra real (audio/IA) e aceite.
+- [x] Executar roteiro completo de uso real (login -> paciente -> consulta -> receita/PDF).
+- [x] Treinar time para registrar mudancas no `CHANGELOG.md` por PR.
+- [x] Gerar release oficial (mover `Unreleased` para `1.0.0` com data, atualizar versoes e tag).
 
 ## Checklist de validacao final
 - [x] Backend: `npm run lint`

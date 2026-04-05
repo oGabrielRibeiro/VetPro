@@ -457,6 +457,15 @@ button:active {
   font-size: 0.82rem;
 }
 
+.vp-alert-success {
+  border: 1px solid #86efac;
+  border-radius: 0.9rem;
+  background: #ecfdf3;
+  color: #166534;
+  padding: 0.7rem 0.8rem;
+  font-size: 0.82rem;
+}
+
 .dark .vp-alert-error {
   background: #3f0d16;
   border-color: #7f1d1d;
@@ -467,6 +476,12 @@ button:active {
   background: #0b1e33;
   border-color: #1d4ed8;
   color: #bfdbfe;
+}
+
+.dark .vp-alert-success {
+  background: #0f2e1b;
+  border-color: #166534;
+  color: #bbf7d0;
 }
 
 .vp-tip-list {

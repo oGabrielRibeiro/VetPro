@@ -12,6 +12,9 @@ const FeedbackBanner = ({
   message,
   type = "error",
   onClose,
+  actionLabel,
+  onAction,
+  actionClassName = "",
   className = "",
 }) => {
   if (!message) return null;
@@ -25,16 +28,27 @@ const FeedbackBanner = ({
       } ${className}`}
     >
       <span>{message}</span>
-      {typeof onClose === "function" && (
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label="Fechar aviso"
-          className="rounded-md border border-current/30 bg-white dark:bg-dark-700 px-2 py-1 text-xs font-semibold"
-        >
-          Fechar
-        </button>
-      )}
+      <div className="flex items-center gap-2">
+        {typeof onAction === "function" && actionLabel && (
+          <button
+            type="button"
+            onClick={onAction}
+            className={`rounded-md border border-current/30 bg-white dark:bg-dark-700 px-2 py-1 text-xs font-semibold ${actionClassName}`}
+          >
+            {actionLabel}
+          </button>
+        )}
+        {typeof onClose === "function" && (
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Fechar aviso"
+            className="rounded-md border border-current/30 bg-white dark:bg-dark-700 px-2 py-1 text-xs font-semibold"
+          >
+            Fechar
+          </button>
+        )}
+      </div>
     </div>
   );
 };

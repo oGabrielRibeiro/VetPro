@@ -32,7 +32,7 @@ function detectExamType(file) {
 
 async function attachFile(userId, consultationId, file) {
   const examType = detectExamType(file);
-  const maxClinicalPhotos = Number(process.env.MAX_CLINICAL_PHOTOS || 4);
+  const maxClinicalPhotos = Number(process.env.MAX_CLINICAL_PHOTOS || 8);
   const consultation = await prisma.consultation.findFirst({
     where: { id: consultationId, userId },
   });
@@ -49,7 +49,10 @@ async function attachFile(userId, consultationId, file) {
         examType: 'CLINICAL_PHOTO',
       },
     });
-    if (Number.isFinite(maxClinicalPhotos) && currentCount >= maxClinicalPhotos) {
+    if (
+      Number.isFinite(maxClinicalPhotos) &&
+      currentCount >= maxClinicalPhotos
+    ) {
       throw new Error('LIMIT_CLINICAL_PHOTOS');
     }
   }

@@ -68,7 +68,7 @@ $md = @"
 - Low: $($frontendSummary.low)
 
 ## Acao recomendada
-- Se houver vulnerabilidades high/critical, abrir item no TODO-LIST.md e atualizar SECURITY-RISK-REGISTER.md com dono e prazo.
+- Se houver vulnerabilidades high/critical, abrir item no TODO-LIST.md e atualizar docs/SECURITY-RISK-REGISTER.md com dono e prazo.
 "@
 
 Set-Content -Path $reportPath -Value $md -Encoding UTF8

@@ -133,7 +133,7 @@ export const AuthProvider = ({ children }) => {
     checkSession();
   }, [establishSession, resolveUserWithPreviews]);
 
-  const login = async (email, password) => {
+  const login = async (email, password, captchaToken = "") => {
     try {
       setAuthLoading(true);
       clearError();
@@ -142,6 +142,7 @@ export const AuthProvider = ({ children }) => {
       const response = await api.post("/auth/login", {
         email: normalizedEmail,
         password,
+        captchaToken,
       });
 
       const token = response.data?.token || response.data?.data?.token;
@@ -155,7 +156,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const register = async (name, email, password) => {
+  const register = async (name, email, password, captchaToken = "") => {
     try {
       setAuthLoading(true);
       clearError();
@@ -168,6 +169,7 @@ export const AuthProvider = ({ children }) => {
         email: normalizedEmail,
         password,
         clinicName: `Clinica de ${normalizedName}`,
+        captchaToken,
       });
 
       const token = response.data?.token || response.data?.data?.token;
@@ -175,6 +177,29 @@ export const AuthProvider = ({ children }) => {
       return withPreviews;
     } catch (err) {
       setError(toUserFriendlyError(err, "Não foi possível criar sua conta."));
+      throw err;
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  const recoverPassword = async (email, captchaToken = "") => {
+    try {
+      setAuthLoading(true);
+      clearError();
+      const normalizedEmail = String(email || "").trim().toLowerCase();
+      await api.post("/auth/recover", {
+        email: normalizedEmail,
+        captchaToken,
+      });
+      return true;
+    } catch (err) {
+      setError(
+        toUserFriendlyError(
+          err,
+          "Não foi possível solicitar a recuperação.",
+        ),
+      );
       throw err;
     } finally {
       setAuthLoading(false);
@@ -192,6 +217,7 @@ export const AuthProvider = ({ children }) => {
         login,
         logout,
         register,
+        recoverPassword,
         updateProfile: (data) => {
           const clean = {
             ...(user || {}),

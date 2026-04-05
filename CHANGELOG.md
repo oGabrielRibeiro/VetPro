@@ -37,23 +37,39 @@ e versionamento semantico [SemVer](https://semver.org/lang/pt-BR/).
 - Captura de assinatura do tutor adicionada para anestesia e procedimento, com renderizacao no PDF.
 - Assinaturas de consentimento agora sao persistidas em tabela dedicada com metadados de captura.
 - Upload de anexos agora limita fotos clinicas por consulta (configuravel via `MAX_CLINICAL_PHOTOS`).
+- Captcha opcional adicionado ao login/cadastro/recuperacao com lockout progressivo e logs de seguranca.
+- Rate limits agora sao configuraveis por `.env` para auth, upload, create e geral.
+- Template de receita configuravel por clinica (classic/compact) com logo e contatos.
+- Botao de geolocalizacao adicionado para preencher endereco no perfil da clinica e do tutor.
+- Contador de fotos clinicas restantes no anexo de exames (UI).
+- Feedback padronizado com acao no banner (recarregar/retentar) para erros em listas.
+- Atalhos de teclado: `Ctrl+Shift+N` (nova consulta) e `Ctrl+Shift+P` (novo paciente).
+- Indicador de rascunho/autosave nas consultas (quick e modo campo).
+- Indicador de ultima atualizacao nos prontuarios e lista de consultas.
+- Ajustes de contraste no modo escuro na revisao rapida do Modo Campo.
+- Emojis/icones agora sem fundo, com tamanho ampliado para melhorar leitura.
+- Popup de impressao do prontuario com selecao de anexos (checkbox por arquivo).
 
 ### Added
 - Estrutura inicial de changelog e fluxo de release.
 - Script `scripts/release.ps1` com opcao de `commit + tag` automaticos.
-- Guia de release em `RELEASE.md` e instrucoes no `README.md`.
+- Guia de release em `docs/RELEASE.md` e instrucoes no `README.md`.
 - Scripts de conveniencia no backend para testes sem `up.ps1`: `infra:up`, `infra:down`, `infra:status`, `verify:local`.
-- Registro de riscos de seguranca em `SECURITY-RISK-REGISTER.md`.
+- Registro de riscos de seguranca em `docs/SECURITY-RISK-REGISTER.md`.
 - Script `scripts/security-monthly-check.ps1` para gerar relatorio mensal de `npm audit` (frontend + backend).
 - Script `vetpro-front/scripts/check-no-native-popups.js` para bloquear reintroducao de `alert/confirm/prompt` no frontend.
-- Script backend `ai:evaluate:field-dataset` para avaliar o agente de campo usando dataset real (`dataset_treinamento_veterinario_apolo`, JSON + WAV) e gerar relatorio em `vetpro-backend/logs`.
+- Script `scripts/apply-migrations.ps1` para aplicar migracoes com backup e smoke automatizados.
+- Script `scripts/parallel-update.ps1` para update paralelo (build + migracao + troca rapida).
+- Script `scripts/restore-postgres.ps1` para rollback com restore do backup.
+- Documento `docs/UPDATE-STRATEGY.md` com estrategia de atualizacao paralela.
+- Script backend `ai:evaluate:field-dataset` para avaliar o agente de campo usando dataset real (`datasets/field-assist-apolo`, JSON + WAV) e gerar relatorio em `vetpro-backend/logs`.
 - Script backend `ai:evaluate:field-dataset:simulated` para benchmark sem audio real, com simulacao de ruído ASR em multiplas rodadas.
 - Pipeline de gold dataset para campo com scripts `ai:gold:build` e `ai:gold:validate`, gerando `src/ai/benchmarks/field-assist-gold-dataset.json` e `field-assist-rubric.json`.
 - Documento operacional `docs/FIELD-ASSIST-GOLD-DATASET.md` com fluxo de geracao/validacao e estrutura oficial da base.
 - Endpoint de feedback supervisionado por campo (`POST /api/consultations/field-assist/feedback`) com persistencia em JSONL para telemetria anonima opcional.
 - Scripts de aprendizado continuo: `ai:feedback:report` (revisao mensal) e `ai:feedback:export` (export supervisionado para treino).
 - Guia de governanca e aprovacao tecnica do pipeline IA em `docs/FIELD-ASSIST-GOVERNANCE.md`.
-- Checklist de release 1.0 adicionado ao `RELEASE.md` e resumo de status no `README.md`.
+- Checklist de release 1.0 adicionado ao `docs/RELEASE.md` e resumo de status no `README.md`.
 
 ### Changed
 - `Consultation` agora aceita `customFormData` (JSON) para armazenar dados de modelos especificos.
@@ -70,6 +86,8 @@ e versionamento semantico [SemVer](https://semver.org/lang/pt-BR/).
 - Backend migrou de `bcrypt` para `bcryptjs` para eliminar cadeia nativa vulneravel (`node-pre-gyp`/`tar`) sem impacto funcional no fluxo de autenticacao.
 - Fluxo Docker do frontend passou a buildar artefatos em `dist` com `VITE_API_BASE_URL` (e fallback `REACT_APP_API_BASE_URL`).
 - Rotinas de I/O backend passaram a evitar `fs.*Sync` em pontos de runtime criticos (`cloudStorageService`, geracao de receita e limpeza de conta).
+- Dependencias do Prisma atualizadas para `7.5.0` (client + CLI).
+- Prisma Client agora usa driver adapter Postgres (`@prisma/adapter-pg` + `pg`) para compatibilidade com engine `client` da v7.
 - Barras de acao de consulta foram consolidadas para comportamento responsivo consistente em desktop/mobile, removendo uso de `fixed` que causava sobreposicao de campos.
 - Pipeline heuristico de campos especificos (porte) foi reforcado com sanitizacao semantica, limpeza de prefixos conversacionais e deduplicacao entre campos para reduzir sobrepreenchimento.
 - Pipeline de audio do Modo Campo passou a enviar `language=pt` para transcricao Whisper e a reclassificar speaker dos segmentos retornados pelo ASR com heuristica de contexto clinico.
@@ -146,6 +164,7 @@ e versionamento semantico [SemVer](https://semver.org/lang/pt-BR/).
 - Abertura de PDF/blob em nova aba agora preabre a guia no clique e navega apos o download, evitando falha "Nao foi possivel abrir nova aba" por bloqueio de popup.
 - Mensagens de erro `400` no frontend agora exibem detalhes de validacao por campo (quando backend retorna `details`), facilitando identificar rapidamente o motivo de falha ao salvar consulta.
 - Salvamento de consulta agora tenta focar e rolar para o primeiro campo invalido informado pelo backend (`details[0].field`) em `QuickConsultation` e `FieldModeConsultation`.
+- Frontend (nginx) agora envia `no-store` para `index.html`, reduzindo tela branca por cache de bundle antigo.
 - Loader de ambiente do backend agora monta `DATABASE_URL` automaticamente via `POSTGRES_*` quando ausente (com fallback de host para execucao local fora de container).
 - Baseline de seguranca backend atualizado com `npm audit` sem vulnerabilidades apos upgrades e limpeza de dependencias.
 - `field-assist` agora aplica fallback para transcricao textual fornecida quando o retorno do Whisper vier com baixo sinal clinico, reduzindo perda de informacao em audios ruidosos.

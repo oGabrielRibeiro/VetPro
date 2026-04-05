@@ -4,6 +4,7 @@ const path = require('path');
 const fs = require('fs');
 require('./config/loadEnv');
 const authMiddleware = require('./middlewares/authMiddleware');
+const securityMiddleware = require('./middlewares/securityMiddleware');
 const patientRoutes = require('./routes/patientRoutes');
 const consultationRoutes = require('./routes/consultationRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
@@ -12,6 +13,7 @@ const appointmentRoutes = require('./routes/appointmentRoutes');
 const {
   generalLimiter,
   authLimiter,
+  userActionLimiter,
 } = require('./middlewares/rateLimitMiddleware');
 const cacheService = require('./services/cacheService');
 
@@ -82,6 +84,9 @@ app.disable('x-powered-by');
 app.use(express.json({ limit: '20mb' }));
 app.use(express.urlencoded({ extended: true, limit: '20mb' }));
 
+// Security middleware (CSP + headers de segurança)
+securityMiddleware(app);
+
 // Rate limiting geral para todas as rotas API
 app.use('/api', generalLimiter);
 
@@ -101,7 +106,7 @@ if (process.env.OAUTH_ENABLED === 'true') {
 app.use('/api/reports', require('./routes/reportRoutes'));
 
 app.use('/api/patients', patientRoutes);
-app.use('/api/consultations', consultationRoutes);
+app.use('/api/consultations', userActionLimiter, consultationRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/clinic', clinicRoutes);
 app.use('/api/appointments', appointmentRoutes);

@@ -219,18 +219,20 @@ async function create(req, res) {
       if (data.customFormData.anesthesia?.consentSignature) {
         data.customFormData.anesthesia = {
           ...data.customFormData.anesthesia,
-          consentMeta:
-            data.customFormData.anesthesia.consentMeta ||
-            { ...baseMeta, consentType: 'anestesia' },
+          consentMeta: data.customFormData.anesthesia.consentMeta || {
+            ...baseMeta,
+            consentType: 'anestesia',
+          },
         };
       }
 
       if (data.customFormData.procedure?.consentSignature) {
         data.customFormData.procedure = {
           ...data.customFormData.procedure,
-          consentMeta:
-            data.customFormData.procedure.consentMeta ||
-            { ...baseMeta, consentType: 'procedimento' },
+          consentMeta: data.customFormData.procedure.consentMeta || {
+            ...baseMeta,
+            consentType: 'procedimento',
+          },
         };
       }
     }
@@ -246,14 +248,16 @@ async function create(req, res) {
 
     if (data?.customFormData && typeof data.customFormData === 'object') {
       const signatures = [];
-      const anesthesiaSignature = data.customFormData?.anesthesia?.consentSignature;
+      const anesthesiaSignature =
+        data.customFormData?.anesthesia?.consentSignature;
       if (anesthesiaSignature) {
         signatures.push({
           type: 'anestesia',
           dataUrl: anesthesiaSignature,
         });
       }
-      const procedureSignature = data.customFormData?.procedure?.consentSignature;
+      const procedureSignature =
+        data.customFormData?.procedure?.consentSignature;
       if (procedureSignature) {
         signatures.push({
           type: 'procedimento',
@@ -398,7 +402,34 @@ async function downloadPDF(req, res) {
         item.previousConsultation?.numeroProntuario || null,
     }));
 
-    return pdfService.generateConsultationPDF(consultation, res);
+    const filesParam = String(req.query?.files || '').trim();
+    const requestedFileIds = filesParam
+      ? filesParam
+          .split(',')
+          .map((value) => value.trim())
+          .filter(Boolean)
+      : [];
+
+    let selectedFiles = [];
+    if (requestedFileIds.length) {
+      const rows = await prisma.consultationFile.findMany({
+        where: {
+          id: { in: requestedFileIds },
+          consultationId: id,
+          consultation: { userId: req.user.id },
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+
+      const byId = new Map(rows.map((row) => [row.id, row]));
+      selectedFiles = requestedFileIds
+        .map((fileId) => byId.get(fileId))
+        .filter(Boolean);
+    }
+
+    return pdfService.generateConsultationPDF(consultation, res, {
+      files: selectedFiles,
+    });
   } catch (error) {
     logger.error(error);
     return res.status(500).json({ error: 'Erro ao gerar PDF' });

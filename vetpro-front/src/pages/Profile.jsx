@@ -16,6 +16,7 @@ const emptyForm = {
   clinicCNPJ: "",
   clinicPhone: "",
   clinicEmail: "",
+  clinicPrescriptionTemplate: "classic",
   profilePhotoPreview: "",
   signaturePreview: "",
   clinicLogoPreview: "",
@@ -50,6 +51,10 @@ function buildInitialForm(profile = {}) {
     clinicCNPJ: profile.clinicCNPJ ?? profile.clinic?.cnpj ?? "",
     clinicPhone: profile.clinicPhone ?? profile.clinic?.phone ?? "",
     clinicEmail: profile.clinicEmail ?? profile.clinic?.email ?? "",
+    clinicPrescriptionTemplate:
+      profile.clinicPrescriptionTemplate ||
+      profile.clinic?.prescriptionTemplate ||
+      "classic",
     clinicLogoPreview:
       profile.clinicLogoPreview ||
       profile.clinic?.logoUrl ||
@@ -539,6 +544,24 @@ const Profile = ({ profile, onSave, onCancel, onDeleteAccount, onBack }) => {
                     className="vp-input-field text-sm"
                     placeholder="contato@clinica.com"
                   />
+                </div>
+                <div>
+                  <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Template de receita
+                  </label>
+                  <select
+                    value={form.clinicPrescriptionTemplate}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        clinicPrescriptionTemplate: e.target.value,
+                      })
+                    }
+                    className="vp-input-field text-sm"
+                  >
+                    <option value="classic">Classico</option>
+                    <option value="compact">Compacto</option>
+                  </select>
                 </div>
               </div>
 

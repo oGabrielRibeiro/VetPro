@@ -341,6 +341,7 @@ const FieldModeConsultation = ({
   const [fieldReviewDecisions, setFieldReviewDecisions] = useState({});
   const [fieldDecisionLoading, setFieldDecisionLoading] = useState({});
   const [feedbackCorrectionNote, setFeedbackCorrectionNote] = useState("");
+  const [draftUpdatedAt, setDraftUpdatedAt] = useState(null);
   const [feedbackTelemetryEnabled, setFeedbackTelemetryEnabled] = useState(() => {
     if (typeof window === "undefined") return true;
     const stored = window.localStorage.getItem("vetpro_feedback_telemetry_enabled");
@@ -413,6 +414,15 @@ const FieldModeConsultation = ({
       initialData?.previousConsultationId || initialData?.id || "new";
     return `vetpro_draft_field_${patient.id}_${suffix}`;
   }, [patient?.id, initialData?.previousConsultationId, initialData?.id]);
+  const draftInfo = useMemo(() => {
+    if (!draftUpdatedAt) return null;
+    const date = new Date(draftUpdatedAt);
+    if (Number.isNaN(date.getTime())) return null;
+    return {
+      date: date.toLocaleDateString("pt-BR"),
+      time: date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
+    };
+  }, [draftUpdatedAt]);
 
   useEffect(() => {
     if (typeof window === "undefined") return undefined;
@@ -527,6 +537,7 @@ const FieldModeConsultation = ({
     recordedAudioBlobRef.current = null;
     setUploadedAudioName("");
     setMobileStep("captura");
+    setDraftUpdatedAt(null);
     if (draftKey) {
       localStorage.removeItem(draftKey);
     }
@@ -682,6 +693,7 @@ const FieldModeConsultation = ({
       transcriptRef.current = String(draft.transcript || "");
       setLiveInterim(String(draft.liveInterim || ""));
       liveInterimRef.current = String(draft.liveInterim || "");
+      setDraftUpdatedAt(draft.updatedAt || null);
       showFeedback("success", "Rascunho de campo restaurado.");
     } catch {
       // ignora rascunho corrompido
@@ -726,6 +738,7 @@ const FieldModeConsultation = ({
       };
       try {
         localStorage.setItem(draftKey, JSON.stringify(draft));
+        setDraftUpdatedAt(draft.updatedAt);
       } catch {
         // sem espaço no storage
       }
@@ -2296,6 +2309,7 @@ const FieldModeConsultation = ({
     if (draftKey) {
       localStorage.removeItem(draftKey);
     }
+    setDraftUpdatedAt(null);
   };
 
   const useConversation = async () => {
@@ -2694,6 +2708,7 @@ const FieldModeConsultation = ({
       if (draftKey) {
         localStorage.removeItem(draftKey);
       }
+      setDraftUpdatedAt(null);
       onBack?.();
       if (isMobile) {
         setMobileStep("captura");
@@ -2741,7 +2756,7 @@ const FieldModeConsultation = ({
   }
 
   return (
-    <div className="w-full max-w-4xl mx-auto space-y-3 sm:space-y-4 pb-52 sm:pb-28">
+    <div className="w-full max-w-4xl mx-auto space-y-4 sm:space-y-5 pb-52 sm:pb-28">
       <div className="rounded-2xl border border-cyan-200 dark:border-cyan-800 bg-gradient-to-r from-cyan-50 to-emerald-50 dark:from-cyan-900 dark:to-emerald-900 p-3 sm:p-5 shadow-sm">
         <div className="flex items-start justify-between gap-3">
           <div>
@@ -2753,6 +2768,11 @@ const FieldModeConsultation = ({
             <p className="text-xs text-cyan-800 dark:text-cyan-300 mt-1 font-semibold">
               Contexto ativo: {consultationTypeLabel}
             </p>
+            {draftInfo && (
+              <p className="text-[11px] text-emerald-700 dark:text-emerald-200 mt-2 font-semibold">
+                Rascunho salvo automaticamente em {draftInfo.date} às {draftInfo.time}
+              </p>
+            )}
           </div>
           <span
             className={`px-2.5 sm:px-3 py-1 rounded-full text-[10px] sm:text-[11px] font-semibold ${
@@ -3155,10 +3175,10 @@ const FieldModeConsultation = ({
       <>
       <div
         ref={reviewSectionRef}
-        className="rounded-xl border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900/70 p-3 sm:p-5 lg:p-6 space-y-3"
+        className="rounded-xl border border-slate-300 dark:border-slate-500 bg-slate-50 dark:bg-slate-900 p-3 sm:p-5 lg:p-6 space-y-3"
       >
         <div className="flex items-center justify-between gap-2">
-          <h2 className="text-sm font-semibold text-slate-800 dark:text-slate-100 uppercase tracking-wide">
+          <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100 uppercase tracking-wide">
             Revisao rapida do prontuario
           </h2>
           <button
@@ -3171,7 +3191,7 @@ const FieldModeConsultation = ({
           </button>
         </div>
         <div className="rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2">
-          <label className="flex items-center gap-2 text-xs font-medium text-slate-700 dark:text-slate-200">
+          <label className="flex items-center gap-2 text-xs font-medium text-slate-700 dark:text-slate-100">
             <input
               type="checkbox"
               checked={feedbackTelemetryEnabled}
@@ -3180,7 +3200,7 @@ const FieldModeConsultation = ({
             />
             Capturar feedback supervisionado (telemetria anonima)
           </label>
-          <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-300">
+          <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-200">
             Quando ativo, aceite/rejeicao por campo alimenta melhoria continua do parser/IA.
           </p>
         </div>
@@ -3202,7 +3222,7 @@ const FieldModeConsultation = ({
             </div>
           )}
         {!parsedData ? (
-          <p className="text-sm text-slate-700 dark:text-slate-200">
+          <p className="text-sm text-slate-700 dark:text-slate-100">
             Inicie a captura e pause para revisar os campos preenchidos automaticamente.
           </p>
         ) : (
@@ -3236,7 +3256,7 @@ const FieldModeConsultation = ({
                         ? "border-rose-300 bg-rose-50"
                         : lowConfidence
                           ? "border-amber-300 bg-amber-50"
-                          : "border-slate-300 bg-white dark:border-slate-600 dark:bg-slate-800"
+                          : "border-slate-300 bg-white dark:border-slate-600 dark:bg-slate-900"
                   }`}
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2">
