@@ -15,7 +15,6 @@ const clinicRoutes = require('./routes/clinicRoutes');
 const appointmentRoutes = require('./routes/appointmentRoutes');
 const {
   generalLimiter,
-  authLimiter,
   userActionLimiter,
 } = require('./middlewares/rateLimitMiddleware');
 const cacheService = require('./services/cacheService');
@@ -97,8 +96,8 @@ securityMiddleware(app);
 // Rate limiting geral para todas as rotas API
 app.use('/api', generalLimiter);
 
-// Rotas de autenticação com limitador específico
-app.use('/api/auth', authLimiter, require('./routes/authRoutes'));
+// Rotas de autenticação
+app.use('/api/auth', require('./routes/authRoutes'));
 
 // OAuth rotas - comentadas por padrão, ativar em .env
 // Para ativar OAuth: OAUTH_ENABLED=true
