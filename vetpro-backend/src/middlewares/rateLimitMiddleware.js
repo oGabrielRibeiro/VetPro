@@ -1,4 +1,6 @@
-const rateLimit = require('express-rate-limit');
+const rateLimitModule = require('express-rate-limit');
+const rateLimit = rateLimitModule.rateLimit || rateLimitModule;
+const { ipKeyGenerator } = rateLimitModule;
 
 // Redis Store para armazenamento distribuído (não-memory)
 function createRedisStore(prefix) {
@@ -67,7 +69,8 @@ const userActionLimiter = rateLimit({
   legacyHeaders: false,
   keyGenerator: (req) => {
     // Limitar por usuário autenticado (ID) ou por IP se não autenticado
-    return req.user?.id || req.ip;
+    if (req.user?.id) return `user:${req.user.id}`;
+    return `ip:${ipKeyGenerator(req.ip)}`;
   },
 });
 

@@ -10,6 +10,9 @@ import PatientForm from "./components/PatientForm";
 import ForceUpdateBanner from "./components/ForceUpdateBanner";
 import WelcomeTour from "./components/WelcomeTour";
 import { ToastProvider } from "./components/Toast";
+import PatientPickerModal from "./components/app/PatientPickerModal";
+import MobileBottomNav from "./components/app/MobileBottomNav";
+import { Tooltip, Popover, DropdownMenu } from "./components/ui";
 import api from "./services/api";
 import { addToQueue } from "./services/offlineQueue";
 import { getQueue, clearQueue } from "./services/offlineQueue";
@@ -31,11 +34,11 @@ const Reports = lazy(() => import("./pages/Reports"));
 const Profile = lazy(() => import("./pages/Profile"));
 const UIPlayground = lazy(() => import("./pages/UIPlayground"));
 const QuickConsultation = lazy(() => import("./components/QuickConsultation"));
-const FieldModeConsultation = lazy(() =>
-  import("./components/FieldModeConsultation"),
+const FieldModeConsultation = lazy(
+  () => import("./components/FieldModeConsultation"),
 );
-const ConsultationPreview = lazy(() =>
-  import("./components/ConsultationPreview"),
+const ConsultationPreview = lazy(
+  () => import("./components/ConsultationPreview"),
 );
 const About = lazy(() => import("./pages/About.jsx"));
 const SystemStatus = lazy(() => import("./pages/SystemStatus.jsx"));
@@ -74,8 +77,10 @@ const MainApp = () => {
     useState(null);
   const [selectedConsultationPatientId, setSelectedConsultationPatientId] =
     useState("");
-  const [returnSourceConsultation, setReturnSourceConsultation] = useState(null);
-  const [fieldModeDraftInitialData, setFieldModeDraftInitialData] = useState(null);
+  const [returnSourceConsultation, setReturnSourceConsultation] =
+    useState(null);
+  const [fieldModeDraftInitialData, setFieldModeDraftInitialData] =
+    useState(null);
   const [showPatientPicker, setShowPatientPicker] = useState(false);
   const [fieldMode, setFieldMode] = useState(
     () => localStorage.getItem("vetpro_field_mode") === "true",
@@ -125,7 +130,7 @@ const MainApp = () => {
       <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-emerald-600"></div>
     </div>
   );
- 
+
   const handleToggleFieldMode = () => {
     setFieldMode((prev) => {
       const next = !prev;
@@ -255,11 +260,13 @@ const MainApp = () => {
     if (!isAuthenticated) return;
     let active = true;
     setIsDataLoading(true);
-    Promise.all([fetchPatients(), fetchConsultations(), fetchAppointments()]).finally(
-      () => {
-        if (active) setIsDataLoading(false);
-      },
-    );
+    Promise.all([
+      fetchPatients(),
+      fetchConsultations(),
+      fetchAppointments(),
+    ]).finally(() => {
+      if (active) setIsDataLoading(false);
+    });
     return () => {
       active = false;
     };
@@ -302,7 +309,9 @@ const MainApp = () => {
         if (item.type === "CREATE_CONSULTATION") {
           try {
             await api.post("/consultations", item.data);
-            queryClient.invalidateQueries({ queryKey: queryKeys.consultations });
+            queryClient.invalidateQueries({
+              queryKey: queryKeys.consultations,
+            });
           } catch (error) {
             console.error("Falha ao sincronizar consulta offline:", error);
             updateSystemStatus(
@@ -507,7 +516,9 @@ const MainApp = () => {
     try {
       const response = await api.post("/patients", patientData);
       queryClient.invalidateQueries({ queryKey: queryKeys.patients });
-      const createdPatient = normalizePatient(response.data.data || response.data);
+      const createdPatient = normalizePatient(
+        response.data.data || response.data,
+      );
       setPatients((prev) => [...prev, createdPatient]);
       setCurrentView("patients");
       return true;
@@ -583,7 +594,9 @@ const MainApp = () => {
     const localConsultation =
       typeof consultationInput === "object" && consultationInput
         ? normalizeConsultation(consultationInput)
-        : consultations.find((item) => String(item.id) === String(consultationId));
+        : consultations.find(
+            (item) => String(item.id) === String(consultationId),
+          );
 
     const openPreview = (consultationData) => {
       const normalized = normalizeConsultation(consultationData);
@@ -643,7 +656,11 @@ const MainApp = () => {
 
     setCurrentConsultationPatient(patient);
     setReturnSourceConsultation(consultation);
-    setCurrentView(fieldMode || isMobile ? "new-consultation-field" : "new-consultation-quick");
+    setCurrentView(
+      fieldMode || isMobile
+        ? "new-consultation-field"
+        : "new-consultation-quick",
+    );
   };
 
   const handleGeneratePrescription = async (consultation) => {
@@ -659,7 +676,9 @@ const MainApp = () => {
     }
 
     try {
-      await openApiBlobInNewTab(`/consultations/${consultation.id}/prescription`);
+      await openApiBlobInNewTab(
+        `/consultations/${consultation.id}/prescription`,
+      );
     } catch (error) {
       showActionError(
         toUserFriendlyError(error, "Nao foi possivel gerar a receita agora."),
@@ -753,7 +772,11 @@ const MainApp = () => {
 
     setFieldModeDraftInitialData(null);
     setReturnSourceConsultation(null);
-    setCurrentView(fieldMode || isMobile ? "new-consultation-field" : "new-consultation-quick");
+    setCurrentView(
+      fieldMode || isMobile
+        ? "new-consultation-field"
+        : "new-consultation-quick",
+    );
   }
 
   function confirmPatientForConsultation() {
@@ -765,7 +788,11 @@ const MainApp = () => {
     setFieldModeDraftInitialData(null);
     setReturnSourceConsultation(null);
     setShowPatientPicker(false);
-    setCurrentView(fieldMode || isMobile ? "new-consultation-field" : "new-consultation-quick");
+    setCurrentView(
+      fieldMode || isMobile
+        ? "new-consultation-field"
+        : "new-consultation-quick",
+    );
   }
 
   // Renderizar a view atual
@@ -1150,7 +1177,9 @@ const MainApp = () => {
                 });
                 const logoPath = logoResp?.data?.logoUrl;
                 if (logoPath) {
-                  const base = new URL(api.defaults.baseURL || window.location.origin);
+                  const base = new URL(
+                    api.defaults.baseURL || window.location.origin,
+                  );
                   clinicLogoUrl = logoPath.startsWith("http")
                     ? logoPath
                     : `${base.origin}${logoPath}`;
@@ -1210,7 +1239,8 @@ const MainApp = () => {
               onClick={() => setCurrentView("patients")}
               className="text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white font-medium mb-4 flex items-center text-sm"
             >
-              <AppIcon name="back" className="h-4 w-4 mr-2" /><span>Voltar para Pacientes</span>
+              <AppIcon name="back" className="h-4 w-4 mr-2" />
+              <span>Voltar para Pacientes</span>
             </button>
 
             <div className="flex flex-col sm:flex-row sm:items-center space-y-3 sm:space-y-0 sm:space-x-3">
@@ -1249,10 +1279,7 @@ const MainApp = () => {
                 patientConsultations
                   .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
                   .map((consultation) => (
-                    <div
-                      key={consultation.id}
-                      className="vp-card"
-                    >
+                    <div key={consultation.id} className="vp-card">
                       <div className="border-b border-gray-200 dark:border-dark-700 bg-gray-50 dark:bg-dark-900 px-4 py-3 flex flex-col sm:flex-row sm:justify-between sm:items-center">
                         <div>
                           <h2 className="vp-h2 text-gray-800 dark:text-white">
@@ -1263,9 +1290,11 @@ const MainApp = () => {
                           </h2>
                           <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
                             No {consultation.numeroProntuario} -{" "}
-                            {resolveConsultationContext(
-                              consultation.consultationType,
-                            ).label}
+                            {
+                              resolveConsultationContext(
+                                consultation.consultationType,
+                              ).label
+                            }
                           </p>
                         </div>
                         <div className="mt-2 sm:mt-0 flex flex-wrap gap-2">
@@ -1276,7 +1305,10 @@ const MainApp = () => {
                             className="inline-flex items-center rounded-lg border border-emerald-200 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-900/50 px-2.5 py-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-300 transition-colors hover:bg-emerald-100 dark:hover:bg-emerald-900"
                           >
                             <span className="mr-1">
-                              <AppIcon name="consultations" className="h-3.5 w-3.5" />
+                              <AppIcon
+                                name="consultations"
+                                className="h-3.5 w-3.5"
+                              />
                             </span>
                             <span>Visualizar Prontuario</span>
                           </button>
@@ -1377,7 +1409,10 @@ const MainApp = () => {
   }
 
   if (!user) {
-    if (typeof window !== "undefined" && window.location.pathname === "/status") {
+    if (
+      typeof window !== "undefined" &&
+      window.location.pathname === "/status"
+    ) {
       return (
         <div className="app-shell-bg min-h-screen p-4 sm:p-8">
           <Suspense fallback={lazyFallback}>
@@ -1408,7 +1443,7 @@ const MainApp = () => {
           <div className="shell-surface rounded-2xl border border-gray-200/80 dark:border-dark-700/70 px-3 py-2.5 flex items-center justify-between gap-2">
             <div className="flex items-center space-x-2.5 min-w-0">
               <span className="h-9 w-9 rounded-2xl bg-gradient-to-br from-teal-500 to-blue-600 text-white grid place-items-center text-sm font-bold flex-shrink-0">
-              {user?.name?.charAt(0)?.toUpperCase() || "V"}
+                {user?.name?.charAt(0)?.toUpperCase() || "V"}
               </span>
               <div className="leading-tight min-w-0">
                 <p className="text-[11px] uppercase tracking-[0.12em] text-gray-500 dark:text-gray-400">
@@ -1420,29 +1455,35 @@ const MainApp = () => {
               </div>
             </div>
             <div className="flex items-center gap-1.5">
-              <button
-                type="button"
-                onClick={toggleDarkMode}
-                className={`h-9 w-9 rounded-xl border text-sm transition ${
-                  isDark
-                    ? "bg-yellow-500 text-white border-yellow-500"
-                    : "bg-white text-gray-700 border-gray-200 dark:bg-dark-700 dark:text-gray-300 dark:border-dark-600"
-                }`}
-                title={isDark ? "Modo Claro" : "Modo Escuro"}
+              <Tooltip
+                content={isDark ? "Ativar modo claro" : "Ativar modo escuro"}
               >
-                {isDark ? "L" : "E"}
-              </button>
-              <button
-                type="button"
-                onClick={handleToggleFieldMode}
-                className={`h-9 px-3 text-[11px] font-semibold rounded-xl border transition ${
-                  fieldMode
-                    ? "bg-emerald-600 text-white border-emerald-600"
-                    : "bg-white dark:bg-dark-700 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-dark-600"
-                }`}
-              >
-                {fieldMode ? "Campo ON" : "Campo OFF"}
-              </button>
+                <button
+                  type="button"
+                  onClick={toggleDarkMode}
+                  className={`h-9 w-9 rounded-xl border text-sm transition ${
+                    isDark
+                      ? "bg-yellow-500 text-white border-yellow-500"
+                      : "bg-white text-gray-700 border-gray-200 dark:bg-dark-700 dark:text-gray-300 dark:border-dark-600"
+                  }`}
+                  title={isDark ? "Modo Claro" : "Modo Escuro"}
+                >
+                  {isDark ? "L" : "E"}
+                </button>
+              </Tooltip>
+              <Tooltip content="Alternar Modo Campo">
+                <button
+                  type="button"
+                  onClick={handleToggleFieldMode}
+                  className={`h-9 px-3 text-[11px] font-semibold rounded-xl border transition ${
+                    fieldMode
+                      ? "bg-emerald-600 text-white border-emerald-600"
+                      : "bg-white dark:bg-dark-700 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-dark-600"
+                  }`}
+                >
+                  {fieldMode ? "Campo ON" : "Campo OFF"}
+                </button>
+              </Tooltip>
             </div>
           </div>
         </header>
@@ -1473,29 +1514,84 @@ const MainApp = () => {
                 </p>
               </div>
               <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={toggleDarkMode}
-                  className={`h-10 w-10 rounded-xl border text-sm transition ${
-                    isDark
-                      ? "bg-yellow-500 text-white border-yellow-500"
-                      : "bg-white text-gray-700 border-gray-200 dark:bg-dark-700 dark:text-gray-300 dark:border-dark-600"
-                  }`}
-                  title={isDark ? "Modo Claro" : "Modo Escuro"}
+                <Tooltip
+                  content={isDark ? "Ativar modo claro" : "Ativar modo escuro"}
                 >
-                  {isDark ? "L" : "E"}
-                </button>
-                <button
-                  type="button"
-                  onClick={handleToggleFieldMode}
-                  className={`h-10 rounded-xl px-4 text-xs font-bold shadow-sm border ${
-                    fieldMode
-                      ? "bg-emerald-600 text-white border-emerald-600"
-                      : "bg-white dark:bg-dark-700 border-gray-300 dark:border-dark-600 text-gray-700 dark:text-gray-300"
-                  }`}
+                  <button
+                    type="button"
+                    onClick={toggleDarkMode}
+                    className={`h-10 w-10 rounded-xl border text-sm transition ${
+                      isDark
+                        ? "bg-yellow-500 text-white border-yellow-500"
+                        : "bg-white text-gray-700 border-gray-200 dark:bg-dark-700 dark:text-gray-300 dark:border-dark-600"
+                    }`}
+                    title={isDark ? "Modo Claro" : "Modo Escuro"}
+                  >
+                    {isDark ? "L" : "E"}
+                  </button>
+                </Tooltip>
+                <Popover
+                  trigger={
+                    <button
+                      type="button"
+                      className={`h-10 rounded-xl px-4 text-xs font-bold shadow-sm border ${
+                        fieldMode
+                          ? "bg-emerald-600 text-white border-emerald-600"
+                          : "bg-white dark:bg-dark-700 border-gray-300 dark:border-dark-600 text-gray-700 dark:text-gray-300"
+                      }`}
+                    >
+                      {fieldMode ? "Modo Campo Ativo" : "Ativar Modo Campo"}
+                    </button>
+                  }
                 >
-                  {fieldMode ? "Modo Campo Ativo" : "Ativar Modo Campo"}
-                </button>
+                  <div className="space-y-2">
+                    <p className="text-xs text-gray-500 dark:text-gray-300">
+                      Modo Campo otimiza o fluxo para uso móvel e conexão
+                      instável.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={handleToggleFieldMode}
+                      className="btn btn-success btn-sm w-full"
+                    >
+                      {fieldMode ? "Desativar Modo Campo" : "Ativar Modo Campo"}
+                    </button>
+                  </div>
+                </Popover>
+                <DropdownMenu
+                  trigger={
+                    <button
+                      type="button"
+                      className="h-10 rounded-xl border border-gray-300 px-3 text-xs font-bold text-gray-700 dark:border-dark-600 dark:text-gray-200"
+                    >
+                      Ações
+                    </button>
+                  }
+                  items={[
+                    {
+                      id: "new-patient",
+                      label: "Novo paciente",
+                      onSelect: () => {
+                        setEditingPatient(null);
+                        setCurrentView("add-patient");
+                      },
+                    },
+                    {
+                      id: "new-consultation",
+                      label: "Nova consulta",
+                      onSelect: () => handleGoToNewConsultation(true),
+                    },
+                    {
+                      id: "refresh",
+                      label: "Atualizar dados",
+                      onSelect: () => {
+                        fetchPatients();
+                        fetchConsultations();
+                        fetchAppointments();
+                      },
+                    },
+                  ]}
+                />
               </div>
             </div>
           )}
@@ -1536,60 +1632,14 @@ const MainApp = () => {
         </div>
       </div>
 
-      {showPatientPicker && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="patient-picker-title"
-            aria-describedby="patient-picker-description"
-            onKeyDown={(event) => {
-              if (event.key === "Enter") {
-                event.preventDefault();
-                confirmPatientForConsultation();
-              }
-            }}
-            className="w-full max-w-md rounded-2xl bg-white dark:bg-dark-800 p-5 shadow-xl"
-          >
-            <h2 id="patient-picker-title" className="text-lg font-bold text-gray-800 dark:text-white">
-              Escolher paciente
-            </h2>
-            <p id="patient-picker-description" className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-              Selecione o paciente para iniciar a consulta.
-            </p>
-
-            <select
-              aria-label="Paciente para nova consulta"
-              value={selectedConsultationPatientId}
-              onChange={(e) => setSelectedConsultationPatientId(e.target.value)}
-              className="vp-input-field text-sm mt-4"
-            >
-              {patients.map((patient) => (
-                <option key={patient.id} value={patient.id}>
-                  {patient.name} - {patient.ownerName}
-                </option>
-              ))}
-            </select>
-
-            <div className="mt-5 flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setShowPatientPicker(false)}
-                className="rounded-lg border border-gray-300 dark:border-dark-600 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-dark-700"
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                onClick={confirmPatientForConsultation}
-                className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
-              >
-                Iniciar consulta
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <PatientPickerModal
+        visible={showPatientPicker}
+        patients={patients}
+        selectedPatientId={selectedConsultationPatientId}
+        onSelectPatientId={setSelectedConsultationPatientId}
+        onCancel={() => setShowPatientPicker(false)}
+        onConfirm={confirmPatientForConsultation}
+      />
 
       <WelcomeTour
         visible={showWelcomeTour}
@@ -1599,45 +1649,21 @@ const MainApp = () => {
         }}
       />
 
-      {/* Mobile Bottom Navigation */}
-      {isMobile && (
-        <nav className="fixed bottom-0 left-0 right-0 z-40 px-3 pb-[max(0.45rem,env(safe-area-inset-bottom))]">
-          <div
-            className={`shell-surface rounded-2xl border border-gray-200/80 dark:border-dark-700/70 grid ${
-              MOBILE_NAV_ITEMS.length > 8
-                ? "grid-cols-9"
-                : MOBILE_NAV_ITEMS.length > 7
-                  ? "grid-cols-8"
-                  : "grid-cols-7"
-            }`}
-          >
-            {MOBILE_NAV_ITEMS.map((item) => (
-              <button
-                key={item.id}
-                aria-current={isMobileTabActive(item.id) ? "page" : undefined}
-                aria-label={item.label}
-                onClick={() => {
-                  if (item.id === "logout") {
-                    logout();
-                    return;
-                  }
-                  setCurrentView(
-                    item.id === "consultations" ? "consultations" : item.id,
-                  );
-                }}
-                className={`min-h-[56px] py-2.5 flex flex-col items-center justify-center space-y-1 ${
-                  isMobileTabActive(item.id)
-                    ? "text-emerald-600 dark:text-emerald-400 font-semibold"
-                    : "text-gray-500 dark:text-gray-400"
-                }`}
-              >
-                {item.id === "profile" ? renderProfileBubble(user) : <AppIcon name={item.icon} variant="colorful" />}
-                <span className="text-[10px] font-medium">{item.label}</span>
-              </button>
-            ))}
-          </div>
-        </nav>
-      )}
+      <MobileBottomNav
+        isMobile={isMobile}
+        items={MOBILE_NAV_ITEMS}
+        user={user}
+        isItemActive={isMobileTabActive}
+        onSelectItem={(item) => {
+          if (item.id === "logout") {
+            logout();
+            return;
+          }
+          setCurrentView(
+            item.id === "consultations" ? "consultations" : item.id,
+          );
+        }}
+      />
     </div>
   );
 };
@@ -1654,20 +1680,3 @@ const App = () => {
 };
 
 export default App;
-
-function renderProfileBubble(profileUser) {
-    const initial = (profileUser?.name || "U").charAt(0).toUpperCase();
-    if (profileUser?.profilePhoto) {
-      return (
-        <span className="h-6 w-6 rounded-full overflow-hidden border border-gray-200 dark:border-dark-600">
-          <img src={profileUser.profilePhoto} alt="Perfil" className="h-full w-full object-cover" />
-        </span>
-      );
-    }
-    return (
-      <span className="h-6 w-6 rounded-full bg-emerald-100 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-300 text-xs font-bold grid place-items-center">
-        {initial}
-      </span>
-    );
-}
-

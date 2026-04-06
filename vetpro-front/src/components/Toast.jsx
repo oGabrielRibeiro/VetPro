@@ -1,134 +1,107 @@
-import React, { useEffect, useState, createContext, useContext, useCallback } from 'react';
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useMemo,
+  useState,
+} from "react";
+import * as ToastPrimitive from "@radix-ui/react-toast";
 
-// Toast Context para gerenciar toasts globalmente
 const ToastContext = createContext(null);
 
 export const useToast = () => {
   const context = useContext(ToastContext);
   if (!context) {
-    throw new Error('useToast must be used within a ToastProvider');
+    throw new Error("useToast must be used within a ToastProvider");
   }
   return context;
 };
 
-// Provider que envolve a aplicação
+function getToastTheme(type) {
+  switch (type) {
+    case "success":
+      return "border-emerald-200 bg-emerald-50 text-emerald-800";
+    case "error":
+      return "border-red-200 bg-red-50 text-red-800";
+    case "warning":
+      return "border-amber-200 bg-amber-50 text-amber-800";
+    default:
+      return "border-blue-200 bg-blue-50 text-blue-800";
+  }
+}
+
 export const ToastProvider = ({ children }) => {
   const [toasts, setToasts] = useState([]);
-
-  const addToast = useCallback((message, type = 'info', duration = 4000) => {
-    const id = Date.now() + Math.random();
-    setToasts((prev) => [...prev, { id, message, type, duration }]);
-  }, []);
 
   const removeToast = useCallback((id) => {
     setToasts((prev) => prev.filter((toast) => toast.id !== id));
   }, []);
 
-  const success = useCallback((message) => addToast(message, 'success'), [addToast]);
-  const error = useCallback((message) => addToast(message, 'error'), [addToast]);
-  const warning = useCallback((message) => addToast(message, 'warning'), [addToast]);
-  const info = useCallback((message) => addToast(message, 'info'), [addToast]);
+  const addToast = useCallback((message, type = "info", duration = 4000) => {
+    const id = Date.now() + Math.random();
+    setToasts((prev) => [...prev, { id, message, type, duration, open: true }]);
+    return id;
+  }, []);
+
+  const updateToastOpen = useCallback(
+    (id, open) => {
+      setToasts((prev) =>
+        prev.map((toast) => (toast.id === id ? { ...toast, open } : toast)),
+      );
+      if (!open) {
+        setTimeout(() => removeToast(id), 180);
+      }
+    },
+    [removeToast],
+  );
+
+  const contextValue = useMemo(
+    () => ({
+      addToast,
+      removeToast,
+      success: (message, duration) => addToast(message, "success", duration),
+      error: (message, duration) => addToast(message, "error", duration),
+      warning: (message, duration) => addToast(message, "warning", duration),
+      info: (message, duration) => addToast(message, "info", duration),
+    }),
+    [addToast, removeToast],
+  );
 
   return (
-    <ToastContext.Provider value={{ addToast, removeToast, success, error, warning, info }}>
-      {children}
-      <ToastContainer toasts={toasts} onRemove={removeToast} />
+    <ToastContext.Provider value={contextValue}>
+      <ToastPrimitive.Provider swipeDirection="right" duration={4000}>
+        {children}
+        {toasts.map((toast) => (
+          <ToastPrimitive.Root
+            key={toast.id}
+            open={toast.open}
+            duration={toast.duration}
+            onOpenChange={(open) => updateToastOpen(toast.id, open)}
+            className={`
+              group flex w-[min(92vw,26rem)] items-center gap-3 rounded-xl border px-4 py-3 shadow-lg
+              data-[state=open]:animate-[subtle-enter_180ms_ease-out]
+              data-[state=closed]:animate-[subtle-fade_160ms_ease-in]
+              data-[swipe=move]:translate-x-[var(--radix-toast-swipe-move-x)]
+              data-[swipe=cancel]:translate-x-0 data-[swipe=cancel]:transition-transform
+              data-[swipe=end]:translate-x-[var(--radix-toast-swipe-end-x)]
+              ${getToastTheme(toast.type)}
+            `}
+          >
+            <ToastPrimitive.Title className="flex-1 text-sm font-semibold">
+              {toast.message}
+            </ToastPrimitive.Title>
+            <ToastPrimitive.Close
+              aria-label="Fechar notificacao"
+              className="rounded-md p-1 text-current/80 hover:bg-black/5"
+            >
+              <span aria-hidden>&times;</span>
+            </ToastPrimitive.Close>
+          </ToastPrimitive.Root>
+        ))}
+        <ToastPrimitive.Viewport className="fixed right-4 top-4 z-[80] flex max-h-screen w-auto flex-col gap-2 outline-none" />
+      </ToastPrimitive.Provider>
     </ToastContext.Provider>
   );
 };
 
-// Container que renderiza todos os toasts
-const ToastContainer = ({ toasts, onRemove }) => {
-  if (toasts.length === 0) return null;
-
-  return (
-    <div
-      className="fixed top-4 right-4 z-50 flex flex-col gap-2 max-w-sm w-full"
-      role="region"
-      aria-label="Notificacoes"
-      aria-live="polite"
-    >
-      {toasts.map((toast) => (
-        <Toast key={toast.id} toast={toast} onRemove={onRemove} />
-      ))}
-    </div>
-  );
-};
-
-// Componente Toast individual
-const Toast = ({ toast, onRemove }) => {
-  const [isExiting, setIsExiting] = useState(false);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsExiting(true);
-      setTimeout(() => onRemove(toast.id), 300);
-    }, toast.duration);
-
-    return () => clearTimeout(timer);
-  }, [toast, onRemove]);
-
-  const handleClose = () => {
-    setIsExiting(true);
-    setTimeout(() => onRemove(toast.id), 300);
-  };
-
-  const styles = {
-    success: 'bg-emerald-50 border-emerald-200 text-emerald-800',
-    error: 'bg-red-50 border-red-200 text-red-800',
-    warning: 'bg-amber-50 border-amber-200 text-amber-800',
-    info: 'bg-blue-50 border-blue-200 text-blue-800',
-  };
-
-  const icons = {
-    success: (
-      <svg className="w-5 h-5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-      </svg>
-    ),
-    error: (
-      <svg className="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-      </svg>
-    ),
-    warning: (
-      <svg className="w-5 h-5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-      </svg>
-    ),
-    info: (
-      <svg className="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-      </svg>
-    ),
-  };
-
-  return (
-    <div
-      role={toast.type === "error" ? "alert" : "status"}
-      aria-live={toast.type === "error" ? "assertive" : "polite"}
-      className={`
-        flex items-center gap-3 px-4 py-3 rounded-xl border shadow-lg
-        transform transition-all duration-300 ease-in-out
-        ${styles[toast.type] || styles.info}
-        ${isExiting ? 'opacity-0 translate-x-full' : 'opacity-100 translate-x-0'}
-      `}
-    >
-      <div className="flex-shrink-0">
-        {icons[toast.type] || icons.info}
-      </div>
-      <p className="flex-1 text-sm font-medium">{toast.message}</p>
-      <button
-        onClick={handleClose}
-        aria-label="Fechar notificacao"
-        className="flex-shrink-0 p-1 rounded-lg hover:bg-black/5 transition-colors"
-      >
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-        </svg>
-      </button>
-    </div>
-  );
-};
-
-export default Toast;
+export default ToastProvider;
