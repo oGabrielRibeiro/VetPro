@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, lazy, Suspense } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import Login from "./pages/Login";
 import Sidebar from "./components/Sidebar";
@@ -25,6 +26,7 @@ import {
 } from "./utils/consultationContext";
 import useDarkMode from "./hooks/useDarkMode";
 import { queryClient, queryKeys } from "./utils/queryClient";
+import { routeTransition } from "./motion/presets";
 
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Patients = lazy(() => import("./pages/Patients"));
@@ -60,6 +62,7 @@ const MOBILE_NAV_ITEMS = [
 // Componente principal com roteamento baseado em estado
 const MainApp = () => {
   const { user, loading, logout, updateProfile } = useAuth();
+  const prefersReducedMotion = useReducedMotion();
   const [currentView, setCurrentView] = useState("dashboard");
   const [isMobile, setIsMobile] = useState(false);
   const { isDark, toggleDarkMode } = useDarkMode();
@@ -125,6 +128,10 @@ const MainApp = () => {
   });
 
   const { isAuthenticated } = useAuth();
+  const viewMotionKey = `${currentView}:${currentConsultation?.id || ""}:${
+    currentConsultationPatient?.id || ""
+  }`;
+  const viewMotionProps = routeTransition(Boolean(prefersReducedMotion));
   const lazyFallback = (
     <div className="min-h-[220px] flex items-center justify-center">
       <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-emerald-600"></div>
@@ -1628,7 +1635,18 @@ const MainApp = () => {
               onClose={() => setActionFeedback(null)}
             />
           )}
-          <Suspense fallback={lazyFallback}>{renderCurrentView()}</Suspense>
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.div
+              key={viewMotionKey}
+              className="vp-route-shell"
+              initial={viewMotionProps.initial}
+              animate={viewMotionProps.animate}
+              exit={viewMotionProps.exit}
+              transition={viewMotionProps.transition}
+            >
+              <Suspense fallback={lazyFallback}>{renderCurrentView()}</Suspense>
+            </motion.div>
+          </AnimatePresence>
         </div>
       </div>
 

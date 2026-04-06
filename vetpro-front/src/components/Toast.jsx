@@ -79,8 +79,8 @@ export const ToastProvider = ({ children }) => {
             onOpenChange={(open) => updateToastOpen(toast.id, open)}
             className={`
               group flex w-[min(92vw,26rem)] items-center gap-3 rounded-xl border px-4 py-3 shadow-lg
-              data-[state=open]:animate-[subtle-enter_180ms_ease-out]
-              data-[state=closed]:animate-[subtle-fade_160ms_ease-in]
+              data-[state=open]:animate-[vp-toast-in_var(--vp-motion-duration-base)_var(--vp-motion-easing-emphasized)]
+              data-[state=closed]:animate-[vp-toast-out_var(--vp-motion-duration-fast)_var(--vp-motion-easing-standard)]
               data-[swipe=move]:translate-x-[var(--radix-toast-swipe-move-x)]
               data-[swipe=cancel]:translate-x-0 data-[swipe=cancel]:transition-transform
               data-[swipe=end]:translate-x-[var(--radix-toast-swipe-end-x)]

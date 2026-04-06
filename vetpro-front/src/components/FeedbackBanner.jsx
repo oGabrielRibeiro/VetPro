@@ -1,3 +1,7 @@
+import React from "react";
+import { motion, useReducedMotion } from "framer-motion";
+import { feedbackTransition } from "../motion/presets";
+
 const toneClasses = {
   success:
     "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-200",
@@ -17,12 +21,18 @@ const FeedbackBanner = ({
   actionClassName = "",
   className = "",
 }) => {
+  const prefersReducedMotion = useReducedMotion();
   if (!message) return null;
+  const motionProps = feedbackTransition(type, Boolean(prefersReducedMotion));
 
   return (
-    <div
+    <motion.div
       role={type === "error" || type === "warning" ? "alert" : "status"}
       aria-live={type === "error" ? "assertive" : "polite"}
+      initial={motionProps.initial}
+      animate={motionProps.animate}
+      exit={motionProps.exit}
+      transition={motionProps.transition}
       className={`rounded-xl border px-4 py-3 text-sm flex items-center justify-between gap-2 ${
         toneClasses[type] || toneClasses.error
       } ${className}`}
@@ -49,7 +59,7 @@ const FeedbackBanner = ({
           </button>
         )}
       </div>
-    </div>
+    </motion.div>
   );
 };
 

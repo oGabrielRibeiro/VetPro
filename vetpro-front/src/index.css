@@ -100,11 +100,16 @@ code {
 }
 
 .subtle-enter {
-  animation: subtle-enter 300ms ease-out;
+  animation: subtle-enter var(--vp-motion-duration-slow) var(--vp-motion-easing-emphasized);
 }
 
 .subtle-fade {
-  animation: subtle-fade 180ms ease-out;
+  animation: subtle-fade var(--vp-motion-duration-base) var(--vp-motion-easing-standard);
+}
+
+.vp-route-shell {
+  will-change: transform, opacity;
+  transform-origin: 50% 0%;
 }
 
 .vp-card {
@@ -223,6 +228,68 @@ code {
   }
   to {
     opacity: 1;
+  }
+}
+
+@keyframes vp-overlay-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes vp-overlay-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes vp-modal-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -46%) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+@keyframes vp-modal-out {
+  from {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translate(-50%, -47%) scale(0.985);
+  }
+}
+
+@keyframes vp-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes vp-toast-out {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-6px);
   }
 }
 

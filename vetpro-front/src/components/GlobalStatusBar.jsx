@@ -1,4 +1,6 @@
 import React from "react";
+import { motion, useReducedMotion } from "framer-motion";
+import { feedbackTransition } from "../motion/presets";
 
 const STATUS_STYLES = {
   offline: "border-amber-300 bg-amber-50 text-amber-900",
@@ -19,17 +21,26 @@ const STATUS_LABELS = {
 };
 
 const GlobalStatusBar = ({ status = "idle", message = "", lastSyncAt = "" }) => {
+  const prefersReducedMotion = useReducedMotion();
   const normalized = STATUS_STYLES[status] ? status : "idle";
   const style = STATUS_STYLES[normalized];
   const label = STATUS_LABELS[normalized];
   const safeMessage = String(message || "").trim();
   if (!safeMessage && normalized === "idle") return null;
+  const motionProps = feedbackTransition(
+    normalized === "error" ? "error" : normalized === "success" ? "success" : "info",
+    Boolean(prefersReducedMotion),
+  );
 
   return (
-    <div
+    <motion.div
       className={`mb-3 rounded-xl border px-3 py-2 text-xs sm:text-sm font-medium ${style}`}
       role="status"
       aria-live="polite"
+      initial={motionProps.initial}
+      animate={motionProps.animate}
+      exit={motionProps.exit}
+      transition={motionProps.transition}
     >
       <span className="font-bold">{label}:</span>{" "}
       {safeMessage || "Sistema operacional normal."}
@@ -38,7 +49,7 @@ const GlobalStatusBar = ({ status = "idle", message = "", lastSyncAt = "" }) => 
           Ultima sincronizacao: {new Date(lastSyncAt).toLocaleString("pt-BR")}
         </span>
       ) : null}
-    </div>
+    </motion.div>
   );
 };
 
