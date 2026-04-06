@@ -2,7 +2,7 @@ const express = require('express');
 
 const router = express.Router();
 const authMiddleware = require('../middlewares/authMiddleware');
-const upload = require('../middlewares/clinicLogoUpload');
+const { upload } = require('../middlewares/clinicLogoUpload');
 const clinicController = require('../controllers/clinicController');
 
 router.use(authMiddleware);
@@ -11,5 +11,6 @@ router.use(authMiddleware);
 router.get('/', clinicController.getClinic);
 
 router.post('/logo', upload.single('logo'), clinicController.updateLogo);
+router.get('/logo', clinicController.viewLogo);
 
 module.exports = router;

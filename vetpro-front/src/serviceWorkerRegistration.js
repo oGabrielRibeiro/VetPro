@@ -8,7 +8,7 @@ const isLocalhost = Boolean(
     )
 );
 
-export function register() {
+export function register(config = {}) {
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
       const baseUrl =
@@ -20,9 +20,9 @@ export function register() {
         .toString();
 
       if (isLocalhost) {
-        checkValidServiceWorker(swUrl);
+        checkValidServiceWorker(swUrl, config);
       } else {
-        registerValidSW(swUrl);
+        registerValidSW(swUrl, config);
       }
     });
   }
@@ -40,18 +40,39 @@ export function unregister() {
   }
 }
 
-function registerValidSW(swUrl) {
+function notifyUpdate(registration) {
+  window.dispatchEvent(
+    new CustomEvent('vetpro:sw-update-available', { detail: { registration } }),
+  );
+}
+
+function registerValidSW(swUrl, config = {}) {
   navigator.serviceWorker
     .register(swUrl)
-    .then(() => {
+    .then((registration) => {
       console.log('Service Worker registrado');
+      registration.onupdatefound = () => {
+        const installingWorker = registration.installing;
+        if (!installingWorker) return;
+        installingWorker.onstatechange = () => {
+          if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
+            notifyUpdate(registration);
+            if (typeof config.onUpdate === 'function') {
+              config.onUpdate(registration);
+            }
+          }
+        };
+      };
+      if (typeof config.onSuccess === 'function') {
+        config.onSuccess(registration);
+      }
     })
     .catch(error => {
       console.error('Erro ao registrar Service Worker:', error);
     });
 }
 
-function checkValidServiceWorker(swUrl) {
+function checkValidServiceWorker(swUrl, config = {}) {
   fetch(swUrl)
     .then(response => {
       if (
@@ -64,7 +85,7 @@ function checkValidServiceWorker(swUrl) {
           });
         });
       } else {
-        registerValidSW(swUrl);
+        registerValidSW(swUrl, config);
       }
     })
     .catch(() => {

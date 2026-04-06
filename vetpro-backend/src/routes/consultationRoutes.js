@@ -5,7 +5,7 @@ const multer = require('multer');
 
 const auth = require('../middlewares/authMiddleware');
 const consultationController = require('../controllers/consultationController');
-const upload = require('../middlewares/uploadMiddleware');
+const { upload } = require('../middlewares/uploadMiddleware');
 const fileController = require('../controllers/consultationFileController');
 const { uploadLimiter } = require('../middlewares/rateLimitMiddleware');
 const {

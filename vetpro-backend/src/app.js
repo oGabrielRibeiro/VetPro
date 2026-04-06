@@ -5,6 +5,9 @@ const fs = require('fs');
 require('./config/loadEnv');
 const authMiddleware = require('./middlewares/authMiddleware');
 const securityMiddleware = require('./middlewares/securityMiddleware');
+const requestContextMiddleware = require('./middlewares/requestContextMiddleware');
+const requestMetricsMiddleware = require('./middlewares/requestMetricsMiddleware');
+const metricsService = require('./services/metricsService');
 const patientRoutes = require('./routes/patientRoutes');
 const consultationRoutes = require('./routes/consultationRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
@@ -16,6 +19,8 @@ const {
   userActionLimiter,
 } = require('./middlewares/rateLimitMiddleware');
 const cacheService = require('./services/cacheService');
+const AppError = require('./errors/AppError');
+const { errorHandler, notFoundHandler } = require('./middlewares/errorHandler');
 
 const app = express();
 
@@ -80,6 +85,8 @@ app.use(
 );
 
 app.disable('x-powered-by');
+app.use(requestContextMiddleware);
+app.use(requestMetricsMiddleware);
 // aceitar uploads base64/JSON grandes (fotos, logos, assinaturas)
 app.use(express.json({ limit: '20mb' }));
 app.use(express.urlencoded({ extended: true, limit: '20mb' }));
@@ -121,15 +128,6 @@ app.post('/api/cache/flush', authMiddleware, async (req, res) => {
   const result = await cacheService.flush();
   res.json({ success: result });
 });
-
-app.use(
-  '/uploads',
-  express.static('uploads', {
-    etag: true,
-    lastModified: true,
-    maxAge: '7d',
-  }),
-);
 
 // Swagger UI - servir specification JSON
 app.get('/api-docs.json', (req, res) => {
@@ -177,7 +175,56 @@ app.get('/health', (req, res) => {
   });
 });
 
+app.get('/health/db', async (req, res) => {
+  const status = await metricsService.getSystemHealth();
+  res.status(status.db.ok ? 200 : 503).json({
+    ok: status.db.ok,
+    timestamp: status.timestamp,
+    db: status.db,
+  });
+});
+
+app.get('/health/redis', async (req, res) => {
+  const status = await metricsService.getSystemHealth();
+  res.status(status.redis.ok ? 200 : 503).json({
+    ok: status.redis.ok,
+    timestamp: status.timestamp,
+    redis: status.redis,
+  });
+});
+
+app.get('/status/system', async (req, res) => {
+  const [health, requestMetrics, business] = await Promise.all([
+    metricsService.getSystemHealth(),
+    Promise.resolve(metricsService.getRequestMetrics()),
+    metricsService.getBusinessMetrics().catch(() => null),
+  ]);
+
+  res.status(health.ok ? 200 : 503).json({
+    ok: health.ok,
+    timestamp: health.timestamp,
+    health,
+    metrics: {
+      request: requestMetrics,
+      business,
+    },
+  });
+});
+
+app.get('/debug/error', authMiddleware, (req, res, next) => {
+  const enabled =
+    process.env.ENABLE_DEBUG_ERROR_ENDPOINT === 'true' ||
+    process.env.NODE_ENV !== 'production';
+  if (!enabled) {
+    return next(new AppError('Debug endpoint desabilitado.', 403, 'FORBIDDEN'));
+  }
+  return next(
+    new AppError('Erro simulado para observabilidade.', 500, 'DEBUG_ERROR'),
+  );
+});
+
 // Middleware de erro centralizado
-app.use(require('./middlewares/errorHandler'));
+app.use(notFoundHandler);
+app.use(errorHandler);
 
 module.exports = app;

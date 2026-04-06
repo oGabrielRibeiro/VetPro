@@ -14,6 +14,7 @@ const Sidebar = ({
     { id: "appointments", icon: "appointments", label: "Agenda" },
     { id: "consultations", icon: "consultations", label: "Prontuarios" },
     { id: "reports", icon: "reports", label: "Relatorios" },
+    { id: "system-status", icon: "info", label: "Status do Sistema" },
     { id: "about", icon: "info", label: "Sobre" },
     ...(showUiLab ? [{ id: "ui-playground", icon: "reports", label: "Laboratorio UI" }] : []),
   ];

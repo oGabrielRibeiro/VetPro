@@ -1,12 +1,14 @@
-// Console replaced by logger
 const bcrypt = require('bcryptjs');
 const fs = require('fs/promises');
 const path = require('path');
-const jwt = require('jsonwebtoken');
 const prisma = require('../lib/prisma');
 const logger = require('../utils/logger');
-const { refreshAccessToken } = require('../services/authService');
-const { getJwtSecret } = require('../config/jwtConfig');
+const {
+  issueTokensForUser,
+  refreshAccessToken,
+  revokeUserSessions,
+  bumpTokenVersion,
+} = require('../services/authService');
 const { verifyCaptcha } = require('../services/captchaService');
 const {
   isLockedOut,
@@ -15,38 +17,19 @@ const {
   getLockoutMeta,
 } = require('../services/authSecurityService');
 const { recordSecurityEvent } = require('../services/securityEventService');
-const crypto = require('crypto');
-
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '15m';
+const TempToken = require('../models/TempToken');
 
 function isValidEmail(email = '') {
   return /^\S+@\S+\.\S+$/.test(String(email).trim());
 }
 
-function signToken(user) {
-  const jwtSecret = getJwtSecret();
-  if (!jwtSecret) {
-    throw new Error('JWT_SECRET ausente');
-  }
-  return jwt.sign(
-    {
-      userId: user.id,
-      clinicId: user.clinicId,
-      email: user.email,
-    },
-    jwtSecret,
-    { expiresIn: JWT_EXPIRES_IN },
-  );
-}
-
 function serializeUser(user) {
-  const publicBase = process.env.PUBLIC_URL
-    ? String(process.env.PUBLIC_URL).replace(/\/$/, '')
-    : null;
   const normalizeLogo = (logo) => {
     if (!logo) return null;
+    if (logo.startsWith('private://') || logo.startsWith('/uploads/clinics/')) {
+      return '/api/clinic/logo';
+    }
     if (logo.startsWith('http://') || logo.startsWith('https://')) return logo;
-    if (publicBase) return `${publicBase}${logo}`;
     return logo;
   };
 
@@ -60,6 +43,7 @@ function serializeUser(user) {
     signature: user.signature || null,
     crmv: user.crmv || null,
     clinicId: user.clinicId,
+    twoFactorEnabled: Boolean(user.twoFactorEnabled),
     clinicName: user.clinic?.name || null,
     clinic: user.clinic
       ? {
@@ -107,7 +91,7 @@ async function register(req, res) {
     if (name.length < 2) {
       return res
         .status(400)
-        .json({ error: 'Nome deve ter ao menos 2 caracteres' });
+        .json({ error: 'Nome deve ter ao menos 2 caracteres.' });
     }
 
     if (!isValidEmail(email)) {
@@ -118,12 +102,6 @@ async function register(req, res) {
       return res
         .status(400)
         .json({ error: 'A senha deve ter no minimo 6 caracteres.' });
-    }
-
-    if (!getJwtSecret()) {
-      return res.status(500).json({
-        error: 'Erro de configuracao do servidor. Tente novamente mais tarde.',
-      });
     }
 
     if (process.env.CAPTCHA_ENABLED === 'true') {
@@ -141,32 +119,24 @@ async function register(req, res) {
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) {
       registerFailure(email, req.ip);
-      recordSecurityEvent('auth.register.email_exists', {
-        email,
-        ip: req.ip,
-      });
+      recordSecurityEvent('auth.register.email_exists', { email, ip: req.ip });
       return res.status(409).json({ error: 'Este e-mail ja esta cadastrado.' });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-
     const clinic = await prisma.clinic.create({
-      data: {
-        name: clinicName || `Clinica de ${name}`,
-      },
+      data: { name: clinicName || `Clinica de ${name}` },
     });
 
     const user = await prisma.user.create({
-      data: {
-        name,
-        email,
-        password: hashedPassword,
-        clinicId: clinic.id,
-      },
+      data: { name, email, password: hashedPassword, clinicId: clinic.id },
       include: { clinic: true },
     });
 
-    const token = signToken(user);
+    const tokens = await issueTokensForUser(user, req, {
+      twoFactorVerified: !user.twoFactorEnabled,
+    });
+
     registerSuccess(email, req.ip);
     recordSecurityEvent('auth.register.success', {
       email,
@@ -176,10 +146,12 @@ async function register(req, res) {
 
     return res.status(201).json({
       message: 'Cadastro realizado com sucesso.',
-      token,
+      token: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
       data: {
         user: serializeUser(user),
-        token,
+        token: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
       },
     });
   } catch (err) {
@@ -189,13 +161,8 @@ async function register(req, res) {
       email: req.body?.email,
       ip: req.ip,
     });
-    const details =
-      process.env.NODE_ENV === 'production'
-        ? undefined
-        : String(err?.message || 'Erro desconhecido');
     return res.status(500).json({
       error: 'Nao foi possivel concluir o cadastro. Tente novamente.',
-      ...(details ? { details } : {}),
     });
   }
 }
@@ -209,11 +176,7 @@ async function login(req, res) {
 
     if (isLockedOut(email, req.ip)) {
       const meta = getLockoutMeta(email, req.ip);
-      recordSecurityEvent('auth.login.locked', {
-        email,
-        ip: req.ip,
-        ...meta,
-      });
+      recordSecurityEvent('auth.login.locked', { email, ip: req.ip, ...meta });
       return res.status(429).json({
         error: `Muitas tentativas. Tente novamente em ${meta?.remainingMinutes || 15} minutos.`,
         lockoutUntil: meta?.lockoutUntil,
@@ -230,21 +193,12 @@ async function login(req, res) {
       return res.status(400).json({ error: 'Informe um e-mail valido.' });
     }
 
-    if (!getJwtSecret()) {
-      return res.status(500).json({
-        error: 'Erro de configuracao do servidor. Tente novamente mais tarde.',
-      });
-    }
-
     if (process.env.CAPTCHA_ENABLED === 'true') {
       const captchaToken = String(req.body?.captchaToken || '');
       const captchaValid = await verifyCaptcha(captchaToken, req.ip);
       if (!captchaValid) {
         registerFailure(email, req.ip);
-        recordSecurityEvent('auth.login.captcha_failed', {
-          email,
-          ip: req.ip,
-        });
+        recordSecurityEvent('auth.login.captcha_failed', { email, ip: req.ip });
         return res.status(400).json({ error: 'Captcha invalido.' });
       }
     }
@@ -256,10 +210,7 @@ async function login(req, res) {
 
     if (!user) {
       registerFailure(email, req.ip);
-      recordSecurityEvent('auth.login.invalid_user', {
-        email,
-        ip: req.ip,
-      });
+      recordSecurityEvent('auth.login.invalid_user', { email, ip: req.ip });
       return res.status(401).json({ error: 'E-mail ou senha incorretos.' });
     }
 
@@ -274,26 +225,24 @@ async function login(req, res) {
       return res.status(401).json({ error: 'E-mail ou senha incorretos.' });
     }
 
-    // Verificar se Two-Factor Authentication está habilitado
     if (user.twoFactorEnabled) {
-      // Gerar token temporário para verificação 2FA
-      const tempToken = crypto.randomBytes(32).toString('hex');
-
-      // Guardar token em banco por 5 minutos
-      await prisma.$executeRaw`
-        INSERT INTO "TempToken" (token, userId, purpose, expiresAt)
-        VALUES (${tempToken}, ${user.id}, '2FA_LOGIN', ${new Date(Date.now() + 5 * 60 * 1000)})
-      `;
-
+      const tempToken = await TempToken.create(
+        user.id,
+        TempToken.PURPOSES.TWO_FACTOR_LOGIN,
+        5,
+      );
       return res.json({
         message: 'Two-factor authentication required',
         requires2FA: true,
         tempToken,
-        user: { id: user.id, email: user.email, name: user.name }
+        user: { id: user.id, email: user.email, name: user.name },
       });
     }
 
-    const token = signToken(user);
+    const tokens = await issueTokensForUser(user, req, {
+      twoFactorVerified: true,
+    });
+
     registerSuccess(email, req.ip);
     recordSecurityEvent('auth.login.success', {
       email,
@@ -303,10 +252,12 @@ async function login(req, res) {
 
     return res.json({
       message: 'Login realizado com sucesso.',
-      token,
+      token: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
       data: {
         user: serializeUser(user),
-        token,
+        token: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
       },
     });
   } catch (err) {
@@ -344,10 +295,7 @@ async function recoverPassword(req, res) {
       }
     }
 
-    recordSecurityEvent('auth.recover.request', {
-      email,
-      ip: req.ip,
-    });
+    recordSecurityEvent('auth.recover.request', { email, ip: req.ip });
 
     return res.json({
       message:
@@ -355,10 +303,6 @@ async function recoverPassword(req, res) {
     });
   } catch (err) {
     logger.error('recover error:', err);
-    recordSecurityEvent('auth.recover.error', {
-      email: req.body?.email,
-      ip: req.ip,
-    });
     return res.status(500).json({
       error: 'Nao foi possivel processar a recuperacao no momento.',
     });
@@ -439,32 +383,10 @@ async function updateProfile(req, res) {
       },
     });
 
-    const absoluteLogo =
-      clinic.logoUrl && !clinic.logoUrl.startsWith('http')
-        ? `${req.protocol}://${req.get('host')}${clinic.logoUrl}`
-        : clinic.logoUrl || null;
-
     return res.json({
-      ...serializeUser({
-        ...user,
-        clinic: { ...clinic, logoUrl: absoluteLogo },
-      }),
+      ...serializeUser({ ...user, clinic }),
       crmvState: crmvState || null,
       crmvNumber: crmvNumber || null,
-      clinic: {
-        id: clinic.id,
-        name: clinic.name,
-        address: clinic.address,
-        cnpj: clinic.cnpj,
-        phone: clinic.phone,
-        email: clinic.email,
-        prescriptionTemplate: clinic.prescriptionTemplate || null,
-        logoUrl: absoluteLogo,
-      },
-      profilePhoto: profilePhoto || user.profilePhoto || null,
-      signature: signature || user.signature || null,
-      specialty: specialty || user.specialty || null,
-      phone: phone || user.phone || null,
     });
   } catch (err) {
     logger.error('updateProfile error:', err);
@@ -476,7 +398,13 @@ async function updateProfile(req, res) {
 
 function resolveLocalPath(filePath) {
   if (!filePath) return null;
-  const cleaned = String(filePath).replace(/^\/+/, '');
+  const value = String(filePath);
+  if (path.isAbsolute(value)) return value;
+  if (value.startsWith('private://')) {
+    const relative = value.replace('private://', '');
+    return path.resolve(process.cwd(), 'private_uploads', relative);
+  }
+  const cleaned = value.replace(/^\/+/, '');
   return path.resolve(process.cwd(), cleaned);
 }
 
@@ -513,7 +441,6 @@ async function deleteAccount(req, res) {
     });
 
     const clinicLogoPath = user.clinic?.logoUrl || null;
-
     const { clinicId } = user;
     let shouldDeleteClinic = false;
 
@@ -523,6 +450,8 @@ async function deleteAccount(req, res) {
       });
       await tx.consultation.deleteMany({ where: { userId } });
       await tx.patient.deleteMany({ where: { userId } });
+      await tx.refreshSession.deleteMany({ where: { userId } });
+      await tx.tempToken.deleteMany({ where: { userId } });
       await tx.user.delete({ where: { id: userId } });
 
       const remaining = await tx.user.count({ where: { clinicId } });
@@ -579,21 +508,30 @@ async function refreshToken(req, res) {
       return res.status(400).json({ error: 'Refresh token e obrigatorio.' });
     }
 
-    const result = await refreshAccessToken(refreshTokenValue);
-
+    const result = await refreshAccessToken(refreshTokenValue, req);
     return res.json({
       message: 'Token atualizado com sucesso.',
+      token: result.accessToken,
+      refreshToken: result.refreshToken,
       ...result,
     });
   } catch (err) {
     logger.error('refreshToken error:', err);
-    const message = err?.message || '';
-    if (message.includes('expired')) {
-      return res
-        .status(401)
-        .json({ error: 'Refresh token expirado. Faca login novamente.' });
-    }
-    return res.status(401).json({ error: 'Refresh token invalido.' });
+    return res
+      .status(401)
+      .json({ error: err?.message || 'Refresh token invalido.' });
+  }
+}
+
+async function logout(req, res) {
+  try {
+    const refreshTokenValue = req.body?.refreshToken || null;
+    await revokeUserSessions(req.user.id, refreshTokenValue);
+    await bumpTokenVersion(req.user.id);
+    return res.json({ message: 'Logout realizado com sucesso.' });
+  } catch (err) {
+    logger.error('logout error:', err);
+    return res.status(500).json({ error: 'Nao foi possivel concluir logout.' });
   }
 }
 
@@ -605,4 +543,6 @@ module.exports = {
   updateProfile,
   deleteAccount,
   refreshToken,
+  logout,
+  serializeUser,
 };

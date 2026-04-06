@@ -3,8 +3,15 @@ import { useAuth } from "../contexts/AuthContext";
 import AppIcon from "../components/AppIcon";
 
 const Login = () => {
-  const { login, register, recoverPassword, authLoading, error, clearError } =
-    useAuth();
+  const {
+    login,
+    register,
+    recoverPassword,
+    verifyTwoFactorLogin,
+    authLoading,
+    error,
+    clearError,
+  } = useAuth();
 
   const [isRegisterMode, setIsRegisterMode] = useState(false);
   const [isRecoveryMode, setIsRecoveryMode] = useState(false);
@@ -16,6 +23,9 @@ const Login = () => {
   const [loginLogoError, setLoginLogoError] = useState(false);
   const [captchaToken, setCaptchaToken] = useState("");
   const [captchaError, setCaptchaError] = useState("");
+  const [requires2FA, setRequires2FA] = useState(false);
+  const [tempToken2FA, setTempToken2FA] = useState("");
+  const [twoFactorCode, setTwoFactorCode] = useState("");
   const captchaContainerRef = useRef(null);
   const captchaWidgetIdRef = useRef(null);
   const captchaSiteKey = import.meta.env.VITE_CAPTCHA_SITE_KEY;
@@ -23,9 +33,10 @@ const Login = () => {
 
   const submitLabel = useMemo(() => {
     if (authLoading) return "Processando...";
+    if (requires2FA) return "Validar 2FA";
     if (isRecoveryMode) return "Enviar recuperação";
     return isRegisterMode ? "Criar conta" : "Entrar";
-  }, [authLoading, isRegisterMode, isRecoveryMode]);
+  }, [authLoading, isRegisterMode, isRecoveryMode, requires2FA]);
   const activeError = formError || error || "";
   const isConnectionError = useMemo(() => {
     const source = String(activeError || "").toLowerCase();
@@ -39,6 +50,13 @@ const Login = () => {
   }, [activeError]);
 
   const validate = () => {
+    if (requires2FA) {
+      if (String(twoFactorCode || "").length !== 6) {
+        return "Informe o codigo 2FA com 6 digitos.";
+      }
+      return "";
+    }
+
     const normalizedEmail = String(email || "").trim();
 
     if (isRegisterMode && String(name || "").trim().length < 2) {
@@ -69,12 +87,17 @@ const Login = () => {
       return;
     }
 
-    if (captchaEnabled && !captchaToken) {
+    if (!requires2FA && captchaEnabled && !captchaToken) {
       setCaptchaError("Confirme o captcha antes de continuar.");
       return;
     }
 
     try {
+      if (requires2FA) {
+        await verifyTwoFactorLogin(tempToken2FA, twoFactorCode);
+        return;
+      }
+
       if (isRecoveryMode) {
         await recoverPassword(email, captchaToken);
         setRecoverySuccess(
@@ -83,7 +106,13 @@ const Login = () => {
       } else if (isRegisterMode) {
         await register(name, email, password, captchaToken);
       } else {
-        await login(email, password, captchaToken);
+        const result = await login(email, password, captchaToken);
+        if (result?.requires2FA) {
+          setRequires2FA(true);
+          setTempToken2FA(result.tempToken);
+          setTwoFactorCode("");
+          return;
+        }
       }
     } catch {
       // erro tratado no contexto
@@ -96,6 +125,9 @@ const Login = () => {
     setCaptchaError("");
     setRecoverySuccess("");
     setCaptchaToken("");
+    setRequires2FA(false);
+    setTempToken2FA("");
+    setTwoFactorCode("");
     setIsRecoveryMode(false);
     setIsRegisterMode(registerMode);
   };
@@ -106,6 +138,9 @@ const Login = () => {
     setCaptchaError("");
     setRecoverySuccess("");
     setCaptchaToken("");
+    setRequires2FA(false);
+    setTempToken2FA("");
+    setTwoFactorCode("");
     setIsRegisterMode(false);
     setIsRecoveryMode((prev) => !prev);
   };
@@ -171,7 +206,6 @@ const Login = () => {
           </div>
 
           <div className="p-5 sm:p-6">
-
             {!isRecoveryMode ? (
               <div className="mb-5 vp-segment">
                 <button
@@ -200,18 +234,16 @@ const Login = () => {
             )}
 
             {activeError && (
-              <div className="mb-3 vp-alert-error">
-                {activeError}
-              </div>
+              <div className="mb-3 vp-alert-error">{activeError}</div>
             )}
             {recoverySuccess && (
-              <div className="mb-3 vp-alert-success">
-                {recoverySuccess}
-              </div>
+              <div className="mb-3 vp-alert-success">{recoverySuccess}</div>
             )}
             {isConnectionError && (
               <div className="mb-4 vp-alert-info">
-                <p className="font-semibold">Conexao com backend indisponivel.</p>
+                <p className="font-semibold">
+                  Conexao com backend indisponivel.
+                </p>
                 <ol className="vp-tip-list list-decimal">
                   <li>Verifique se backend esta ativo na porta `5000`.</li>
                   <li>Confirme se frontend esta em `http://127.0.0.1:3000`.</li>
@@ -259,37 +291,38 @@ const Login = () => {
                 />
               </div>
 
-              {!isRecoveryMode && (
+              {!isRecoveryMode && !requires2FA && (
                 <div>
-                <label htmlFor="loginPassword" className="vp-label">
-                  Senha
-                </label>
-                <input
-                  id="loginPassword"
-                  type="password"
-                  value={password}
-                  onChange={(e) => {
-                    setPassword(e.target.value);
-                    if (formError) setFormError("");
-                  }}
-                  required
-                  minLength={6}
-                  className="vp-input"
-                  placeholder="••••••••"
-                />
-                {!isRegisterMode && (
-                  <p className="vp-helper mt-1 text-gray-500 dark:text-gray-400">
-                    Dica: use sua conta comercial da clinica para acessar dados compartilhados.
-                  </p>
-                )}
-                <button
-                  type="button"
-                  onClick={toggleRecovery}
-                  className="mt-2 text-xs font-semibold text-emerald-700 dark:text-emerald-300"
-                >
-                  Esqueci minha senha
-                </button>
-              </div>
+                  <label htmlFor="loginPassword" className="vp-label">
+                    Senha
+                  </label>
+                  <input
+                    id="loginPassword"
+                    type="password"
+                    value={password}
+                    onChange={(e) => {
+                      setPassword(e.target.value);
+                      if (formError) setFormError("");
+                    }}
+                    required
+                    minLength={6}
+                    className="vp-input"
+                    placeholder="••••••••"
+                  />
+                  {!isRegisterMode && (
+                    <p className="vp-helper mt-1 text-gray-500 dark:text-gray-400">
+                      Dica: use sua conta comercial da clinica para acessar
+                      dados compartilhados.
+                    </p>
+                  )}
+                  <button
+                    type="button"
+                    onClick={toggleRecovery}
+                    className="mt-2 text-xs font-semibold text-emerald-700 dark:text-emerald-300"
+                  >
+                    Esqueci minha senha
+                  </button>
+                </div>
               )}
 
               {captchaEnabled && (
@@ -301,6 +334,29 @@ const Login = () => {
                   {captchaError && (
                     <p className="text-xs text-red-500">{captchaError}</p>
                   )}
+                </div>
+              )}
+
+              {requires2FA && (
+                <div>
+                  <label htmlFor="twoFactorCode" className="vp-label">
+                    Codigo 2FA
+                  </label>
+                  <input
+                    id="twoFactorCode"
+                    type="text"
+                    value={twoFactorCode}
+                    onChange={(e) =>
+                      setTwoFactorCode(
+                        e.target.value.replace(/\D/g, "").slice(0, 6),
+                      )
+                    }
+                    required
+                    minLength={6}
+                    maxLength={6}
+                    className="vp-input"
+                    placeholder="000000"
+                  />
                 </div>
               )}
 
@@ -347,6 +403,15 @@ const Login = () => {
                   </button>
                 </>
               )}
+            </div>
+
+            <div className="mt-3 text-center">
+              <a
+                href="/status"
+                className="text-xs font-semibold text-blue-700 dark:text-blue-300"
+              >
+                Ver status publico do sistema
+              </a>
             </div>
           </div>
         </section>

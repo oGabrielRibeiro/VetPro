@@ -6,7 +6,7 @@ const oauthService = require('../services/oauthService');
 const authService = require('../services/authService');
 const logger = require('../utils/logger');
 
-const { generateTokenPair } = authService;
+const { issueTokensForUser } = authService;
 
 const OAUTH_CODE_TTL_MS = 5 * 60 * 1000;
 const oauthCodeStore = new Map();
@@ -81,7 +81,9 @@ router.get(
       }
 
       // Gera tokens
-      const tokens = generateTokenPair(user);
+      const tokens = await issueTokensForUser(user, req, {
+        twoFactorVerified: !user.twoFactorEnabled,
+      });
       const code = createOauthCode({
         type: 'auth',
         accessToken: tokens.accessToken,
@@ -141,7 +143,9 @@ router.post('/complete-register', async (req, res) => {
     });
 
     // Gera tokens
-    const tokens = generateTokenPair(user);
+    const tokens = await issueTokensForUser(user, req, {
+      twoFactorVerified: !user.twoFactorEnabled,
+    });
 
     return res.json({
       user: {

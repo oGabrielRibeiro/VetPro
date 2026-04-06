@@ -30,14 +30,286 @@ const {
   validateStructuredClinicalRecord,
 } = require('../ai/clinicalStructuredSchema');
 
+const stageTimeouts = {
+  aiMs: Number(process.env.FIELD_ASSIST_AI_TIMEOUT_MS || 5000),
+  parseMs: Number(process.env.FIELD_ASSIST_PARSE_TIMEOUT_MS || 2000),
+  retries: Math.max(0, Number(process.env.FIELD_ASSIST_AI_RETRIES || 1)),
+};
+
+const circuitBreakers = new Map();
+
+function getCircuitState(provider = '') {
+  const key = String(provider || '').trim();
+  if (!circuitBreakers.has(key)) {
+    circuitBreakers.set(key, {
+      failures: 0,
+      openedUntil: 0,
+    });
+  }
+  return circuitBreakers.get(key);
+}
+
+function canUseProvider(provider = '') {
+  const state = getCircuitState(provider);
+  return Date.now() >= Number(state.openedUntil || 0);
+}
+
+function reportProviderSuccess(provider = '') {
+  const state = getCircuitState(provider);
+  state.failures = 0;
+  state.openedUntil = 0;
+}
+
+function reportProviderFailure(provider = '', reason = '') {
+  const state = getCircuitState(provider);
+  state.failures += 1;
+  if (state.failures >= 3) {
+    const openMs = Math.min(120000, state.failures * 5000);
+    state.openedUntil = Date.now() + openMs;
+    logger.warn('Circuit breaker aberto para provider IA', {
+      provider,
+      openMs,
+      reason,
+    });
+  }
+}
+
+function wait(ms = 0) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, Math.max(0, ms));
+  });
+}
+
+async function withRetry(fn, { retries = 0, baseDelayMs = 350 } = {}) {
+  let lastError = null;
+  // eslint-disable-next-line no-await-in-loop
+  for (let attempt = 0; attempt <= retries; attempt += 1) {
+    try {
+      // eslint-disable-next-line no-await-in-loop
+      return await fn(attempt);
+    } catch (error) {
+      lastError = error;
+      if (attempt < retries) {
+        const backoffMs = baseDelayMs * 2 ** attempt;
+        // eslint-disable-next-line no-await-in-loop
+        await wait(backoffMs);
+      }
+    }
+  }
+  throw lastError;
+}
+
+async function fetchJsonWithTimeout(
+  url,
+  options = {},
+  { timeoutMs = 5000, provider = 'unknown' } = {},
+) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      const errText = await response.text();
+      throw new Error(`${provider} ${response.status}: ${errText}`);
+    }
+    return await response.json();
+  } catch (error) {
+    if (error?.name === 'AbortError') {
+      throw new Error(`${provider} timeout (${timeoutMs}ms)`);
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+function resolveProviderCascade() {
+  return [{ id: 'openai' }, { id: 'azure' }, { id: 'gcp' }];
+}
+
+function mapAiResponseToDraft({
+  parsed = {},
+  mode = 'nova',
+  porte = 'pequeno',
+  specificFieldKeys = [],
+  provider = 'openai',
+  unified = null,
+}) {
+  const structuredRaw =
+    parsed?.structuredClinicalRecord ||
+    parsed?.prontuarioEstruturado ||
+    parsed?.prontuario_estruturado ||
+    {};
+  const structuredClinicalRecord =
+    validateStructuredClinicalRecord(structuredRaw);
+  const structuredMapped = mapStructuredRecordToDraft(
+    structuredClinicalRecord,
+    porte,
+    specificFieldKeys,
+  );
+  const mergedAiRaw = {
+    ...structuredMapped,
+    ...parsed,
+    specificFields: {
+      ...(structuredMapped.specificFields || {}),
+      ...(parsed.specificFields || parsed.specific_fields || {}),
+    },
+  };
+
+  return {
+    draft: ensureDraftShape(mergedAiRaw, mode, specificFieldKeys, porte),
+    provider,
+    confidence: 0.8,
+    structuredClinicalRecord,
+    schemaVersion: CLINICAL_SCHEMA_VERSION,
+    context: {
+      porte,
+      specificFieldKeys,
+      unifiedBrain: {
+        semanticAlerts: unified?.pipeline?.semanticRules?.alerts || [],
+        roleReliability: unified?.context?.roleReliability || null,
+      },
+    },
+  };
+}
+
+async function callOpenAIChat({
+  completionMessages = [],
+  model = 'gpt-4o-mini',
+}) {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) throw new Error('openai_missing_api_key');
+
+  const payload = await fetchJsonWithTimeout(
+    'https://api.openai.com/v1/chat/completions',
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model,
+        temperature: 0,
+        response_format: { type: 'json_object' },
+        messages: completionMessages,
+      }),
+    },
+    { timeoutMs: stageTimeouts.aiMs, provider: 'openai' },
+  );
+
+  return String(payload?.choices?.[0]?.message?.content || '').trim();
+}
+
+async function callAzureOpenAIChat({
+  completionMessages = [],
+  model = 'gpt-4o-mini',
+}) {
+  const endpoint = String(process.env.AZURE_OPENAI_ENDPOINT || '').trim();
+  const deployment = String(
+    process.env.AZURE_OPENAI_DEPLOYMENT || model || '',
+  ).trim();
+  const apiKey = String(process.env.AZURE_OPENAI_API_KEY || '').trim();
+  if (!endpoint || !deployment || !apiKey) {
+    throw new Error('azure_openai_not_configured');
+  }
+
+  const base = endpoint.replace(/\/+$/, '');
+  const url = `${base}/openai/deployments/${deployment}/chat/completions?api-version=2024-06-01`;
+  const payload = await fetchJsonWithTimeout(
+    url,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'api-key': apiKey,
+      },
+      body: JSON.stringify({
+        temperature: 0,
+        response_format: { type: 'json_object' },
+        messages: completionMessages,
+      }),
+    },
+    { timeoutMs: stageTimeouts.aiMs, provider: 'azure' },
+  );
+
+  return String(payload?.choices?.[0]?.message?.content || '').trim();
+}
+
+async function callGoogleGeminiChat({ completionMessages = [] }) {
+  const apiKey = String(process.env.GCP_GEMINI_API_KEY || '').trim();
+  const model = String(
+    process.env.GCP_GEMINI_MODEL || 'gemini-1.5-flash',
+  ).trim();
+  if (!apiKey) throw new Error('gcp_gemini_not_configured');
+
+  const prompt = completionMessages
+    .map(
+      (m) =>
+        `${String(m.role || 'user').toUpperCase()}: ${String(m.content || '')}`,
+    )
+    .join('\n\n');
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+  const payload = await fetchJsonWithTimeout(
+    url,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        generationConfig: {
+          temperature: 0,
+          responseMimeType: 'application/json',
+        },
+        contents: [
+          {
+            role: 'user',
+            parts: [{ text: prompt }],
+          },
+        ],
+      }),
+    },
+    { timeoutMs: stageTimeouts.aiMs, provider: 'gcp' },
+  );
+
+  const text =
+    payload?.candidates?.[0]?.content?.parts?.[0]?.text ||
+    payload?.candidates?.[0]?.content?.parts?.map((p) => p?.text).join('\n') ||
+    '';
+  return String(text || '').trim();
+}
+
+async function runChatCompletionProvider({
+  provider = 'openai',
+  completionMessages = [],
+  model = 'gpt-4o-mini',
+}) {
+  if (provider === 'openai') {
+    return callOpenAIChat({ completionMessages, model });
+  }
+  if (provider === 'azure') {
+    return callAzureOpenAIChat({ completionMessages, model });
+  }
+  return callGoogleGeminiChat({ completionMessages });
+}
+
 async function generateWithOpenAI({
   messages,
   mode,
   patient,
   recordProfile = null,
 }) {
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) return null;
+  const hasAnyProvider =
+    Boolean(process.env.OPENAI_API_KEY) ||
+    Boolean(process.env.AZURE_OPENAI_API_KEY) ||
+    Boolean(process.env.GCP_GEMINI_API_KEY);
+  if (!hasAnyProvider) return null;
 
   const model = process.env.OPENAI_MODEL || 'gpt-4o-mini';
   const unified = runUnifiedClinicalBrain(messages);
@@ -97,69 +369,54 @@ async function generateWithOpenAI({
     })),
   );
 
-  const response = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model,
-      temperature: 0,
-      response_format: { type: 'json_object' },
-      messages: completionMessages,
-    }),
-  });
+  const cascade = resolveProviderCascade();
+  let lastError = null;
 
-  if (!response.ok) {
-    const errText = await response.text();
-    throw new Error(`OpenAI ${response.status}: ${errText}`);
+  for (const entry of cascade) {
+    const provider = entry.id;
+    if (!canUseProvider(provider)) {
+      continue;
+    }
+
+    try {
+      // eslint-disable-next-line no-await-in-loop
+      const content = await withRetry(
+        async () =>
+          runChatCompletionProvider({
+            provider,
+            completionMessages,
+            model,
+          }),
+        { retries: stageTimeouts.retries },
+      );
+
+      const parsedResult = parseJsonObjectSafe(content);
+      const { parsed } = parsedResult;
+      if (!parsed || typeof parsed !== 'object') {
+        const reason = parsedResult.error || 'invalid_json';
+        throw new Error(`${provider}_invalid_json_${reason}`);
+      }
+
+      reportProviderSuccess(provider);
+      return mapAiResponseToDraft({
+        parsed,
+        mode,
+        porte,
+        specificFieldKeys,
+        provider,
+        unified,
+      });
+    } catch (error) {
+      lastError = error;
+      reportProviderFailure(provider, error?.message || 'provider_error');
+      logger.warn('Provider IA falhou, tentando proximo', {
+        provider,
+        error: String(error?.message || 'unknown_error'),
+      });
+    }
   }
 
-  const payload = await response.json();
-  const content = payload?.choices?.[0]?.message?.content || '';
-  const parsedResult = parseJsonObjectSafe(content);
-  const { parsed } = parsedResult;
-  if (!parsed || typeof parsed !== 'object') {
-    const reason = parsedResult.error || 'invalid_json';
-    throw new Error(`Resposta da IA sem JSON valido (${reason}).`);
-  }
-  const structuredRaw =
-    parsed?.structuredClinicalRecord ||
-    parsed?.prontuarioEstruturado ||
-    parsed?.prontuario_estruturado ||
-    {};
-  const structuredClinicalRecord =
-    validateStructuredClinicalRecord(structuredRaw);
-  const structuredMapped = mapStructuredRecordToDraft(
-    structuredClinicalRecord,
-    porte,
-    specificFieldKeys,
-  );
-  const mergedAiRaw = {
-    ...structuredMapped,
-    ...parsed,
-    specificFields: {
-      ...(structuredMapped.specificFields || {}),
-      ...(parsed.specificFields || parsed.specific_fields || {}),
-    },
-  };
-
-  return {
-    draft: ensureDraftShape(mergedAiRaw, mode, specificFieldKeys, porte),
-    provider: 'openai',
-    confidence: 0.8,
-    structuredClinicalRecord,
-    schemaVersion: CLINICAL_SCHEMA_VERSION,
-    context: {
-      porte,
-      specificFieldKeys,
-      unifiedBrain: {
-        semanticAlerts: unified.pipeline?.semanticRules?.alerts || [],
-        roleReliability: unified.context?.roleReliability || null,
-      },
-    },
-  };
+  throw lastError || new Error('ia_provider_cascade_failed');
 }
 
 async function generateRecordDraftFromChat({
@@ -196,12 +453,41 @@ async function generateRecordDraftFromChat({
   }
 
   const speciesProfile = detectSpeciesProfile(patient, sourceText);
-  const heuristic = buildHeuristicDraft(
-    safeMessages,
-    mode,
-    patient,
-    recordProfile,
-  );
+  let heuristic = null;
+  try {
+    heuristic = await Promise.race([
+      Promise.resolve(
+        buildHeuristicDraft(safeMessages, mode, patient, recordProfile),
+      ),
+      new Promise((_, reject) => {
+        setTimeout(
+          () =>
+            reject(
+              new Error(`heuristic_parse_timeout_${stageTimeouts.parseMs}ms`),
+            ),
+          stageTimeouts.parseMs,
+        );
+      }),
+    ]);
+  } catch (error) {
+    logger.warn('Falha no parser heuristico', { error: error.message });
+    heuristic = {
+      draft: ensureDraftShape({}, mode, specificFieldKeys, porte),
+      provider: 'heuristic',
+      confidence: 0.2,
+      confidenceByField: {},
+      missingFields: buildMissingFields(
+        ensureDraftShape({}, mode, specificFieldKeys, porte),
+        specificFieldKeys,
+      ),
+      context: {
+        modeTitle: titleByMode(mode),
+        speciesProfile: 'geral',
+        porte,
+        specificFieldKeys,
+      },
+    };
+  }
   let aiErrorMessage = null;
 
   try {
@@ -300,35 +586,39 @@ async function refineFieldWithOpenAI({
   mode = 'nova',
   patient = null,
 }) {
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) return null;
-
   const model = process.env.OPENAI_MODEL || 'gpt-4o-mini';
   const prompt = buildFieldRefinementPrompt({ field, mode, patient });
+  const completionMessages = [
+    { role: 'system', content: prompt },
+    { role: 'user', content: String(text || '') },
+  ];
 
-  const response = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model,
-      temperature: 0,
-      messages: [
-        { role: 'system', content: prompt },
-        { role: 'user', content: String(text || '') },
-      ],
-    }),
-  });
+  const cascade = resolveProviderCascade();
+  let lastError = null;
 
-  if (!response.ok) {
-    const errText = await response.text();
-    throw new Error(`OpenAI ${response.status}: ${errText}`);
+  for (const entry of cascade) {
+    const provider = entry.id;
+    if (!canUseProvider(provider)) continue;
+    try {
+      // eslint-disable-next-line no-await-in-loop
+      const content = await withRetry(
+        async () =>
+          runChatCompletionProvider({
+            provider,
+            completionMessages,
+            model,
+          }),
+        { retries: stageTimeouts.retries },
+      );
+      reportProviderSuccess(provider);
+      return String(content || '').trim();
+    } catch (error) {
+      lastError = error;
+      reportProviderFailure(provider, error?.message || 'provider_error');
+    }
   }
 
-  const payload = await response.json();
-  return String(payload?.choices?.[0]?.message?.content || '').trim();
+  throw lastError || new Error('ia_refine_provider_cascade_failed');
 }
 
 async function refineRecordField({

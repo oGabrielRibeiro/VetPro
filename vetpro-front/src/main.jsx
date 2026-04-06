@@ -5,6 +5,7 @@ import "./index.css";
 import App from "./App";
 import { queryClient } from "./utils/queryClient";
 import * as serviceWorkerRegistration from "./serviceWorkerRegistration";
+import { reportWebVitals } from "./services/webVitals";
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
 
@@ -16,4 +17,5 @@ root.render(
   </React.StrictMode>,
 );
 
-serviceWorkerRegistration.unregister();
+serviceWorkerRegistration.register();
+reportWebVitals();

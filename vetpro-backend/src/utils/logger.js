@@ -5,9 +5,11 @@
 
 const winston = require('winston');
 const path = require('path');
+const { URL } = require('url');
 
 // Importar DailyRotateFile separadamente
 const DailyRotateFile = require('winston-daily-rotate-file');
+const { getContext } = require('./requestContext');
 
 const REDACTED = '[REDACTED]';
 const SENSITIVE_KEY_REGEX =
@@ -60,6 +62,18 @@ function sanitizeValue(value, keyHint = '') {
   return value;
 }
 
+const requestContextFormat = winston.format((info) => {
+  const context = getContext();
+  const nextInfo = { ...info };
+  if (context) {
+    nextInfo.requestId = context.requestId;
+    nextInfo.traceId = context.traceId;
+    nextInfo.spanId = context.spanId;
+    nextInfo.parentSpanId = context.parentSpanId;
+  }
+  return nextInfo;
+});
+
 const sanitizeLogFormat = winston.format((info) => sanitizeValue(info));
 
 // Configuração de rotação de arquivos
@@ -70,6 +84,7 @@ const logger = winston.createLogger({
   format: winston.format.combine(
     winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
     winston.format.errors({ stack: true }),
+    requestContextFormat(),
     sanitizeLogFormat(),
     winston.format.json(),
   ),
@@ -92,6 +107,22 @@ const logger = winston.createLogger({
     }),
   ],
 });
+
+if (process.env.LOG_FORWARD_URL) {
+  try {
+    const endpoint = new URL(process.env.LOG_FORWARD_URL);
+    logger.add(
+      new winston.transports.Http({
+        host: endpoint.hostname,
+        port: endpoint.port || (endpoint.protocol === 'https:' ? 443 : 80),
+        path: `${endpoint.pathname}${endpoint.search}`,
+        ssl: endpoint.protocol === 'https:',
+      }),
+    );
+  } catch (_) {
+    // ignora URL inválida
+  }
+}
 
 // Em desenvolvimento, também exibe no console
 if (process.env.NODE_ENV !== 'production') {

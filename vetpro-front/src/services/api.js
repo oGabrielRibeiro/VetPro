@@ -1,6 +1,15 @@
 import axios from "axios";
 import { toUserFriendlyError } from "../utils/errorMessages";
 
+function emitUxMetric(metric) {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new CustomEvent("vetpro:ux-metric", { detail: metric }));
+  if (import.meta.env.DEV) {
+    // eslint-disable-next-line no-console
+    console.debug("[ux-metric]", metric);
+  }
+}
+
 function isLoopbackHost(hostname = "") {
   const host = String(hostname || "").toLowerCase();
   return host === "localhost" || host === "127.0.0.1" || host === "::1";
@@ -76,6 +85,19 @@ const api = axios.create({
   },
 });
 
+function getClientFingerprint() {
+  const key = "vetpro_client_fingerprint";
+  let current = localStorage.getItem(key);
+  if (!current) {
+    current =
+      (typeof crypto !== "undefined" && crypto.randomUUID
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random().toString(16).slice(2)}`) || "";
+    localStorage.setItem(key, current);
+  }
+  return current;
+}
+
 let isRefreshingToken = false;
 let authExpiredDispatched = false;
 let queuedRequests = [];
@@ -115,6 +137,7 @@ const markSessionExpired = (error) => {
 };
 
 api.interceptors.request.use((config) => {
+  config.metadata = { startedAt: performance.now() };
   const token = localStorage.getItem("token");
   const normalizedToken = String(token || "").trim();
 
@@ -129,11 +152,34 @@ api.interceptors.request.use((config) => {
     localStorage.removeItem("token");
   }
 
+  config.headers["x-client-fingerprint"] = getClientFingerprint();
+
   return config;
 });
 
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    const startedAt = response?.config?.metadata?.startedAt;
+    if (typeof startedAt === "number") {
+      const elapsedMs = Math.round(performance.now() - startedAt);
+      const route = String(response?.config?.url || "");
+      if (
+        route.includes("/auth/login") ||
+        route.includes("/consultations") ||
+        route.includes("/prescription")
+      ) {
+        emitUxMetric({
+          type: "api_latency",
+          route,
+          method: response?.config?.method || "get",
+          elapsedMs,
+          status: response?.status,
+          timestamp: new Date().toISOString(),
+        });
+      }
+    }
+    return response;
+  },
   async (error) => {
     const status = error?.response?.status;
     const originalRequest = error?.config || {};
@@ -143,7 +189,9 @@ api.interceptors.response.use(
     }
 
     // Evita loop em endpoints de auth.
-    const isAuthEndpoint = String(originalRequest?.url || "").includes("/auth/");
+    const isAuthEndpoint = String(originalRequest?.url || "").includes(
+      "/auth/",
+    );
     if (isAuthEndpoint) {
       markSessionExpired(error);
       return Promise.reject(error);
@@ -179,7 +227,12 @@ api.interceptors.response.use(
       const refreshResponse = await axios.post(
         `${resolveApiOrigin()}/api/auth/refresh`,
         { refreshToken },
-        { headers: { "Content-Type": "application/json" } },
+        {
+          headers: {
+            "Content-Type": "application/json",
+            "x-client-fingerprint": getClientFingerprint(),
+          },
+        },
       );
 
       const nextToken =
@@ -187,12 +240,19 @@ api.interceptors.response.use(
         refreshResponse?.data?.data?.token ||
         refreshResponse?.data?.accessToken ||
         "";
+      const nextRefreshToken =
+        refreshResponse?.data?.refreshToken ||
+        refreshResponse?.data?.data?.refreshToken ||
+        "";
 
       if (!nextToken) {
         throw new Error("Refresh token sem access token.");
       }
 
       localStorage.setItem("token", nextToken);
+      if (nextRefreshToken) {
+        localStorage.setItem("refreshToken", nextRefreshToken);
+      }
       flushQueuedRequests(null, nextToken);
 
       originalRequest.headers.Authorization = `Bearer ${nextToken}`;

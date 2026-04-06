@@ -18,7 +18,7 @@ const STATUS_LABELS = {
   idle: "Pronto",
 };
 
-const GlobalStatusBar = ({ status = "idle", message = "" }) => {
+const GlobalStatusBar = ({ status = "idle", message = "", lastSyncAt = "" }) => {
   const normalized = STATUS_STYLES[status] ? status : "idle";
   const style = STATUS_STYLES[normalized];
   const label = STATUS_LABELS[normalized];
@@ -33,9 +33,13 @@ const GlobalStatusBar = ({ status = "idle", message = "" }) => {
     >
       <span className="font-bold">{label}:</span>{" "}
       {safeMessage || "Sistema operacional normal."}
+      {lastSyncAt ? (
+        <span className="ml-2 opacity-80">
+          Ultima sincronizacao: {new Date(lastSyncAt).toLocaleString("pt-BR")}
+        </span>
+      ) : null}
     </div>
   );
 };
 
 export default GlobalStatusBar;
-

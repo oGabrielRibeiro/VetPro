@@ -36,6 +36,33 @@ function loadHttpsOptions() {
 const httpsOptions = HTTPS_ENABLED ? loadHttpsOptions() : null;
 let server;
 
+async function connectPrismaWithRetry() {
+  const retries = Number(process.env.DB_CONNECT_RETRIES || 8);
+  const delayMs = Number(process.env.DB_CONNECT_RETRY_DELAY_MS || 3000);
+
+  async function attemptConnect(attempt) {
+    try {
+      await prisma.$connect();
+      logger.info('Conexao com banco estabelecida com sucesso.');
+    } catch (error) {
+      logger.error('Falha ao conectar no banco de dados', {
+        attempt,
+        retries,
+        error: error?.message || String(error),
+      });
+      if (attempt >= retries) {
+        throw error;
+      }
+      await new Promise((resolve) => {
+        setTimeout(resolve, delayMs);
+      });
+      await attemptConnect(attempt + 1);
+    }
+  }
+
+  await attemptConnect(1);
+}
+
 async function shutdown(signal) {
   logger.info(`${signal} recebido. Encerrando servidor...`);
   if (server) {
@@ -47,29 +74,39 @@ async function shutdown(signal) {
   process.exit(0);
 }
 
-if (HTTPS_ENABLED && httpsOptions) {
-  server = https.createServer(httpsOptions, app);
-  server.keepAliveTimeout = 65000;
-  server.headersTimeout = 66000;
-  server.listen(PORT, HOST, () => {
-    logger.info(`Servidor HTTPS rodando em https://${HOST}:${PORT}`);
-    websocketService.initialize(server);
-  });
-} else {
-  if (HTTPS_ENABLED && !httpsOptions) {
-    logger.warn(
-      'HTTPS ativado no .env, mas certificados nao encontrados. Subindo em HTTP.',
-    );
-  }
+connectPrismaWithRetry()
+  .then(() => {
+    if (HTTPS_ENABLED && httpsOptions) {
+      server = https.createServer(httpsOptions, app);
+      server.keepAliveTimeout = 65000;
+      server.headersTimeout = 66000;
+      server.listen(PORT, HOST, () => {
+        logger.info(`Servidor HTTPS rodando em https://${HOST}:${PORT}`);
+        websocketService.initialize(server);
+      });
+      return;
+    }
 
-  server = http.createServer(app);
-  server.keepAliveTimeout = 65000;
-  server.headersTimeout = 66000;
-  server.listen(PORT, HOST, () => {
-    logger.info(`Servidor HTTP rodando em http://${HOST}:${PORT}`);
-    websocketService.initialize(server);
+    if (HTTPS_ENABLED && !httpsOptions) {
+      logger.warn(
+        'HTTPS ativado no .env, mas certificados nao encontrados. Subindo em HTTP.',
+      );
+    }
+
+    server = http.createServer(app);
+    server.keepAliveTimeout = 65000;
+    server.headersTimeout = 66000;
+    server.listen(PORT, HOST, () => {
+      logger.info(`Servidor HTTP rodando em http://${HOST}:${PORT}`);
+      websocketService.initialize(server);
+    });
+  })
+  .catch((error) => {
+    logger.error('Falha ao iniciar servidor por indisponibilidade do banco.', {
+      error: error?.message || String(error),
+    });
+    process.exit(1);
   });
-}
 
 process.on('SIGINT', () => {
   shutdown('SIGINT').catch((error) => {

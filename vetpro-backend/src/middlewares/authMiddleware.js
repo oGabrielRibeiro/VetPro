@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken');
 const prisma = require('../lib/prisma');
 const { getJwtSecret } = require('../config/jwtConfig');
+const { getFingerprintHashFromRequest } = require('../utils/tokenFingerprint');
 
 async function authMiddleware(req, res, next) {
   let token;
@@ -38,11 +39,29 @@ async function authMiddleware(req, res, next) {
       });
     }
 
+    if (Number(decoded?.tokenVersion || 0) !== Number(user.tokenVersion || 0)) {
+      return res.status(401).json({
+        error: 'Sessao invalidada. Faca login novamente.',
+        code: 'TOKEN_REVOKED',
+      });
+    }
+
+    if (decoded?.fingerprintHash) {
+      const requestFingerprint = getFingerprintHashFromRequest(req);
+      if (requestFingerprint !== decoded.fingerprintHash) {
+        return res.status(401).json({
+          error: 'Sessao invalida para este dispositivo.',
+          code: 'TOKEN_FINGERPRINT_INVALID',
+        });
+      }
+    }
+
     req.user = {
       id: user.id,
       clinicId: user.clinicId,
       email: user.email,
       name: user.name,
+      twoFactorEnabled: Boolean(user.twoFactorEnabled),
     };
 
     return next();

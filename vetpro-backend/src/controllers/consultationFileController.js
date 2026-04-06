@@ -3,6 +3,15 @@ const path = require('path');
 const fs = require('fs');
 const fileService = require('../services/consultationFileService');
 const logger = require('../utils/logger');
+const AppError = require('../errors/AppError');
+const {
+  validateUploadedFileOrThrow,
+  safeUnlink,
+} = require('../utils/uploadSecurity');
+const {
+  ALLOWED_MIME_TYPES,
+  MAX_SIZE_BY_MIME,
+} = require('../middlewares/uploadMiddleware');
 
 async function viewFile(req, res) {
   try {
@@ -30,13 +39,21 @@ async function uploadFile(req, res) {
     const { id } = req.params;
 
     if (!req.file) {
-      return res.status(400).json({ error: 'Nenhum arquivo enviado' });
+      throw new AppError('Nenhum arquivo enviado.', 400, 'UPLOAD_MISSING_FILE');
     }
+
+    await validateUploadedFileOrThrow(req.file, {
+      allowedMimeTypes: ALLOWED_MIME_TYPES,
+      maxSizeByMime: MAX_SIZE_BY_MIME,
+    });
 
     const file = await fileService.attachFile(req.user.id, id, req.file);
 
     return res.status(201).json(file);
   } catch (error) {
+    if (req.file?.path) {
+      await safeUnlink(req.file.path).catch(() => null);
+    }
     if (error?.message === 'LIMIT_CLINICAL_PHOTOS') {
       return res.status(400).json({
         error:

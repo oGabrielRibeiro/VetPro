@@ -1,4 +1,10 @@
-import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
 import api from "../services/api";
 import { toUserFriendlyError } from "../utils/errorMessages";
 
@@ -12,41 +18,60 @@ export const AuthProvider = ({ children }) => {
 
   const clearError = () => setError(null);
 
-  const resolveUserWithPreviews = useCallback((baseUser = {}, localProfile = null) => {
-    const merged =
-      localProfile && localProfile.id === baseUser?.id
-        ? { ...baseUser, ...localProfile }
-        : baseUser;
+  const resolveUserWithPreviews = useCallback(
+    (baseUser = {}, localProfile = null) => {
+      const merged =
+        localProfile && localProfile.id === baseUser?.id
+          ? { ...baseUser, ...localProfile }
+          : baseUser;
 
-    return {
-      ...merged,
-      profilePhotoPreview:
-        merged.profilePhoto || merged.profilePhotoPreview || null,
-      signaturePreview: merged.signature || merged.signaturePreview || null,
-      clinicLogoPreview: merged.clinic?.logoUrl || merged.clinicLogoPreview || null,
-    };
-  }, []);
+      return {
+        ...merged,
+        profilePhotoPreview:
+          merged.profilePhoto || merged.profilePhotoPreview || null,
+        signaturePreview: merged.signature || merged.signaturePreview || null,
+        clinicLogoPreview:
+          merged.clinic?.logoUrl || merged.clinicLogoPreview || null,
+      };
+    },
+    [],
+  );
 
-  const establishSession = useCallback(async (token, refreshToken = null) => {
-    if (!token) {
-      throw new Error("Token de sessao invalido.");
+  const establishSession = useCallback(
+    async (token, refreshToken = null) => {
+      if (!token) {
+        throw new Error("Token de sessao invalido.");
+      }
+
+      localStorage.setItem("token", token);
+      if (refreshToken) {
+        localStorage.setItem("refreshToken", refreshToken);
+      }
+
+      const me = await api.get("/auth/me");
+      const localProfileRaw = localStorage.getItem("vetpro_profile");
+      const localProfile = localProfileRaw ? JSON.parse(localProfileRaw) : null;
+      const withPreviews = resolveUserWithPreviews(me.data, localProfile);
+      localStorage.setItem(
+        "vetpro_profile",
+        JSON.stringify({ id: withPreviews.id }),
+      );
+      setUser(withPreviews);
+      return withPreviews;
+    },
+    [resolveUserWithPreviews],
+  );
+
+  const logout = useCallback(async (message = null) => {
+    try {
+      const refreshToken = localStorage.getItem("refreshToken");
+      const token = localStorage.getItem("token");
+      if (token) {
+        await api.post("/auth/logout", { refreshToken });
+      }
+    } catch {
+      // ignora falha de rede/logout remoto
     }
-
-    localStorage.setItem("token", token);
-    if (refreshToken) {
-      localStorage.setItem("refreshToken", refreshToken);
-    }
-
-    const me = await api.get("/auth/me");
-    const localProfileRaw = localStorage.getItem("vetpro_profile");
-    const localProfile = localProfileRaw ? JSON.parse(localProfileRaw) : null;
-    const withPreviews = resolveUserWithPreviews(me.data, localProfile);
-    localStorage.setItem("vetpro_profile", JSON.stringify({ id: withPreviews.id }));
-    setUser(withPreviews);
-    return withPreviews;
-  }, [resolveUserWithPreviews]);
-
-  const logout = useCallback((message = null) => {
     localStorage.removeItem("token");
     localStorage.removeItem("refreshToken");
     localStorage.removeItem("vetpro_profile");
@@ -65,7 +90,8 @@ export const AuthProvider = ({ children }) => {
     };
 
     window.addEventListener("vetpro:auth-expired", onAuthExpired);
-    return () => window.removeEventListener("vetpro:auth-expired", onAuthExpired);
+    return () =>
+      window.removeEventListener("vetpro:auth-expired", onAuthExpired);
   }, [logout]);
 
   useEffect(() => {
@@ -78,11 +104,16 @@ export const AuthProvider = ({ children }) => {
         const oauthCode = params.get("code");
 
         if (isOauthPath && oauthCode) {
-          const exchange = await api.post("/oauth/exchange-code", { code: oauthCode });
+          const exchange = await api.post("/oauth/exchange-code", {
+            code: oauthCode,
+          });
           const payload = exchange?.data || {};
 
           if (payload.type === "auth") {
-            await establishSession(payload.accessToken, payload.refreshToken || null);
+            await establishSession(
+              payload.accessToken,
+              payload.refreshToken || null,
+            );
             window.history.replaceState({}, "", "/");
             setLoading(false);
             return;
@@ -113,8 +144,13 @@ export const AuthProvider = ({ children }) => {
 
         const response = await api.get("/auth/me");
         const localProfileRaw = localStorage.getItem("vetpro_profile");
-        const localProfile = localProfileRaw ? JSON.parse(localProfileRaw) : null;
-        const withPreviews = resolveUserWithPreviews(response.data, localProfile);
+        const localProfile = localProfileRaw
+          ? JSON.parse(localProfileRaw)
+          : null;
+        const withPreviews = resolveUserWithPreviews(
+          response.data,
+          localProfile,
+        );
         setUser(withPreviews);
       } catch (err) {
         localStorage.removeItem("token");
@@ -122,7 +158,9 @@ export const AuthProvider = ({ children }) => {
         setUser(null);
         const path = window.location.pathname || "";
         if (path === "/oauth/callback" || path === "/oauth/complete-register") {
-          setError(toUserFriendlyError(err, "Falha ao concluir login com Google."));
+          setError(
+            toUserFriendlyError(err, "Falha ao concluir login com Google."),
+          );
           window.history.replaceState({}, "", "/?error=oauth_failed");
         }
       } finally {
@@ -138,15 +176,29 @@ export const AuthProvider = ({ children }) => {
       setAuthLoading(true);
       clearError();
 
-      const normalizedEmail = String(email || "").trim().toLowerCase();
+      const normalizedEmail = String(email || "")
+        .trim()
+        .toLowerCase();
       const response = await api.post("/auth/login", {
         email: normalizedEmail,
         password,
         captchaToken,
       });
 
+      if (response?.data?.requires2FA && response?.data?.tempToken) {
+        return {
+          requires2FA: true,
+          tempToken: response.data.tempToken,
+          user: response?.data?.user || null,
+        };
+      }
+
       const token = response.data?.token || response.data?.data?.token;
-      const withPreviews = await establishSession(token);
+      const refreshToken =
+        response.data?.refreshToken ||
+        response.data?.data?.refreshToken ||
+        null;
+      const withPreviews = await establishSession(token, refreshToken);
       return withPreviews;
     } catch (err) {
       setError(toUserFriendlyError(err, "Não foi possível fazer login."));
@@ -162,7 +214,9 @@ export const AuthProvider = ({ children }) => {
       clearError();
 
       const normalizedName = String(name || "").trim();
-      const normalizedEmail = String(email || "").trim().toLowerCase();
+      const normalizedEmail = String(email || "")
+        .trim()
+        .toLowerCase();
 
       const response = await api.post("/auth/register", {
         name: normalizedName,
@@ -173,7 +227,11 @@ export const AuthProvider = ({ children }) => {
       });
 
       const token = response.data?.token || response.data?.data?.token;
-      const withPreviews = await establishSession(token);
+      const refreshToken =
+        response.data?.refreshToken ||
+        response.data?.data?.refreshToken ||
+        null;
+      const withPreviews = await establishSession(token, refreshToken);
       return withPreviews;
     } catch (err) {
       setError(toUserFriendlyError(err, "Não foi possível criar sua conta."));
@@ -187,7 +245,9 @@ export const AuthProvider = ({ children }) => {
     try {
       setAuthLoading(true);
       clearError();
-      const normalizedEmail = String(email || "").trim().toLowerCase();
+      const normalizedEmail = String(email || "")
+        .trim()
+        .toLowerCase();
       await api.post("/auth/recover", {
         email: normalizedEmail,
         captchaToken,
@@ -195,11 +255,30 @@ export const AuthProvider = ({ children }) => {
       return true;
     } catch (err) {
       setError(
-        toUserFriendlyError(
-          err,
-          "Não foi possível solicitar a recuperação.",
-        ),
+        toUserFriendlyError(err, "Não foi possível solicitar a recuperação."),
       );
+      throw err;
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  const verifyTwoFactorLogin = async (tempToken, code) => {
+    try {
+      setAuthLoading(true);
+      clearError();
+      const response = await api.post("/auth/2fa/verify-login", {
+        tempToken,
+        token: code,
+      });
+      const token = response.data?.token || response.data?.data?.token;
+      const refreshToken =
+        response.data?.refreshToken ||
+        response.data?.data?.refreshToken ||
+        null;
+      return await establishSession(token, refreshToken);
+    } catch (err) {
+      setError(toUserFriendlyError(err, "Codigo 2FA invalido."));
       throw err;
     } finally {
       setAuthLoading(false);
@@ -218,6 +297,7 @@ export const AuthProvider = ({ children }) => {
         logout,
         register,
         recoverPassword,
+        verifyTwoFactorLogin,
         updateProfile: (data) => {
           const clean = {
             ...(user || {}),

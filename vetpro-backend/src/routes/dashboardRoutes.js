@@ -7,6 +7,7 @@ const controller = require('../controllers/dashboardController');
 router.use(auth);
 
 router.get('/monthly', controller.getMonthlyData);
+router.get('/business', controller.getBusinessMetrics);
 router.get('/', controller.getDashboard);
 
 module.exports = router;

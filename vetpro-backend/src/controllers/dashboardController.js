@@ -1,5 +1,6 @@
 // Console replaced by logger
 const dashboardService = require('../services/dashboardService');
+const metricsService = require('../services/metricsService');
 const logger = require('../utils/logger');
 
 async function getDashboard(req, res) {
@@ -30,7 +31,20 @@ async function getMonthlyData(req, res) {
   }
 }
 
+async function getBusinessMetrics(req, res) {
+  try {
+    const data = await metricsService.getBusinessMetrics();
+    res.json(data);
+  } catch (error) {
+    logger.error(error);
+    res
+      .status(500)
+      .json({ error: 'Nao foi possivel carregar metricas de negocio.' });
+  }
+}
+
 module.exports = {
   getDashboard,
   getMonthlyData,
+  getBusinessMetrics,
 };

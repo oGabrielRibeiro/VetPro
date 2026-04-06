@@ -1,6 +1,10 @@
 const sharp = require('sharp');
 const path = require('path');
 const prisma = require('../lib/prisma');
+const {
+  getScopedUploadDir,
+  ensureDirectory,
+} = require('../utils/uploadSecurity');
 
 // Detecta o tipo de exame a partir do nome/mimetype
 function detectExamType(file) {
@@ -64,10 +68,12 @@ async function attachFile(userId, consultationId, file) {
   // -----------------------------
   if (file.mimetype.startsWith('image/')) {
     const thumbName = `thumb-${file.filename}`;
-    const thumbFullPath = path.join(
-      'uploads/consultations/thumbnails',
-      thumbName,
+    const thumbDir = path.join(
+      getScopedUploadDir('consultations'),
+      'thumbnails',
     );
+    await ensureDirectory(thumbDir);
+    const thumbFullPath = path.join(thumbDir, thumbName);
 
     await sharp(file.path).resize(200).toFile(thumbFullPath);
 

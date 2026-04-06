@@ -1,36 +1,10 @@
+@import "./design/tokens.css";
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  --vp-primary: #0f766e;
-  --vp-primary-strong: #0f5f5b;
-  --vp-accent: #2563eb;
-  --vp-bg: #f4f7fb;
-  --vp-card: #ffffff;
-  --vp-border: #d8e2ee;
-  --vp-text: #122033;
-  --vp-text-secondary: #485a70;
-  --vp-text-muted: #5d6f85;
   --vp-radius: 14px;
-  --vp-radius-sm: 0.65rem;
-  --vp-radius-md: 0.85rem;
-  --vp-radius-lg: 1.25rem;
-  --vp-font-body: "Plus Jakarta Sans", "Avenir Next", "Segoe UI", sans-serif;
-  --vp-font-mono: "IBM Plex Mono", Consolas, "Courier New", monospace;
-  --vp-shadow: 0 14px 30px rgba(13, 38, 59, 0.1);
-  --vp-transition: 160ms ease;
-}
-
-/* Dark mode variables */
-.dark {
-  --vp-bg: #09121e;
-  --vp-card: #111f2d;
-  --vp-border: #213548;
-  --vp-text: #e8f1fa;
-  --vp-text-secondary: #c4d3e7;
-  --vp-text-muted: #a7b8cf;
-  --vp-shadow: 0 14px 30px rgba(0, 0, 0, 0.42);
 }
 
 body {
@@ -39,11 +13,21 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background:
-    radial-gradient(circle at 12% 8%, rgba(15, 118, 110, 0.18), transparent 34%),
-    radial-gradient(circle at 82% 12%, rgba(37, 99, 235, 0.16), transparent 30%),
+    radial-gradient(
+      circle at 12% 8%,
+      rgba(15, 118, 110, 0.18),
+      transparent 34%
+    ),
+    radial-gradient(
+      circle at 82% 12%,
+      rgba(37, 99, 235, 0.16),
+      transparent 30%
+    ),
     var(--vp-bg);
   color: var(--vp-text);
-  transition: background-color 0.3s ease, color 0.3s ease;
+  transition:
+    background-color 0.3s ease,
+    color 0.3s ease;
 }
 
 code {
@@ -61,7 +45,11 @@ code {
 .dark .app-shell-bg {
   background:
     radial-gradient(circle at 8% 4%, rgba(16, 185, 129, 0.15), transparent 23%),
-    radial-gradient(circle at 96% 3%, rgba(56, 189, 248, 0.14), transparent 27%),
+    radial-gradient(
+      circle at 96% 3%,
+      rgba(56, 189, 248, 0.14),
+      transparent 27%
+    ),
     linear-gradient(180deg, rgba(9, 18, 30, 0.55), transparent 25%),
     var(--vp-bg);
 }
@@ -71,7 +59,10 @@ code {
   background: color-mix(in srgb, var(--vp-card) 84%, #f8fcff 16%);
   backdrop-filter: blur(12px);
   box-shadow: var(--vp-shadow);
-  transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+  transition:
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    transform 180ms ease;
 }
 
 .dark .shell-surface {
@@ -89,7 +80,10 @@ code {
 }
 
 .interactive-card {
-  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease,
+    border-color 180ms ease;
 }
 
 .interactive-card:hover {
@@ -143,8 +137,11 @@ code {
   border-radius: var(--vp-radius-sm);
   padding: 0.6rem 0.75rem;
   font-size: 0.9rem;
-  transition: border-color var(--vp-transition), box-shadow var(--vp-transition),
-    background-color var(--vp-transition), color var(--vp-transition);
+  transition:
+    border-color var(--vp-transition),
+    box-shadow var(--vp-transition),
+    background-color var(--vp-transition),
+    color var(--vp-transition);
 }
 
 .anesthesia-grid-input {
@@ -275,7 +272,9 @@ textarea:focus-visible {
 }
 
 button {
-  transition: transform var(--vp-transition), box-shadow var(--vp-transition),
+  transition:
+    transform var(--vp-transition),
+    box-shadow var(--vp-transition),
     opacity var(--vp-transition);
 }
 
@@ -294,8 +293,12 @@ button:active {
   font-size: 0.9rem;
   font-weight: 700;
   line-height: 1.1;
-  transition: background-color var(--vp-transition), border-color var(--vp-transition),
-    color var(--vp-transition), box-shadow var(--vp-transition), transform var(--vp-transition),
+  transition:
+    background-color var(--vp-transition),
+    border-color var(--vp-transition),
+    color var(--vp-transition),
+    box-shadow var(--vp-transition),
+    transform var(--vp-transition),
     opacity var(--vp-transition);
 }
 
@@ -312,7 +315,9 @@ button:active {
 }
 
 .btn.is-active {
-  box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.18), 0 10px 18px rgba(13, 38, 59, 0.18);
+  box-shadow:
+    0 0 0 2px rgba(14, 165, 233, 0.18),
+    0 10px 18px rgba(13, 38, 59, 0.18);
 }
 
 .btn-md {
@@ -544,8 +549,11 @@ input,
 select,
 textarea {
   border-radius: 10px;
-  transition: border-color var(--vp-transition), box-shadow var(--vp-transition),
-    background-color var(--vp-transition), color var(--vp-transition);
+  transition:
+    border-color var(--vp-transition),
+    box-shadow var(--vp-transition),
+    background-color var(--vp-transition),
+    color var(--vp-transition);
   background-color: var(--vp-card);
   border-color: var(--vp-border);
   color: var(--vp-text);
@@ -647,12 +655,12 @@ textarea:focus {
   body * {
     visibility: hidden;
   }
-  
+
   #print-content,
   #print-content * {
     visibility: visible;
   }
-  
+
   #print-content {
     position: absolute;
     left: 0;
@@ -661,12 +669,12 @@ textarea:focus {
     height: auto;
     page-break-after: always;
   }
-  
+
   @page {
     size: A4;
     margin: 1cm;
   }
-  
+
   .no-print {
     display: none !important;
   }
@@ -1025,8 +1033,13 @@ textarea:focus {
 
 /* Animação subtle para destaque */
 @keyframes highlight-pulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
-  50% { box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(16, 185, 129, 0);
+  }
 }
 
 .highlight-animation {
@@ -1087,4 +1100,15 @@ textarea:focus {
 
 .dark .section-icon-orange {
   background: linear-gradient(135deg, #fb923c, #f97316);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

@@ -7,6 +7,8 @@ import GlobalStatusBar from "./components/GlobalStatusBar";
 import AppIcon from "./components/AppIcon";
 import SpeciesIcon from "./components/SpeciesIcon";
 import PatientForm from "./components/PatientForm";
+import ForceUpdateBanner from "./components/ForceUpdateBanner";
+import WelcomeTour from "./components/WelcomeTour";
 import { ToastProvider } from "./components/Toast";
 import api from "./services/api";
 import { addToQueue } from "./services/offlineQueue";
@@ -19,6 +21,7 @@ import {
   resolveConsultationContext,
 } from "./utils/consultationContext";
 import useDarkMode from "./hooks/useDarkMode";
+import { queryClient, queryKeys } from "./utils/queryClient";
 
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Patients = lazy(() => import("./pages/Patients"));
@@ -35,6 +38,7 @@ const ConsultationPreview = lazy(() =>
   import("./components/ConsultationPreview"),
 );
 const About = lazy(() => import("./pages/About.jsx"));
+const SystemStatus = lazy(() => import("./pages/SystemStatus.jsx"));
 
 const IS_DEV = Boolean(import.meta.env.DEV);
 
@@ -45,6 +49,7 @@ const MOBILE_NAV_ITEMS = [
   { id: "consultations", icon: "consultations", label: "Pront." },
   { id: "reports", icon: "reports", label: "Relat." },
   ...(IS_DEV ? [{ id: "ui-playground", icon: "reports", label: "Lab" }] : []),
+  { id: "system-status", icon: "info", label: "Status" },
   { id: "profile", icon: "profile", label: "Perfil" },
   { id: "logout", icon: "logout", label: "Sair" },
 ];
@@ -77,10 +82,25 @@ const MainApp = () => {
   );
   const [dataError, setDataError] = useState("");
   const [actionFeedback, setActionFeedback] = useState(null);
+  const [showWelcomeTour, setShowWelcomeTour] = useState(() => {
+    try {
+      return localStorage.getItem("vetpro_welcome_tour_done") !== "true";
+    } catch {
+      return false;
+    }
+  });
   const [systemStatus, setSystemStatus] = useState({
     status: "idle",
     message: "",
   });
+  const [lastSyncAt, setLastSyncAt] = useState(() => {
+    try {
+      return localStorage.getItem("vetpro_last_sync_at") || "";
+    } catch {
+      return "";
+    }
+  });
+  const [swUpdateRegistration, setSwUpdateRegistration] = useState(null);
   const [queueSize, setQueueSize] = useState(() => {
     try {
       return getQueue().length;
@@ -160,10 +180,19 @@ const MainApp = () => {
     if (!isAuthenticated) return;
 
     try {
-      const response = await api.get("/patients");
-      const payload = response.data.data || response.data || [];
+      const payload = await queryClient.fetchQuery({
+        queryKey: queryKeys.patients,
+        queryFn: async () => {
+          const response = await api.get("/patients");
+          return response.data.data || response.data || [];
+        },
+        staleTime: 5 * 60 * 1000,
+      });
       setPatients(payload.map(normalizePatient));
       setDataError("");
+      const now = new Date().toISOString();
+      localStorage.setItem("vetpro_last_sync_at", now);
+      setLastSyncAt(now);
     } catch (err) {
       console.error("Erro ao buscar pacientes:", err);
       setDataError(
@@ -176,10 +205,19 @@ const MainApp = () => {
     if (!isAuthenticated) return;
 
     try {
-      const response = await api.get("/consultations");
-      const payload = response.data.data || response.data || [];
+      const payload = await queryClient.fetchQuery({
+        queryKey: queryKeys.consultations,
+        queryFn: async () => {
+          const response = await api.get("/consultations");
+          return response.data.data || response.data || [];
+        },
+        staleTime: 3 * 60 * 1000,
+      });
       setConsultations(payload.map(normalizeConsultation));
       setDataError("");
+      const now = new Date().toISOString();
+      localStorage.setItem("vetpro_last_sync_at", now);
+      setLastSyncAt(now);
     } catch (err) {
       console.error("Erro ao buscar consultas:", err);
       setDataError(
@@ -192,10 +230,19 @@ const MainApp = () => {
     if (!isAuthenticated) return;
 
     try {
-      const response = await api.get("/appointments");
-      const payload = response.data?.data || response.data || [];
+      const payload = await queryClient.fetchQuery({
+        queryKey: queryKeys.appointments,
+        queryFn: async () => {
+          const response = await api.get("/appointments");
+          return response.data?.data || response.data || [];
+        },
+        staleTime: 2 * 60 * 1000,
+      });
       setAppointments(Array.isArray(payload) ? payload : []);
       setDataError("");
+      const now = new Date().toISOString();
+      localStorage.setItem("vetpro_last_sync_at", now);
+      setLastSyncAt(now);
     } catch (err) {
       console.error("Erro ao buscar agendamentos:", err);
       setDataError(
@@ -229,6 +276,16 @@ const MainApp = () => {
   }, [fetchConsultations]);
 
   useEffect(() => {
+    const onSwUpdate = (event) => {
+      setSwUpdateRegistration(event?.detail?.registration || null);
+      updateSystemStatus("queued", "Nova versao disponivel para atualizacao.");
+    };
+    window.addEventListener("vetpro:sw-update-available", onSwUpdate);
+    return () =>
+      window.removeEventListener("vetpro:sw-update-available", onSwUpdate);
+  }, [updateSystemStatus]);
+
+  useEffect(() => {
     const syncData = async () => {
       if (!navigator.onLine) return;
 
@@ -245,6 +302,7 @@ const MainApp = () => {
         if (item.type === "CREATE_CONSULTATION") {
           try {
             await api.post("/consultations", item.data);
+            queryClient.invalidateQueries({ queryKey: queryKeys.consultations });
           } catch (error) {
             console.error("Falha ao sincronizar consulta offline:", error);
             updateSystemStatus(
@@ -258,6 +316,9 @@ const MainApp = () => {
 
       clearQueue();
       setQueueSize(0);
+      const now = new Date().toISOString();
+      localStorage.setItem("vetpro_last_sync_at", now);
+      setLastSyncAt(now);
       updateSystemStatus("success", "Dados offline sincronizados com sucesso.");
       showActionSuccess("Dados offline sincronizados com sucesso.");
       await fetchConsultations();
@@ -388,6 +449,7 @@ const MainApp = () => {
     try {
       updateSystemStatus("syncing", "Salvando consulta...");
       const response = await api.post("/consultations", payload);
+      queryClient.invalidateQueries({ queryKey: queryKeys.consultations });
       const savedConsultation = normalizeConsultation(response.data);
 
       if (returnPlan?.recommended) {
@@ -405,6 +467,7 @@ const MainApp = () => {
           status: hasDate ? "agendado" : "possivel-retorno",
           linkedConsultationId: savedConsultation.id,
         });
+        queryClient.invalidateQueries({ queryKey: queryKeys.appointments });
       }
 
       await fetchConsultations();
@@ -425,6 +488,7 @@ const MainApp = () => {
   const handleEditPatient = async (id, updatedData) => {
     try {
       await api.put(`/patients/${id}`, updatedData);
+      queryClient.invalidateQueries({ queryKey: queryKeys.patients });
       const saved = normalizePatient({ ...updatedData, id });
       setPatients((prev) => prev.map((p) => (p.id === id ? saved : p)));
 
@@ -442,6 +506,7 @@ const MainApp = () => {
   const handleAddPatient = async (patientData) => {
     try {
       const response = await api.post("/patients", patientData);
+      queryClient.invalidateQueries({ queryKey: queryKeys.patients });
       const createdPatient = normalizePatient(response.data.data || response.data);
       setPatients((prev) => [...prev, createdPatient]);
       setCurrentView("patients");
@@ -463,6 +528,7 @@ const MainApp = () => {
       } else {
         await api.post("/appointments", appointmentData);
       }
+      queryClient.invalidateQueries({ queryKey: queryKeys.appointments });
       await fetchAppointments();
       updateSystemStatus("success", "Agendamento salvo com sucesso.");
       setCurrentView("appointments");
@@ -481,6 +547,7 @@ const MainApp = () => {
     try {
       updateSystemStatus("syncing", "Removendo agendamento...");
       await api.delete(`/appointments/${id}`);
+      queryClient.invalidateQueries({ queryKey: queryKeys.appointments });
       await fetchAppointments();
       updateSystemStatus("success", "Agendamento removido.");
       return true;
@@ -496,6 +563,7 @@ const MainApp = () => {
 
   const handleDeleteAccount = async () => {
     await api.delete("/auth/account");
+    queryClient.clear();
     try {
       localStorage.removeItem("vetpro_patients");
       localStorage.removeItem("vetpro_consultations");
@@ -633,6 +701,8 @@ const MainApp = () => {
         return "Sobre o VetPro";
       case "ui-playground":
         return "Laboratorio UI";
+      case "system-status":
+        return "Status do Sistema";
       default:
         return "VetPro";
     }
@@ -659,6 +729,8 @@ const MainApp = () => {
         return "Visao geral da plataforma e recursos";
       case "ui-playground":
         return "Area interna para validar componentes e padroes visuais";
+      case "system-status":
+        return "Saude da plataforma e disponibilidade de servicos";
       default:
         return "Central veterinaria";
     }
@@ -1053,6 +1125,8 @@ const MainApp = () => {
             }}
           />
         );
+      case "system-status":
+        return <SystemStatus compact />;
 
       case "about":
         return <About />;
@@ -1303,6 +1377,15 @@ const MainApp = () => {
   }
 
   if (!user) {
+    if (typeof window !== "undefined" && window.location.pathname === "/status") {
+      return (
+        <div className="app-shell-bg min-h-screen p-4 sm:p-8">
+          <Suspense fallback={lazyFallback}>
+            <SystemStatus />
+          </Suspense>
+        </div>
+      );
+    }
     return <Login />;
   }
 
@@ -1372,6 +1455,10 @@ const MainApp = () => {
         }`}
       >
         <div className="mx-auto w-full max-w-[1280px] subtle-enter">
+          <ForceUpdateBanner
+            registration={swUpdateRegistration}
+            onDismiss={() => setSwUpdateRegistration(null)}
+          />
           {!isMobile && (
             <div className="sticky top-3 z-30 mb-4 shell-surface rounded-2xl border border-gray-200/80 dark:border-dark-700/70 px-4 py-3 flex items-center justify-between gap-3">
               <div className="leading-tight">
@@ -1435,6 +1522,7 @@ const MainApp = () => {
           <GlobalStatusBar
             status={systemStatus.status}
             message={systemStatus.message}
+            lastSyncAt={lastSyncAt}
           />
           {actionFeedback?.message && (
             <FeedbackBanner
@@ -1503,12 +1591,24 @@ const MainApp = () => {
         </div>
       )}
 
+      <WelcomeTour
+        visible={showWelcomeTour}
+        onClose={() => {
+          setShowWelcomeTour(false);
+          localStorage.setItem("vetpro_welcome_tour_done", "true");
+        }}
+      />
+
       {/* Mobile Bottom Navigation */}
       {isMobile && (
         <nav className="fixed bottom-0 left-0 right-0 z-40 px-3 pb-[max(0.45rem,env(safe-area-inset-bottom))]">
           <div
             className={`shell-surface rounded-2xl border border-gray-200/80 dark:border-dark-700/70 grid ${
-              MOBILE_NAV_ITEMS.length > 7 ? "grid-cols-8" : "grid-cols-7"
+              MOBILE_NAV_ITEMS.length > 8
+                ? "grid-cols-9"
+                : MOBILE_NAV_ITEMS.length > 7
+                  ? "grid-cols-8"
+                  : "grid-cols-7"
             }`}
           >
             {MOBILE_NAV_ITEMS.map((item) => (
