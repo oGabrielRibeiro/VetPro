@@ -1,4 +1,5 @@
 const prisma = require('../lib/prisma');
+const EncryptedFieldService = require('./encryptedFieldService');
 
 class ValidationError extends Error {
   constructor(message) {
@@ -258,9 +259,12 @@ async function createPatient(userId, clinicId, data) {
   validatePatientInput(data, { partial: false });
   const normalized = normalizePatientInput(data);
 
+  // Criptografar campos sensíveis
+  const encryptedData = EncryptedFieldService.encryptFields('Patient', normalized);
+
   return prisma.patient.create({
     data: {
-      ...normalized,
+      ...encryptedData,
       clinicId,
       userId,
     },
@@ -292,8 +296,13 @@ async function getPatients(userId, query = {}) {
     prisma.patient.count({ where }),
   ]);
 
+  // Descriptografar campos sensíveis para cada paciente
+  const decryptedPatients = patients.map(patient =>
+    EncryptedFieldService.decryptFields('Patient', patient)
+  );
+
   return {
-    data: patients.map(serializePatient),
+    data: decryptedPatients.map(serializePatient),
     meta: {
       total,
       page,
@@ -311,7 +320,12 @@ async function getPatientById(userId, patientId) {
     },
   });
 
-  return patient ? serializePatient(patient) : null;
+  if (!patient) return null;
+
+  // Descriptografar campos sensíveis
+  const decryptedPatient = EncryptedFieldService.decryptFields('Patient', patient);
+
+  return serializePatient(decryptedPatient);
 }
 
 async function updatePatient(userId, patientId, data, options = {}) {
@@ -323,12 +337,15 @@ async function updatePatient(userId, patientId, data, options = {}) {
     throw new ValidationError('Nenhum campo valido para atualizar.');
   }
 
+  // Criptografar campos sensíveis
+  const encryptedData = EncryptedFieldService.encryptFields('Patient', normalized);
+
   return prisma.patient.updateMany({
     where: {
       id: patientId,
       userId,
     },
-    data: normalized,
+    data: encryptedData,
   });
 }
 

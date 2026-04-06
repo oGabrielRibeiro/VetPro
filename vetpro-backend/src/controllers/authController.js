@@ -15,6 +15,7 @@ const {
   getLockoutMeta,
 } = require('../services/authSecurityService');
 const { recordSecurityEvent } = require('../services/securityEventService');
+const crypto = require('crypto');
 
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '15m';
 
@@ -271,6 +272,25 @@ async function login(req, res) {
         attempts: state?.list?.length || null,
       });
       return res.status(401).json({ error: 'E-mail ou senha incorretos.' });
+    }
+
+    // Verificar se Two-Factor Authentication está habilitado
+    if (user.twoFactorEnabled) {
+      // Gerar token temporário para verificação 2FA
+      const tempToken = crypto.randomBytes(32).toString('hex');
+
+      // Guardar token em banco por 5 minutos
+      await prisma.$executeRaw`
+        INSERT INTO "TempToken" (token, userId, purpose, expiresAt)
+        VALUES (${tempToken}, ${user.id}, '2FA_LOGIN', ${new Date(Date.now() + 5 * 60 * 1000)})
+      `;
+
+      return res.json({
+        message: 'Two-factor authentication required',
+        requires2FA: true,
+        tempToken,
+        user: { id: user.id, email: user.email, name: user.name }
+      });
     }
 
     const token = signToken(user);

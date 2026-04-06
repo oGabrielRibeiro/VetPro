@@ -3,6 +3,7 @@ import FeedbackBanner from "../components/FeedbackBanner";
 import AppIcon from "../components/AppIcon";
 import ConfirmDialog from "../components/ConfirmDialog";
 import { VpButton } from "../components/ui";
+import TwoFactorSetup from "../components/TwoFactorSetup";
 
 const emptyForm = {
   name: "",
@@ -79,6 +80,8 @@ const Profile = ({ profile, onSave, onCancel, onDeleteAccount, onBack }) => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [clinicGeoLoading, setClinicGeoLoading] = useState(false);
   const [clinicGeoError, setClinicGeoError] = useState("");
+  const [showTwoFactorModal, setShowTwoFactorModal] = useState(false);
+  const [twoFAEnabled, setTwoFAEnabled] = useState(profile?.twoFactorEnabled || false);
 
   useEffect(() => {
     setForm(buildInitialForm(profile));
@@ -656,6 +659,7 @@ const Profile = ({ profile, onSave, onCancel, onDeleteAccount, onBack }) => {
               )}
             </div>
           </div>
+      <TwoFactorSettings twoFAEnabled={form.twoFactorEnabled} />
         </div>
 
         {/* Danger Zone */}
