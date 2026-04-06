@@ -659,7 +659,28 @@ const Profile = ({ profile, onSave, onCancel, onDeleteAccount, onBack }) => {
               )}
             </div>
           </div>
-      <TwoFactorSettings twoFAEnabled={form.twoFactorEnabled} />
+      <div className="shell-surface rounded-3xl border border-gray-200/80 dark:border-dark-700/70 overflow-hidden">
+        <div className="bg-white/65 dark:bg-dark-900/45 px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200 dark:border-dark-700">
+          <h2 className="vp-h2 text-gray-800 dark:text-white">Seguranca</h2>
+        </div>
+        <div className="p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div>
+            <p className="vp-h3 text-gray-800 dark:text-white">
+              Autenticacao de dois fatores (2FA)
+            </p>
+            <p className="vp-helper text-gray-600 dark:text-gray-400">
+              Status: {twoFAEnabled ? "Ativado" : "Desativado"}
+            </p>
+          </div>
+          <VpButton
+            type="button"
+            onClick={() => setShowTwoFactorModal(true)}
+            variant={twoFAEnabled ? "neutral" : "success"}
+          >
+            {twoFAEnabled ? "Gerenciar 2FA" : "Ativar 2FA"}
+          </VpButton>
+        </div>
+      </div>
         </div>
 
         {/* Danger Zone */}
@@ -706,9 +727,16 @@ const Profile = ({ profile, onSave, onCancel, onDeleteAccount, onBack }) => {
         onCancel={() => setShowDeleteModal(false)}
         onConfirm={handleDeleteAccount}
       />
+
+      <TwoFactorSetup
+        isOpen={showTwoFactorModal}
+        onClose={() => setShowTwoFactorModal(false)}
+        onVerify={() => setTwoFAEnabled(true)}
+        onDisable={() => setTwoFAEnabled(false)}
+        twoFAEnabled={twoFAEnabled}
+      />
     </div>
   );
 };
 
 export default Profile;
-
