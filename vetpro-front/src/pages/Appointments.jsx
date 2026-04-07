@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import AppIcon from "../components/AppIcon";
 import SpeciesIcon from "../components/SpeciesIcon";
 import useDebouncedValue from "../hooks/useDebouncedValue";
@@ -33,6 +33,25 @@ const Appointments = ({
       }),
     [appointments, debouncedDate, debouncedPatient],
   );
+  const appointmentsProgressiveEnabled = filteredAppointments.length > 24;
+  const [visibleAppointmentsCount, setVisibleAppointmentsCount] = useState(18);
+  const totalAppointmentsCount = filteredAppointments.length;
+  const visibleAppointments = appointmentsProgressiveEnabled
+    ? filteredAppointments.slice(0, visibleAppointmentsCount)
+    : filteredAppointments;
+  const hasMoreAppointments =
+    appointmentsProgressiveEnabled &&
+    visibleAppointmentsCount < totalAppointmentsCount;
+
+  useEffect(() => {
+    setVisibleAppointmentsCount(18);
+  }, [filteredAppointments]);
+
+  const loadMoreAppointments = () => {
+    setVisibleAppointmentsCount((current) =>
+      Math.min(current + 18, totalAppointmentsCount),
+    );
+  };
 
   const getPatientById = (id) =>
     patients.find((p) => String(p.id) === String(id));
@@ -187,7 +206,10 @@ const Appointments = ({
 
       {!isLoading && filteredAppointments.length > 0 ? (
         <section className="space-y-3 subtle-fade">
-          {filteredAppointments.map((appointment) => {
+          <p className="vp-helper text-gray-500 dark:text-gray-400">
+            Exibindo {visibleAppointmentsCount} de {totalAppointmentsCount} agendamentos
+          </p>
+          {visibleAppointments.map((appointment) => {
             const patient = getPatientById(appointment.patientId);
             if (!patient) return null;
 
@@ -288,6 +310,14 @@ const Appointments = ({
           </button>
         </section>
       ) : null}
+
+      {!isLoading && hasMoreAppointments && (
+        <div className="flex justify-center pt-1 subtle-fade">
+          <button onClick={loadMoreAppointments} className="btn btn-neutral btn-md">
+            Carregar mais agendamentos
+          </button>
+        </div>
+      )}
     </div>
   );
 };

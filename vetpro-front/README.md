@@ -26,7 +26,6 @@ Sistema completo para gestão de prontuários veterinários com suporte a múlti
 - Testes: `Vitest` (ambiente `jsdom`)
 
 Comandos:
-
 ```bash
 npm run dev
 npm run build
@@ -82,3 +81,121 @@ Renomeie os arquivos gerados para:
 
 - Backend: `npm run dev` em `vetpro-backend`
 - Frontend: `npm run dev` em `vetpro-front`
+
+## 📦 Scripts Completos
+
+| Script | Descrição |
+|--------|-----------|
+| `npm run dev` | Servidor de desenvolvimento (http://localhost:3000) |
+| `npm run build` | Build de produção |
+| `npm run preview` | Preview do build local |
+| `npm test` | Testes unitários (Vitest) |
+| `npm run test:e2e` | Testes E2E (Playwright) |
+| `npm run lint` | ESLint - verificar erros |
+| `npm run lint:fix` | ESLint - corrigir automaticamente |
+| `npm run format` | Prettier - formatar código |
+| `npm run format:check` | Prettier - verificar formatação |
+| `npm run storybook` | Storybook docs |
+
+## 🧪 Testes e Qualidade
+
+### Executar testes unitários
+```bash
+npm test
+```
+
+### Executar testes E2E
+```bash
+npm run test:e2e
+```
+
+## 🏗️ Estrutura do Projeto
+
+```
+vetpro-front/
+├── src/
+│   ├── App.jsx              # Raíz da app
+│   ├── pages/               # Páginas principais
+│   │   ├── Dashboard.jsx
+│   │   ├── Appointments.jsx
+│   │   ├── Consultations.jsx
+│   │   └── Patients.jsx
+│   ├── components/          # Componentes reutilizáveis
+│   │   ├── ConsultationForm.jsx
+│   │   ├── PatientForm.jsx
+│   │   └── ...
+│   ├── services/            # API clients
+│   ├── utils/               # Utilitários
+│   └── hooks/               # Hooks customizados
+└── public/                  # Assets estáticos
+```
+
+## 📱 Design System
+
+### Tokens
+Gerencia tokens de design:
+```bash
+npm run tokens:build
+```
+
+### Componentes Principais
+- Dialog (Modal)
+- DropdownMenu
+- Select
+- Toast (Notificações)
+- Tooltip
+- Popover
+
+Baseado em **Radix UI** para acessibilidade WCAG.
+
+## 🔧 Boas Práticas
+
+### Type Checking (TypeScript opcional)
+A configuração do Vite suporta TypeScript. Para ativar, renomeie arquivos `.jsx` para `.tsx`.
+
+### Componentes Documentados
+- PropTypes em andamento
+- JSDoc em funções críticas
+- Storybook para componentes visuais
+
+## 🐛 Solução de Problemas
+
+### Porta 3000 em uso
+```bash
+lsof -ti:3000 | xargs kill -9
+```
+
+### Limpar cache completo
+```bash
+rm -rf node_modules package-lock.json
+npm install
+```
+
+### Verificar Node versão
+```bash
+node -v  # deve ser >= 20 < 21
+```
+
+## 📦 Build de Produção
+
+### 1. Configurar variáveis
+```bash
+echo "VITE_API_BASE_URL=http://localhost:5000/api" > .env.production.local
+```
+
+### 2. Executar build
+```bash
+npm run build
+```
+
+## 📱 Mobile HTTPS
+
+Para capturar áudio no Chrome mobile, configure HTTPS.
+
+## 📈 Métricas
+
+- **Build otimizado**: em progresso
+- **Cobertura de testes**: 0% → 80% (em progresso)
+- **ESLint**: ✅ Configurado
+- **Prettier**: ✅ Configurado
+- **Peso dos components**: Otimizado

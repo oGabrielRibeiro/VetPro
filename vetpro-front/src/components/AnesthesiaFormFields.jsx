@@ -1,4 +1,5 @@
 import React from "react";
+import PropTypes from "prop-types";
 import AppIcon from "./AppIcon";
 
 const ASA_OPTIONS = ["I", "II", "III", "IV", "V"];
@@ -812,6 +813,34 @@ const AnesthesiaFormFields = ({ value, onChange, onRequestSignature }) => {
       </div>
     </div>
   );
+};
+
+AnesthesiaFormFields.propTypes = {
+  value: PropTypes.shape({
+    asa: PropTypes.string,
+    preMeds: PropTypes.array,
+    anestheticPlan: PropTypes.string,
+    locoRegional: PropTypes.string,
+    locoRegionalDetails: PropTypes.string,
+    intubation: PropTypes.string,
+    circuit: PropTypes.string,
+    catheter: PropTypes.string,
+    activated: PropTypes.string,
+    maintenanceNotes: PropTypes.string,
+    vitalsGrid: PropTypes.array,
+    extubationTime: PropTypes.string,
+    recoveryQuality: PropTypes.string,
+    complications: PropTypes.string,
+    glucoseLevel: PropTypes.string,
+    usedFluids: PropTypes.string,
+    positioning: PropTypes.string
+  }),
+  onChange: PropTypes.func.isRequired,
+  onRequestSignature: PropTypes.func.isRequired
+};
+
+AnesthesiaFormFields.defaultProps = {
+  value: null
 };
 
 export default AnesthesiaFormFields;

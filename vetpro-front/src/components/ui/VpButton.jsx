@@ -1,4 +1,5 @@
 import React from "react";
+import PropTypes from "prop-types";
 
 const VARIANT_CLASS = {
   primary: "btn btn-primary",
@@ -52,6 +53,34 @@ const VpButton = ({
       {!loading && iconRight}
     </Component>
   );
+};
+
+VpButton.propTypes = {
+  as: PropTypes.oneOfType([PropTypes.string, PropTypes.elementType]),
+  variant: PropTypes.oneOf(['primary', 'success', 'neutral', 'info', 'warning', 'danger']),
+  size: PropTypes.oneOf(['sm', 'md', 'lg']),
+  block: PropTypes.bool,
+  loading: PropTypes.bool,
+  active: PropTypes.bool,
+  icon: PropTypes.node,
+  iconRight: PropTypes.node,
+  disabled: PropTypes.bool,
+  className: PropTypes.string,
+  children: PropTypes.node
+};
+
+VpButton.defaultProps = {
+  as: "button",
+  variant: "primary",
+  size: "md",
+  block: false,
+  loading: false,
+  active: false,
+  icon: null,
+  iconRight: null,
+  disabled: false,
+  className: "",
+  children: null
 };
 
 export default VpButton;

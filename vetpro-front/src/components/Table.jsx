@@ -1,4 +1,5 @@
 import React from 'react';
+import PropTypes from 'prop-types';
 import AppIcon from './AppIcon';
 
 const Table = ({
@@ -136,6 +137,55 @@ export const TableBadge = ({ children, variant = 'default' }) => {
     warning: 'bg-amber-100 text-amber-700',
     error: 'bg-red-100 text-red-700',
     info: 'bg-blue-100 text-blue-700',
+  };
+
+  return (
+    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${variants[variant]}`}>
+      {children}
+    </span>
+  );
+};
+
+Table.propTypes = {
+  columns: PropTypes.arrayOf(PropTypes.shape({
+    key: PropTypes.string.isRequired,
+    label: PropTypes.string.isRequired,
+    render: PropTypes.func
+  })),
+  data: PropTypes.array,
+  caption: PropTypes.string,
+  onRowClick: PropTypes.func,
+  emptyMessage: PropTypes.string,
+  emptyIcon: PropTypes.string,
+  loading: PropTypes.bool,
+  striped: PropTypes.bool,
+  hoverable: PropTypes.bool,
+  responsive: PropTypes.bool,
+  className: PropTypes.string
+};
+
+Table.defaultProps = {
+  columns: [],
+  data: [],
+  caption: '',
+  onRowClick: undefined,
+  emptyMessage: 'Nenhum registro encontrado',
+  emptyIcon: 'search',
+  loading: false,
+  striped: true,
+  hoverable: true,
+  responsive: true,
+  className: ''
+};
+
+// PropTypes for nested StatusBadge component
+const StatusBadge = ({ variant = "primary", children }) => {
+  const variants = {
+    primary: "bg-blue-50 text-blue-700",
+    success: "bg-green-50 text-green-700",
+    warning: "bg-yellow-50 text-yellow-700",
+    danger: "bg-red-50 text-red-700",
+    info: "bg-blue-50 text-blue-700",
   };
 
   return (

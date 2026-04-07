@@ -1,4 +1,5 @@
 import React from "react";
+import PropTypes from "prop-types";
 
 const VpCard = ({
   title,
@@ -32,6 +33,24 @@ const VpCard = ({
       <div className={`p-4 sm:p-5 ${bodyClassName}`}>{children}</div>
     </section>
   );
+};
+
+VpCard.propTypes = {
+  title: PropTypes.string,
+  subtitle: PropTypes.string,
+  children: PropTypes.node,
+  className: PropTypes.string,
+  bodyClassName: PropTypes.string,
+  headerAction: PropTypes.node
+};
+
+VpCard.defaultProps = {
+  title: null,
+  subtitle: null,
+  children: null,
+  className: "",
+  bodyClassName: "",
+  headerAction: null
 };
 
 export default VpCard;

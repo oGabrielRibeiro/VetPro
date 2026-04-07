@@ -1,4 +1,5 @@
 import React, { forwardRef } from "react";
+import PropTypes from "prop-types";
 
 const Input = forwardRef(({
   id,
@@ -53,5 +54,33 @@ const Input = forwardRef(({
 });
 
 Input.displayName = "Input";
+
+Input.propTypes = {
+  id: PropTypes.string,
+  label: PropTypes.string,
+  error: PropTypes.string,
+  helperText: PropTypes.string,
+  type: PropTypes.string,
+  className: PropTypes.string,
+  inputClassName: PropTypes.string,
+  labelClassName: PropTypes.string,
+  containerClassName: PropTypes.string,
+  required: PropTypes.bool,
+  disabled: PropTypes.bool,
+  readOnly: PropTypes.bool,
+  placeholder: PropTypes.string
+};
+
+Input.defaultProps = {
+  type: "text",
+  className: "",
+  inputClassName: "",
+  labelClassName: "",
+  containerClassName: "",
+  required: false,
+  disabled: false,
+  readOnly: false,
+  placeholder: undefined
+};
 
 export default Input;

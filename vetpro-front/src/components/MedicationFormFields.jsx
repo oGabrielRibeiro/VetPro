@@ -1,4 +1,5 @@
 import React from "react";
+import PropTypes from "prop-types";
 import AppIcon from "./AppIcon";
 
 const buildMedicationItem = () => ({
@@ -120,6 +121,25 @@ const MedicationFormFields = ({ value, onChange }) => {
       </div>
     </div>
   );
+};
+
+MedicationFormFields.propTypes = {
+  value: PropTypes.shape({
+    diagnosis: PropTypes.string,
+    items: PropTypes.arrayOf(PropTypes.shape({
+      name: PropTypes.string,
+      dose: PropTypes.string,
+      route: PropTypes.string,
+      frequency: PropTypes.string,
+      duration: PropTypes.string
+    })),
+    observations: PropTypes.string
+  }),
+  onChange: PropTypes.func.isRequired
+};
+
+MedicationFormFields.defaultProps = {
+  value: null
 };
 
 export default MedicationFormFields;

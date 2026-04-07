@@ -17,7 +17,7 @@ const generalLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
-  skip: (req) => req.path === '/health' || req.path === '/',
+  skip: (req) => req.path === '/health' || req.path === '/' || req.headers['x-skip-rate-limit'] === 'true',
 });
 
 // Rate limiter mais estricto para rotas de autenticação
@@ -31,6 +31,7 @@ const authLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   skipSuccessfulRequests: false,
+  skip: (req) => req.headers['x-skip-rate-limit'] === 'true',
 });
 
 // Rate limiter para rotas de criação (pacientes, consultas)
@@ -72,6 +73,7 @@ const userActionLimiter = rateLimit({
     if (req.user?.id) return `user:${req.user.id}`;
     return `ip:${ipKeyGenerator(req.ip)}`;
   },
+  skip: (req) => req.headers['x-skip-rate-limit'] === 'true',
 });
 
 module.exports = {

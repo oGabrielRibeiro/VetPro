@@ -1,4 +1,5 @@
 import React, { forwardRef, useId } from "react";
+import PropTypes from "prop-types";
 import * as RadixSelect from "@radix-ui/react-select";
 
 function ChevronDown() {
@@ -131,5 +132,40 @@ const Select = forwardRef(
 );
 
 Select.displayName = "Select";
+
+Select.propTypes = {
+  id: PropTypes.string,
+  name: PropTypes.string,
+  label: PropTypes.string,
+  error: PropTypes.string,
+  helperText: PropTypes.string,
+  options: PropTypes.arrayOf(PropTypes.shape({
+    value: PropTypes.string.isRequired,
+    label: PropTypes.string.isRequired,
+    disabled: PropTypes.bool
+  })),
+  placeholder: PropTypes.string,
+  selectClassName: PropTypes.string,
+  labelClassName: PropTypes.string,
+  containerClassName: PropTypes.string,
+  required: PropTypes.bool,
+  disabled: PropTypes.bool,
+  value: PropTypes.string,
+  defaultValue: PropTypes.string,
+  onChange: PropTypes.func
+};
+
+Select.defaultProps = {
+  options: [],
+  placeholder: "Selecione uma opção",
+  selectClassName: "",
+  labelClassName: "",
+  containerClassName: "",
+  required: false,
+  disabled: false,
+  value: undefined,
+  defaultValue: undefined,
+  onChange: undefined
+};
 
 export default Select;

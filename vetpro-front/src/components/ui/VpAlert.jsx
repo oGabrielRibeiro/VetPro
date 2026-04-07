@@ -1,4 +1,5 @@
 import React from "react";
+import PropTypes from "prop-types";
 import VpButton from "./VpButton";
 
 const TONE_CLASS = {
@@ -36,6 +37,24 @@ const VpAlert = ({
       </div>
     </div>
   );
+};
+
+VpAlert.propTypes = {
+  tone: PropTypes.oneOf(['info', 'success', 'warning', 'error']),
+  title: PropTypes.string,
+  message: PropTypes.string,
+  actionLabel: PropTypes.string,
+  onAction: PropTypes.func,
+  className: PropTypes.string
+};
+
+VpAlert.defaultProps = {
+  tone: 'info',
+  title: null,
+  message: null,
+  actionLabel: null,
+  onAction: null,
+  className: ''
 };
 
 export default VpAlert;

@@ -1,4 +1,5 @@
 import React, { forwardRef, useId, useState } from "react";
+import PropTypes from "prop-types";
 
 const DatePicker = forwardRef(({
   id,
@@ -269,5 +270,35 @@ const DatePicker = forwardRef(({
 });
 
 DatePicker.displayName = "DatePicker";
+
+DatePicker.propTypes = {
+  id: PropTypes.string,
+  label: PropTypes.string,
+  error: PropTypes.string,
+  helperText: PropTypes.string,
+  value: PropTypes.string,
+  onChange: PropTypes.func.isRequired,
+  minDate: PropTypes.string,
+  maxDate: PropTypes.string,
+  disabled: PropTypes.bool,
+  className: PropTypes.string,
+  inputClassName: PropTypes.string,
+  labelClassName: PropTypes.string,
+  containerClassName: PropTypes.string,
+  required: PropTypes.bool,
+  allowFutureDates: PropTypes.bool,
+  allowPastDates: PropTypes.bool
+};
+
+DatePicker.defaultProps = {
+  disabled: false,
+  className: "",
+  inputClassName: "",
+  labelClassName: "",
+  containerClassName: "",
+  required: false,
+  allowFutureDates: true,
+  allowPastDates: true
+};
 
 export default DatePicker;

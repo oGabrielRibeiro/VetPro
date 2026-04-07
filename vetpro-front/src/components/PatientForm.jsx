@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import PropTypes from "prop-types";
 import { useForm, Controller } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import Input from "./Input";
@@ -460,6 +461,36 @@ const PatientForm = ({ patient, onSubmit, onCancel, isEditing }) => {
       </div>
     </div>
   );
+};
+
+PatientForm.propTypes = {
+  patient: PropTypes.shape({
+    id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    name: PropTypes.string,
+    species: PropTypes.string,
+    subcategory: PropTypes.string,
+    breed: PropTypes.string,
+    sex: PropTypes.string,
+    age: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    birthDate: PropTypes.string,
+    weight: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    color: PropTypes.string,
+    microchip: PropTypes.string,
+    porte: PropTypes.string,
+    ownerName: PropTypes.string,
+    ownerPhone: PropTypes.string,
+    ownerAltPhone: PropTypes.string,
+    ownerEmail: PropTypes.string,
+    ownerAddress: PropTypes.string
+  }),
+  onSubmit: PropTypes.func.isRequired,
+  onCancel: PropTypes.func.isRequired,
+  isEditing: PropTypes.bool
+};
+
+PatientForm.defaultProps = {
+  patient: null,
+  isEditing: false
 };
 
 export default PatientForm;

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import PropTypes from 'prop-types';
 import FeedbackBanner from "./FeedbackBanner";
 import AppIcon from "./AppIcon";
 
@@ -879,6 +880,69 @@ const ConsultationForm = ({
       </div>
     </div>
   );
+};
+
+ConsultationForm.propTypes = {
+  consultation: PropTypes.shape({
+    id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    patientId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    date: PropTypes.string,
+    veterinarianName: PropTypes.string,
+    veterinarianCRMV: PropTypes.string,
+    chiefComplaint: PropTypes.string,
+    anamnesis: PropTypes.string,
+    clinicalAssessment: PropTypes.string,
+    diagnosis: PropTypes.string,
+    treatment: PropTypes.string,
+    observations: PropTypes.string,
+    recordNumber: PropTypes.string,
+    template: PropTypes.string,
+    vaccinationStatus: PropTypes.string,
+    deworming: PropTypes.string,
+    diet: PropTypes.string,
+    housing: PropTypes.string,
+    managementType: PropTypes.string,
+    useType: PropTypes.string,
+    hoofCare: PropTypes.string,
+    productionSystem: PropTypes.string,
+    herdBatch: PropTypes.string,
+    animalIdentification: PropTypes.string,
+    herdHealthStatus: PropTypes.string,
+    birdType: PropTypes.string,
+    files: PropTypes.array
+  }),
+  patients: PropTypes.arrayOf(PropTypes.shape({
+    id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
+    name: PropTypes.string.isRequired,
+    species: PropTypes.string,
+    subcategory: PropTypes.string,
+    breed: PropTypes.string,
+    age: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    ownerName: PropTypes.string,
+    ownerPhone: PropTypes.string,
+    ownerEmail: PropTypes.string
+  })).isRequired,
+  onSubmit: PropTypes.func.isRequired,
+  onCancel: PropTypes.func.isRequired,
+  currentUser: PropTypes.shape({
+    name: PropTypes.string,
+    crmvState: PropTypes.string,
+    crmvNumber: PropTypes.string,
+    clinicName: PropTypes.string,
+    clinicAddress: PropTypes.string,
+    signaturePreview: PropTypes.string
+  }),
+  isPreviewMode: PropTypes.bool.isRequired,
+  setIsPreviewMode: PropTypes.func.isRequired,
+  selectedFiles: PropTypes.array,
+  setSelectedFiles: PropTypes.func
+};
+
+ConsultationForm.defaultProps = {
+  consultation: null,
+  currentUser: null,
+  selectedFiles: [],
+  setSelectedFiles: () => {}
 };
 
 export default ConsultationForm;

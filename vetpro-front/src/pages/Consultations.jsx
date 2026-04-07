@@ -57,6 +57,26 @@ const Consultations = ({
     );
     setFilteredConsultations(filtered);
   }, [consultations, debouncedPatientId, debouncedDateRange]);
+  const consultationsProgressiveEnabled = filteredConsultations.length > 24;
+  const [visibleConsultationsCount, setVisibleConsultationsCount] =
+    useState(20);
+  const totalConsultationsCount = filteredConsultations.length;
+  const visibleConsultations = consultationsProgressiveEnabled
+    ? filteredConsultations.slice(0, visibleConsultationsCount)
+    : filteredConsultations;
+  const hasMoreConsultations =
+    consultationsProgressiveEnabled &&
+    visibleConsultationsCount < totalConsultationsCount;
+
+  useEffect(() => {
+    setVisibleConsultationsCount(20);
+  }, [filteredConsultations]);
+
+  const loadMoreConsultations = () => {
+    setVisibleConsultationsCount((current) =>
+      Math.min(current + 20, totalConsultationsCount),
+    );
+  };
 
   const getPatientById = (id) =>
     patients.find((p) => String(p.id) === String(id));
@@ -304,9 +324,15 @@ const Consultations = ({
         </article>
       </section>
 
+      {!isLoading && filteredConsultations.length > 0 && (
+        <p className="vp-helper text-gray-500 dark:text-gray-400">
+          Exibindo {visibleConsultationsCount} de {totalConsultationsCount} prontuarios
+        </p>
+      )}
+
       {!isLoading && filteredConsultations.length > 0 ? (
         <section className="space-y-3 subtle-fade">
-          {filteredConsultations.map((consultation) => {
+          {visibleConsultations.map((consultation) => {
             const patient = getPatientById(consultation.patientId);
             if (!patient) return null;
 
@@ -428,6 +454,14 @@ const Consultations = ({
           </VpButton>
         </section>
       ) : null}
+
+      {!isLoading && hasMoreConsultations && (
+        <div className="flex justify-center pt-1 subtle-fade">
+          <VpButton onClick={loadMoreConsultations} variant="neutral" size="md">
+            Carregar mais consultas
+          </VpButton>
+        </div>
+      )}
     </div>
   );
 };

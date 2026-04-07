@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import AppIcon from "../components/AppIcon";
 import FeedbackBanner from "../components/FeedbackBanner";
 import SpeciesIcon from "../components/SpeciesIcon";
@@ -29,6 +29,24 @@ const Patients = ({
           patient.subcategory.toLowerCase().includes(term)),
     );
   }, [patients, debouncedQuery]);
+  const patientsProgressiveEnabled = filteredPatients.length > 30;
+  const [visiblePatientsCount, setVisiblePatientsCount] = useState(24);
+  const totalPatientsCount = filteredPatients.length;
+  const visiblePatients = patientsProgressiveEnabled
+    ? filteredPatients.slice(0, visiblePatientsCount)
+    : filteredPatients;
+  const hasMorePatients =
+    patientsProgressiveEnabled && visiblePatientsCount < totalPatientsCount;
+
+  useEffect(() => {
+    setVisiblePatientsCount(24);
+  }, [filteredPatients]);
+
+  const loadMorePatients = () => {
+    setVisiblePatientsCount((current) =>
+      Math.min(current + 24, totalPatientsCount),
+    );
+  };
   const hasError = Boolean(String(errorMessage || "").trim());
 
   return (
@@ -84,6 +102,11 @@ const Patients = ({
         <p className="vp-helper text-gray-500 dark:text-gray-400">
           {filteredPatients.length} resultado(s)
         </p>
+        {!isLoading && filteredPatients.length > 0 && (
+          <p className="vp-helper text-gray-500 dark:text-gray-400">
+            Exibindo {visiblePatientsCount} de {totalPatientsCount}
+          </p>
+        )}
       </div>
 
       {hasError && (
@@ -113,7 +136,7 @@ const Patients = ({
 
       {!isLoading && filteredPatients.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 subtle-fade">
-          {filteredPatients.map((patient) => (
+          {visiblePatients.map((patient) => (
             <div
               key={patient.id}
               className="shell-surface interactive-card rounded-2xl border border-gray-200/80 dark:border-dark-700/70 overflow-hidden"
@@ -192,6 +215,14 @@ const Patients = ({
           </button>
         </div>
       ) : null}
+
+      {!isLoading && hasMorePatients && (
+        <div className="flex justify-center pt-1 subtle-fade">
+          <button onClick={loadMorePatients} className="btn btn-neutral btn-md">
+            Carregar mais pacientes
+          </button>
+        </div>
+      )}
     </div>
   );
 };

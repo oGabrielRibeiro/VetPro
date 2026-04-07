@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import PropTypes from "prop-types";
 import api from "../services/api";
 import VoiceTextarea from "./VoiceTextarea";
 import FeedbackBanner from "./FeedbackBanner";
@@ -3977,6 +3978,43 @@ const QuickConsultation = ({ patient, onSave, onBack, initialData = null }) => {
       />
     </div>
   );
+};
+
+QuickConsultation.propTypes = {
+  patient: PropTypes.shape({
+    id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    name: PropTypes.string,
+    species: PropTypes.string,
+    subcategory: PropTypes.string,
+    breed: PropTypes.string,
+    sex: PropTypes.string,
+    age: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    weight: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    color: PropTypes.string,
+    microchip: PropTypes.string,
+    ownerName: PropTypes.string,
+    ownerPhone: PropTypes.string,
+    ownerEmail: PropTypes.string
+  }),
+  onSave: PropTypes.func.isRequired,
+  onBack: PropTypes.func.isRequired,
+  initialData: PropTypes.shape({
+    id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    date: PropTypes.string,
+    veterinarianName: PropTypes.string,
+    veterinarianCRMV: PropTypes.string,
+    chiefComplaint: PropTypes.string,
+    anamnesis: PropTypes.string,
+    clinicalAssessment: PropTypes.string,
+    diagnosis: PropTypes.string,
+    treatment: PropTypes.string,
+    observations: PropTypes.string
+  })
+};
+
+QuickConsultation.defaultProps = {
+  patient: null,
+  initialData: null
 };
 
 export default QuickConsultation;

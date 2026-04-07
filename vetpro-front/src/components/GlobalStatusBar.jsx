@@ -1,4 +1,5 @@
 import React from "react";
+import PropTypes from "prop-types";
 import { motion, useReducedMotion } from "framer-motion";
 import { feedbackTransition } from "../motion/presets";
 
@@ -51,6 +52,18 @@ const GlobalStatusBar = ({ status = "idle", message = "", lastSyncAt = "" }) => 
       ) : null}
     </motion.div>
   );
+};
+
+GlobalStatusBar.propTypes = {
+  status: PropTypes.oneOf(['offline', 'syncing', 'queued', 'success', 'error', 'idle']),
+  message: PropTypes.string,
+  lastSyncAt: PropTypes.oneOfType([PropTypes.string, PropTypes.instanceOf(Date)])
+};
+
+GlobalStatusBar.defaultProps = {
+  status: 'idle',
+  message: '',
+  lastSyncAt: ''
 };
 
 export default GlobalStatusBar;
