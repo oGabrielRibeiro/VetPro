@@ -6,6 +6,9 @@ export function useDarkMode() {
     if (saved !== null) {
       return saved === "true";
     }
+    if (typeof window.matchMedia !== "function") {
+      return false;
+    }
     return window.matchMedia("(prefers-color-scheme: dark)").matches;
   });
 

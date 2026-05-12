@@ -30,5 +30,17 @@ if (!global.vetproEnvLoaded) {
     )}:${encodeURIComponent(pass)}@${host}:${port}/${db}`;
   }
 
+  if (!process.env.ENCRYPTION_KEY) {
+    process.env.ENCRYPTION_KEY = '0123456789abcdef0123456789abcdef';
+  }
+
+  if (!process.env.JWT_SECRET) {
+    process.env.JWT_SECRET = 'vetpro-test-jwt-secret-0123456789';
+  }
+
+  if (!process.env.JWT_REFRESH_SECRET) {
+    process.env.JWT_REFRESH_SECRET = 'vetpro-test-refresh-secret-0123456789';
+  }
+
   global.vetproEnvLoaded = true;
 }

@@ -1,4 +1,5 @@
 import { useEffect, useId, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import PropTypes from "prop-types";
 import api from "../services/api";
 import { useAuth } from "../contexts/AuthContext";
@@ -776,8 +777,9 @@ const ConsultationPreview = ({
         </div>
       </div>
 
-      {isPrintModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4">
+      {isPrintModalOpen &&
+        createPortal(
+        <div className="fixed inset-0 z-[90] grid place-items-center bg-black/45 p-4">
           <div
             role="dialog"
             aria-modal="true"
@@ -867,7 +869,8 @@ const ConsultationPreview = ({
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );

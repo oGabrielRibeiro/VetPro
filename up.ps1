@@ -17,7 +17,8 @@ $FrontendDir = Join-Path $ProjectRoot "vetpro-front"
 $FrontendPackageJsonPath = Join-Path $FrontendDir "package.json"
 $CacheDir = Join-Path $ProjectRoot ".vetpro-cache"
 $FrontendNginxConfigPath = Join-Path $FrontendDir "nginx.conf"
-$BackendHealthUrl = "http://localhost:5000/health"
+$BackendHealthUrl = "http://localhost:5000/health/live"
+$BackendReadinessUrl = "http://localhost:5000/health/ready"
 $FrontendUrl = "http://localhost:3000"
 
 function Assert-LastExitCode {
@@ -403,9 +404,16 @@ try {
 
   Write-Host "Aguardando backend ficar online..." -ForegroundColor Cyan
   if (-not (Wait-HttpReady -Url $BackendHealthUrl -TimeoutSeconds 120)) {
-    Write-Host "Backend nao respondeu em /health dentro do timeout." -ForegroundColor Red
+    Write-Host "Backend nao respondeu em /health/live dentro do timeout." -ForegroundColor Red
     docker compose logs backend --tail 120
     throw "Falha no health check do backend."
+  }
+
+  Write-Host "Aguardando backend ficar pronto (readiness)..." -ForegroundColor Cyan
+  if (-not (Wait-HttpReady -Url $BackendReadinessUrl -TimeoutSeconds 120)) {
+    Write-Host "Backend nao respondeu em /health/ready dentro do timeout." -ForegroundColor Red
+    docker compose logs backend --tail 120
+    throw "Falha no readiness check do backend."
   }
 
   Write-Host "Aguardando frontend ficar online..." -ForegroundColor Cyan

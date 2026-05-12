@@ -17,6 +17,15 @@ export const AuthProvider = ({ children }) => {
   const [error, setError] = useState(null);
 
   const clearError = () => setError(null);
+  const resolveClinicLogoUrl = useCallback((rawUrl) => {
+    const url = String(rawUrl || "").trim();
+    if (!url) return null;
+    const token = localStorage.getItem("token");
+    if (!token) return url;
+    if (!url.includes("/api/clinic/logo")) return url;
+    const separator = url.includes("?") ? "&" : "?";
+    return `${url}${separator}access_token=${encodeURIComponent(token)}`;
+  }, []);
 
   const resolveUserWithPreviews = useCallback(
     (baseUser = {}, localProfile = null) => {
@@ -31,10 +40,12 @@ export const AuthProvider = ({ children }) => {
           merged.profilePhoto || merged.profilePhotoPreview || null,
         signaturePreview: merged.signature || merged.signaturePreview || null,
         clinicLogoPreview:
-          merged.clinic?.logoUrl || merged.clinicLogoPreview || null,
+          resolveClinicLogoUrl(merged.clinic?.logoUrl) ||
+          resolveClinicLogoUrl(merged.clinicLogoPreview) ||
+          null,
       };
     },
-    [],
+    [resolveClinicLogoUrl],
   );
 
   const establishSession = useCallback(

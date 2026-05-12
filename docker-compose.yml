@@ -38,8 +38,11 @@ services:
       - .env
     environment:
       NODE_ENV: ${NODE_ENV:-production}
+      APP_ENV: ${APP_ENV:-staging}
       PORT: 5000
       HOST: 0.0.0.0
+      REDIS_REQUIRED: ${REDIS_REQUIRED:-true}
+      RATE_LIMIT_SCALE: ${RATE_LIMIT_SCALE:-1}
       JWT_SECRET: ${JWT_SECRET}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-15m}
@@ -81,6 +84,8 @@ services:
       context: ./vetpro-front
       args:
         VITE_API_BASE_URL: ${VITE_API_BASE_URL:-${REACT_APP_API_BASE_URL:-}}
+        VITE_ENABLE_UX_TELEMETRY: ${VITE_ENABLE_UX_TELEMETRY:-true}
+        VITE_ENABLE_OFFLINE_QUEUE: ${VITE_ENABLE_OFFLINE_QUEUE:-true}
         REACT_APP_API_BASE_URL: ${REACT_APP_API_BASE_URL:-}
         VITE_MAX_CLINICAL_PHOTOS: ${VITE_MAX_CLINICAL_PHOTOS:-8}
     restart: always

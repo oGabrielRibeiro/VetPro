@@ -159,30 +159,76 @@ const PatientForm = ({ patient, onSubmit, onCancel, isEditing }) => {
     }
   }, [birthDateValue, setValue]);
 
-  const handleOwnerGeolocation = () => {
+  const handleOwnerGeolocation = async () => {
     if (!navigator.geolocation) {
       setOwnerGeoError("Geolocalizacao nao suportada neste navegador.");
       return;
     }
     setOwnerGeoLoading(true);
     setOwnerGeoError("");
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const lat = position.coords.latitude.toFixed(6);
-        const lng = position.coords.longitude.toFixed(6);
-        setValue("ownerAddress", `Lat ${lat}, Long ${lng}`, {
-          shouldValidate: true,
+
+    try {
+      const position = await new Promise((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: true,
+          timeout: 10000,
         });
-        setOwnerGeoLoading(false);
-      },
-      () => {
-        setOwnerGeoError(
-          "Nao foi possivel obter a localizacao. Verifique as permissoes.",
-        );
-        setOwnerGeoLoading(false);
-      },
-      { enableHighAccuracy: true, timeout: 10000 },
-    );
+      });
+
+      const lat = position.coords.latitude.toFixed(6);
+      const lng = position.coords.longitude.toFixed(6);
+
+      // Buscar endereço via Nominatim (OpenStreetMap - gratuito, sem API key)
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
+        {
+          headers: {
+            'Accept': 'application/json',
+            'Accept-Language': 'pt-BR'
+          }
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Falha ao buscar endereço");
+      }
+
+      const data = await response.json();
+      const address = data.address;
+
+      // Formatar endereço brasileiro
+      const enderecoFormatado = [
+        address.road || "",
+        address.house_number || "",
+        address.neighbourhood || "",
+        address.suburb || "",
+        address.city || address.town || "",
+        address.state || "",
+        address.postcode || "",
+      ]
+        .filter(Boolean)
+        .join(", ");
+
+      setValue("ownerAddress", enderecoFormatado || `Lat ${lat}, Long ${lng}`, {
+        shouldValidate: true,
+      });
+      setOwnerGeoLoading(false);
+    } catch (error) {
+      console.error("Erro na geolocalização:", error);
+      // Fallback: usar coordenadas se falhar
+      const position = await new Promise((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: true,
+          timeout: 10000,
+        });
+      });
+      const lat = position.coords.latitude.toFixed(6);
+      const lng = position.coords.longitude.toFixed(6);
+      setValue("ownerAddress", `Lat ${lat}, Long ${lng}`, {
+        shouldValidate: true,
+      });
+      setOwnerGeoLoading(false);
+    }
   };
 
   useEffect(() => {

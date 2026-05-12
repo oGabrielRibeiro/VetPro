@@ -158,11 +158,35 @@ const Dashboard = ({
       icon: "reports",
     },
   ];
+  const highlightedStat =
+    stats.find((item) => item.key === workspacePrefs.highlightMetric) ||
+    stats[0];
+
+  const handleOpenMetric = (metricKey) => {
+    if (metricKey === "today") {
+      onOpenAppointments?.() || onViewAppointments?.();
+      return;
+    }
+    if (metricKey === "patients") {
+      onOpenPatients?.();
+      return;
+    }
+    if (metricKey === "consultations" || metricKey === "returnRate") {
+      onNewConsultation?.();
+    }
+  };
+
+  const metricCtaByKey = {
+    today: "Abrir agenda",
+    patients: "Abrir pacientes",
+    consultations: "Nova consulta",
+    returnRate: "Revisar retornos",
+  };
 
   const hasError = Boolean(String(errorMessage || "").trim());
 
   return (
-    <div className="w-full max-w-7xl mx-auto space-y-3 sm:space-y-4 subtle-enter">
+    <div className="vp-page subtle-enter">
       <section className="shell-surface rounded-3xl border border-gray-200/80 dark:border-dark-700/70 p-3 sm:p-5 lg:p-6">
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1.5fr_1fr]">
           <div>
@@ -195,20 +219,20 @@ const Dashboard = ({
           <div className="space-y-3">
             <div className="rounded-2xl border border-teal-200/70 dark:border-teal-800/50 bg-gradient-to-br from-teal-50 via-cyan-50 to-blue-50 dark:from-teal-900/30 dark:via-cyan-900/20 dark:to-blue-900/20 p-4">
               <p className="vp-overline text-teal-700 dark:text-teal-300">
-                Hoje
+                Destaque do workspace
               </p>
               <p className="mt-2 text-3xl font-black text-teal-900 dark:text-teal-200">
-                {todayAppointments}
+                {highlightedStat?.value}
               </p>
               <p className="vp-helper mt-1 text-teal-800 dark:text-teal-300">
-                agendamento(s) no dia
+                {highlightedStat?.label}
               </p>
               <button
                 type="button"
-                onClick={() => onOpenAppointments?.() || onViewAppointments?.()}
+                onClick={() => handleOpenMetric(highlightedStat?.key)}
                 className="mt-4 w-full rounded-xl border border-teal-300/70 dark:border-teal-700 bg-white/80 dark:bg-dark-800/80 px-3 py-2 text-xs font-semibold text-teal-800 dark:text-teal-300"
               >
-                Abrir agenda
+                {metricCtaByKey[highlightedStat?.key] || "Ver detalhes"}
               </button>
             </div>
             <div className="rounded-2xl border border-gray-200/80 dark:border-dark-700/70 bg-white/70 dark:bg-dark-900/55 p-4">
@@ -259,6 +283,19 @@ const Dashboard = ({
                 />
                 Exibir recomendacoes operacionais
               </label>
+              <button
+                type="button"
+                onClick={() =>
+                  setWorkspacePrefs({
+                    mode: "executive",
+                    highlightMetric: "today",
+                    showTips: true,
+                  })
+                }
+                className="mt-3 w-full rounded-xl border border-gray-300 dark:border-dark-600 px-3 py-2 text-xs font-semibold text-gray-700 dark:text-gray-200"
+              >
+                Restaurar padrao
+              </button>
             </div>
           </div>
         </div>

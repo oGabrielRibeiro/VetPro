@@ -66,23 +66,32 @@ function buildAllowedOrigins() {
 }
 
 const allowedOrigins = buildAllowedOrigins();
+
+app.use(cors({
+  origin: function (origin, callback) {
+    // Aceita requisições sem origin (como Postman ou mobile)
+    if (!origin) return callback(null, true);
+
+    const normalized = origin.replace(/\/$/, '');
+    const approved = allowedOrigins.has(normalized);
+
+    if (approved) {
+      callback(null, true);
+    } else {
+      console.warn(`CORS bloqueado para origem: ${origin}`);
+      callback(null, false);
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'x-client-fingerprint'],
+}));
+
 const swaggerEnabled =
   process.env.NODE_ENV !== 'production' ||
   process.env.ENABLE_SWAGGER_DOCS === 'true';
 
 // Middlewares globais
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      if (!origin) return callback(null, true);
-      if (allowedOrigins.has(origin)) return callback(null, true);
-      return callback(new Error('CORS origin nao permitida'));
-    },
-    credentials: true,
-    optionsSuccessStatus: 204,
-  }),
-);
-
 app.disable('x-powered-by');
 app.use(requestContextMiddleware);
 app.use(requestMetricsMiddleware);
@@ -116,6 +125,8 @@ app.use('/api/consultations', userActionLimiter, consultationRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/clinic', clinicRoutes);
 app.use('/api/appointments', appointmentRoutes);
+app.use('/api/status', require('./routes/statusRoutes'));
+app.use('/api/admin', require('./routes/adminRoutes'));
 
 // Rota de cache (para debugging/admin)
 app.get('/api/cache/stats', authMiddleware, async (req, res) => {
@@ -171,6 +182,37 @@ app.get('/health', (req, res) => {
   res.json({
     ok: true,
     timestamp: new Date().toISOString(),
+    dependencies: {
+      app: { ok: true, status: 'up' },
+    },
+  });
+});
+
+app.get('/health/live', (req, res) => {
+  res.json({
+    ok: true,
+    timestamp: new Date().toISOString(),
+    dependencies: {
+      app: { ok: true, status: 'up' },
+    },
+  });
+});
+
+app.get('/health/ready', async (req, res) => {
+  const status = await metricsService.getSystemHealth();
+  const dependencies = {
+    db: status.db,
+    redis: status.redis,
+  };
+  const redisRequired =
+    String(process.env.REDIS_REQUIRED || 'true').toLowerCase() === 'true';
+  const redisOk = redisRequired ? Boolean(status.redis?.ok) : true;
+  const ready = Boolean(status.db?.ok) && redisOk;
+
+  res.status(ready ? 200 : 503).json({
+    ok: ready,
+    timestamp: status.timestamp,
+    dependencies,
   });
 });
 
@@ -179,6 +221,9 @@ app.get('/health/db', async (req, res) => {
   res.status(status.db.ok ? 200 : 503).json({
     ok: status.db.ok,
     timestamp: status.timestamp,
+    dependencies: {
+      db: status.db,
+    },
     db: status.db,
   });
 });
@@ -188,6 +233,9 @@ app.get('/health/redis', async (req, res) => {
   res.status(status.redis.ok ? 200 : 503).json({
     ok: status.redis.ok,
     timestamp: status.timestamp,
+    dependencies: {
+      redis: status.redis,
+    },
     redis: status.redis,
   });
 });
@@ -202,6 +250,10 @@ app.get('/status/system', async (req, res) => {
   res.status(health.ok ? 200 : 503).json({
     ok: health.ok,
     timestamp: health.timestamp,
+    dependencies: {
+      db: health.db,
+      redis: health.redis,
+    },
     health,
     metrics: {
       request: requestMetrics,

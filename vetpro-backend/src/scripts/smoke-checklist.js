@@ -5,9 +5,9 @@ const fs = require('fs');
 const logger = require('../utils/logger');
 
 const BASE_URL = process.env.API_BASE_URL || 'http://localhost:5000/api';
-const HEALTH_URL = BASE_URL.endsWith('/api')
-  ? `${BASE_URL.slice(0, -4)}/health`
-  : `${BASE_URL}/health`;
+const API_ROOT = BASE_URL.endsWith('/api') ? BASE_URL.slice(0, -4) : BASE_URL;
+const HEALTH_LIVE_URL = `${API_ROOT}/health/live`;
+const HEALTH_READY_URL = `${API_ROOT}/health/ready`;
 
 function printInfo(message) {
   process.stdout.write(`${message}\n`);
@@ -143,8 +143,11 @@ async function ensureLocalInfra() {
 
 async function isApiUp() {
   try {
-    const response = await fetch(HEALTH_URL, { method: 'GET' });
-    return response.ok;
+    const [liveResponse, readyResponse] = await Promise.all([
+      fetch(HEALTH_LIVE_URL, { method: 'GET' }),
+      fetch(HEALTH_READY_URL, { method: 'GET' }),
+    ]);
+    return liveResponse.ok && readyResponse.ok;
   } catch (_) {
     return false;
   }

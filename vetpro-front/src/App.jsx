@@ -1,4 +1,11 @@
-import React, { useState, useEffect, useCallback, lazy, Suspense } from "react";
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+  lazy,
+  Suspense,
+} from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import Login from "./pages/Login";
@@ -16,7 +23,7 @@ import MobileBottomNav from "./components/app/MobileBottomNav";
 import { Tooltip, Popover, DropdownMenu } from "./components/ui";
 import api from "./services/api";
 import { addToQueue } from "./services/offlineQueue";
-import { getQueue, clearQueue } from "./services/offlineQueue";
+import { getQueue, replaceQueue } from "./services/offlineQueue";
 import { toUserFriendlyError } from "./utils/errorMessages";
 import { sanitizeConsultationNotesForDisplay } from "./utils/consultationNotes";
 import { openApiBlobInNewTab } from "./utils/blobDownloads";
@@ -27,6 +34,7 @@ import {
 import useDarkMode from "./hooks/useDarkMode";
 import { queryClient, queryKeys } from "./utils/queryClient";
 import { routeTransition } from "./motion/presets";
+import { runtimeConfig } from "./config/runtimeConfig";
 
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Patients = lazy(() => import("./pages/Patients"));
@@ -44,6 +52,7 @@ const ConsultationPreview = lazy(
 );
 const About = lazy(() => import("./pages/About.jsx"));
 const SystemStatus = lazy(() => import("./pages/SystemStatus.jsx"));
+const MasterAdmin = lazy(() => import("./pages/MasterAdmin.jsx"));
 
 const IS_DEV = Boolean(import.meta.env.DEV);
 
@@ -126,6 +135,17 @@ const MainApp = () => {
       .split("T")[0],
     endDate: new Date().toISOString().split("T")[0],
   });
+  const mobileNavItems = useMemo(() => {
+    const base = [...MOBILE_NAV_ITEMS];
+    if (String(user?.role || "").toLowerCase() === "master") {
+      base.splice(base.length - 2, 0, {
+        id: "master-admin",
+        icon: "settings",
+        label: "Master",
+      });
+    }
+    return base;
+  }, [user?.role]);
 
   const { isAuthenticated } = useAuth();
   const viewMotionKey = `${currentView}:${currentConsultation?.id || ""}:${
@@ -154,6 +174,35 @@ const MainApp = () => {
     ...patient,
     species: patient.species || patient.specie || "Não informado",
   });
+
+  const isProfileComplete = useCallback((profile) => {
+    const name = String(profile?.name || "").trim();
+    const email = String(profile?.email || "").trim();
+    const clinicName = String(
+      profile?.clinicName || profile?.clinic?.name || "",
+    ).trim();
+    const rawCrmv = String(
+      profile?.crmv || profile?.crmvNumber || "",
+    ).trim();
+
+    const hasBasic = Boolean(name && email && clinicName);
+    if (!hasBasic) return false;
+
+    if (!rawCrmv) return false;
+    if (rawCrmv.includes("-")) {
+      const [state, number] = rawCrmv.split("-").map((part) => part.trim());
+      return Boolean(state && number);
+    }
+
+    const state = String(profile?.crmvState || "").trim();
+    const number = String(profile?.crmvNumber || "").trim();
+    return Boolean(state && number);
+  }, []);
+
+  const mustCompleteProfile = useMemo(
+    () => Boolean(user && !isProfileComplete(user)),
+    [user, isProfileComplete],
+  );
 
   const normalizeConsultation = (consultation) => ({
     ...consultation,
@@ -300,8 +349,23 @@ const MainApp = () => {
   }, [updateSystemStatus]);
 
   useEffect(() => {
+    const onApiUnavailable = (event) => {
+      const message =
+        event?.detail?.message ||
+        "Servidor temporariamente indisponivel. Tentaremos reconectar.";
+      updateSystemStatus("error", message);
+      setActionFeedback({ type: "error", message });
+    };
+
+    window.addEventListener("vetpro:api-unavailable", onApiUnavailable);
+    return () =>
+      window.removeEventListener("vetpro:api-unavailable", onApiUnavailable);
+  }, [updateSystemStatus]);
+
+  useEffect(() => {
     const syncData = async () => {
       if (!navigator.onLine) return;
+      if (!runtimeConfig.enableOfflineQueue) return;
 
       const queue = getQueue();
       if (queue.length === 0) return;
@@ -312,6 +376,10 @@ const MainApp = () => {
       );
       console.log("Sincronizando dados offline...");
 
+      const remainingQueue = [];
+      const conflictItems = [];
+      let syncedCount = 0;
+
       for (const item of queue) {
         if (item.type === "CREATE_CONSULTATION") {
           try {
@@ -319,24 +387,57 @@ const MainApp = () => {
             queryClient.invalidateQueries({
               queryKey: queryKeys.consultations,
             });
+            syncedCount += 1;
           } catch (error) {
             console.error("Falha ao sincronizar consulta offline:", error);
-            updateSystemStatus(
-              "error",
-              "Falha ao sincronizar dados offline. Tentaremos novamente.",
-            );
-            return;
+            const status = Number(error?.response?.status || 0);
+            const attempts = Number(item?.attempts || 0) + 1;
+            const nextItem = { ...item, attempts };
+            if (status === 409 || status === 422) {
+              conflictItems.push(nextItem);
+              continue;
+            }
+            remainingQueue.push(nextItem);
+            continue;
           }
         }
       }
 
-      clearQueue();
-      setQueueSize(0);
+      replaceQueue(remainingQueue);
+      setQueueSize(remainingQueue.length);
       const now = new Date().toISOString();
       localStorage.setItem("vetpro_last_sync_at", now);
       setLastSyncAt(now);
-      updateSystemStatus("success", "Dados offline sincronizados com sucesso.");
-      showActionSuccess("Dados offline sincronizados com sucesso.");
+
+      if (syncedCount > 0) {
+        updateSystemStatus(
+          "success",
+          `${syncedCount} item(ns) offline sincronizado(s) com sucesso.`,
+        );
+        showActionSuccess(
+          `${syncedCount} item(ns) offline sincronizado(s) com sucesso.`,
+        );
+      }
+
+      if (conflictItems.length > 0) {
+        updateSystemStatus(
+          "error",
+          `${conflictItems.length} item(ns) com conflito. Mantivemos versoes locais para revisao.`,
+        );
+        setActionFeedback({
+          type: "error",
+          message:
+            "Detectamos conflito de sincronizacao (ultima escrita local mantida para revisao manual).",
+        });
+      }
+
+      if (remainingQueue.length > 0 && conflictItems.length === 0) {
+        updateSystemStatus(
+          "queued",
+          `${remainingQueue.length} item(ns) seguem pendentes para nova tentativa.`,
+        );
+      }
+
       await fetchConsultations();
     };
 
@@ -399,6 +500,18 @@ const MainApp = () => {
   }, []);
 
   useEffect(() => {
+    if (!user) return;
+    if (!mustCompleteProfile) return;
+    if (currentView === "profile") return;
+    setCurrentView("profile");
+    setActionFeedback({
+      type: "error",
+      message:
+        "Complete seu cadastro para continuar: Nome, E-mail, CRMV (numero e UF) e Nome da Clinica.",
+    });
+  }, [user, mustCompleteProfile, currentView]);
+
+  useEffect(() => {
     const isEditableTarget = (target) => {
       if (!target) return false;
       if (target.isContentEditable) return true;
@@ -445,7 +558,7 @@ const MainApp = () => {
   const handleAddConsultation = async (consultationData) => {
     const { returnPlan, ...payload } = consultationData || {};
 
-    if (!navigator.onLine) {
+    if (!navigator.onLine && runtimeConfig.enableOfflineQueue) {
       addToQueue({
         type: "CREATE_CONSULTATION",
         data: payload,
@@ -1164,11 +1277,14 @@ const MainApp = () => {
 
       case "about":
         return <About />;
+      case "master-admin":
+        return <MasterAdmin onBack={() => setCurrentView("dashboard")} />;
 
       case "profile":
         return (
           <Profile
             profile={user || {}}
+            forceCompletion={mustCompleteProfile}
             onSave={async (updatedProfile) => {
               let clinicLogoUrl =
                 updatedProfile.clinicLogoPreview ||
@@ -1187,9 +1303,16 @@ const MainApp = () => {
                   const base = new URL(
                     api.defaults.baseURL || window.location.origin,
                   );
-                  clinicLogoUrl = logoPath.startsWith("http")
+                  const rawLogoUrl = logoPath.startsWith("http")
                     ? logoPath
                     : `${base.origin}${logoPath}`;
+                  const token = localStorage.getItem("token");
+                  clinicLogoUrl =
+                    token && rawLogoUrl.includes("/api/clinic/logo")
+                      ? `${rawLogoUrl}${
+                          rawLogoUrl.includes("?") ? "&" : "?"
+                        }access_token=${encodeURIComponent(token)}`
+                      : rawLogoUrl;
                 }
               }
 
@@ -1221,9 +1344,22 @@ const MainApp = () => {
                 type: "success",
                 message: "Perfil salvo com sucesso.",
               });
+              if (isProfileComplete(merged)) {
+                setCurrentView("dashboard");
+              }
               return merged;
             }}
-            onCancel={() => setCurrentView("dashboard")}
+            onCancel={() => {
+              if (mustCompleteProfile) {
+                setActionFeedback({
+                  type: "error",
+                  message:
+                    "Finalize os campos obrigatorios do perfil para liberar o sistema.",
+                });
+                return;
+              }
+              setCurrentView("dashboard");
+            }}
             onDeleteAccount={handleDeleteAccount}
           />
         );
@@ -1441,6 +1577,7 @@ const MainApp = () => {
           setCurrentView={setCurrentView}
           onLogout={logout}
           showUiLab={IS_DEV}
+          isMaster={String(user?.role || "").toLowerCase() === "master"}
         />
       )}
 
@@ -1498,11 +1635,11 @@ const MainApp = () => {
 
       {/* Main Content */}
       <div
-        className={`flex-1 overflow-auto px-2 sm:px-3 md:px-6 md:pb-6 ${
+        className={`flex-1 overflow-auto px-2 sm:px-4 md:px-6 lg:px-7 md:pb-7 ${
           isMobile ? "vp-mobile-content" : "pt-5"
         }`}
       >
-        <div className="mx-auto w-full max-w-[1280px] subtle-enter">
+        <div className="mx-auto w-full max-w-[1320px] subtle-enter">
           <ForceUpdateBanner
             registration={swUpdateRegistration}
             onDismiss={() => setSwUpdateRegistration(null)}
@@ -1669,7 +1806,7 @@ const MainApp = () => {
 
       <MobileBottomNav
         isMobile={isMobile}
-        items={MOBILE_NAV_ITEMS}
+        items={mobileNavItems}
         user={user}
         isItemActive={isMobileTabActive}
         onSelectItem={(item) => {

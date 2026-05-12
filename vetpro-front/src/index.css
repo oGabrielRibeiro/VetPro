@@ -112,6 +112,24 @@ code {
   transform-origin: 50% 0%;
 }
 
+.vp-page {
+  width: 100%;
+  max-width: 1200px;
+  margin-inline: auto;
+  padding-inline: clamp(0.1rem, 0.7vw, 0.35rem);
+  display: grid;
+  gap: clamp(0.75rem, 1vw, 1rem);
+}
+
+.vp-page-tight {
+  width: 100%;
+  max-width: 1080px;
+  margin-inline: auto;
+  padding-inline: clamp(0.1rem, 0.7vw, 0.35rem);
+  display: grid;
+  gap: clamp(0.75rem, 1vw, 1rem);
+}
+
 .vp-card {
   background: var(--vp-card);
   border: 1px solid var(--vp-border);

@@ -2,7 +2,7 @@ import React from "react";
 import AppIcon from "../components/AppIcon";
 
 const About = () => (
-  <div className="max-w-4xl mx-auto space-y-6">
+  <div className="vp-page-tight subtle-enter">
     <div className="shell-surface rounded-3xl border border-gray-200/80 dark:border-dark-700/70 p-6 sm:p-8">
       <p className="vp-overline">VetPro Platform</p>
       <h1 className="vp-h1 mt-2">Da conversa ao prontuario em minutos</h1>

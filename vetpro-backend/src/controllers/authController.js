@@ -10,6 +10,7 @@ const {
   bumpTokenVersion,
 } = require('../services/authService');
 const { verifyCaptcha } = require('../services/captchaService');
+const { isCaptchaRequired } = require('../config/environmentProfile');
 const {
   isLockedOut,
   registerFailure,
@@ -37,6 +38,7 @@ function serializeUser(user) {
     id: user.id,
     email: user.email,
     name: user.name,
+    role: user.role || 'user',
     phone: user.phone || null,
     specialty: user.specialty || null,
     profilePhoto: user.profilePhoto || null,
@@ -104,7 +106,7 @@ async function register(req, res) {
         .json({ error: 'A senha deve ter no minimo 6 caracteres.' });
     }
 
-    if (process.env.CAPTCHA_ENABLED === 'true') {
+    if (isCaptchaRequired()) {
       const captchaToken = String(req.body?.captchaToken || '');
       const captchaValid = await verifyCaptcha(captchaToken, req.ip);
       if (!captchaValid) {
@@ -193,7 +195,7 @@ async function login(req, res) {
       return res.status(400).json({ error: 'Informe um e-mail valido.' });
     }
 
-    if (process.env.CAPTCHA_ENABLED === 'true') {
+    if (isCaptchaRequired()) {
       const captchaToken = String(req.body?.captchaToken || '');
       const captchaValid = await verifyCaptcha(captchaToken, req.ip);
       if (!captchaValid) {
@@ -283,7 +285,7 @@ async function recoverPassword(req, res) {
       return res.status(400).json({ error: 'Informe um e-mail valido.' });
     }
 
-    if (process.env.CAPTCHA_ENABLED === 'true') {
+    if (isCaptchaRequired()) {
       const captchaToken = String(req.body?.captchaToken || '');
       const captchaValid = await verifyCaptcha(captchaToken, req.ip);
       if (!captchaValid) {

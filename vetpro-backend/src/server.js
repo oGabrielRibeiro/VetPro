@@ -5,6 +5,7 @@ const path = require('path');
 const app = require('./app');
 const prisma = require('./lib/prisma');
 const websocketService = require('./services/websocketService');
+const { ensureMasterUser } = require('./services/masterBootstrapService');
 const logger = require('./utils/logger');
 
 const PORT = Number(process.env.PORT || 5000);
@@ -75,7 +76,8 @@ async function shutdown(signal) {
 }
 
 connectPrismaWithRetry()
-  .then(() => {
+  .then(async () => {
+    await ensureMasterUser();
     if (HTTPS_ENABLED && httpsOptions) {
       server = https.createServer(httpsOptions, app);
       server.keepAliveTimeout = 65000;

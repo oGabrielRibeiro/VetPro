@@ -27,11 +27,15 @@ export const fetchBlobUrlFromApi = async (path) => {
   return blobUrl;
 };
 
-export const openApiBlobInNewTab = async (path) => {
+export const openApiBlobInNewTab = async (path, filename = "arquivo.pdf") => {
   // Abre imediatamente para evitar bloqueio de popup em chamadas async.
   const pendingTab = window.open("", "_blank", "noopener,noreferrer");
-  if (!pendingTab) {
-    throw new Error("Nao foi possivel abrir nova aba.");
+
+  // Se popup foi bloqueado, faz download como fallback
+  if (!pendingTab || pendingTab.closed) {
+    console.warn("Popup bloqueado pelo navegador, fazendo download como fallback...");
+    // Fazer download
+    return await downloadApiBlob(path, filename);
   }
 
   try {

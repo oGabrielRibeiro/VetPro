@@ -1,6 +1,8 @@
 const PDFDocument = require('pdfkit');
 const path = require('path');
 const fs = require('fs');
+const { PDFDocument: PdfLibDocument } = require('pdf-lib');
+const sharp = require('sharp');
 
 const PORTE_NOTES_MARK_START = '[[PORTE_CLINICO]]';
 const PORTE_NOTES_MARK_END = '[[/PORTE_CLINICO]]';
@@ -752,7 +754,71 @@ function drawReturnRegistryPage(doc, consultation) {
     });
 }
 
-function generateConsultationPDF(consultation, res, options = {}) {
+async function mergeConsultationWithAttachments(mainPdfBuffer, files = []) {
+  if (!Array.isArray(files) || files.length === 0) return mainPdfBuffer;
+
+  const mergedPdf = await PdfLibDocument.create();
+  const mainPdf = await PdfLibDocument.load(mainPdfBuffer);
+  const mainPages = await mergedPdf.copyPages(mainPdf, mainPdf.getPageIndices());
+  mainPages.forEach((page) => mergedPdf.addPage(page));
+
+  for (const file of files) {
+    const mime = String(file?.mimeType || '').toLowerCase();
+    const filePath = file?.path;
+    if (!filePath || !fs.existsSync(filePath)) continue;
+
+    // Para anexos PDF, adiciona todas as paginas no final do prontuario.
+    if (mime === 'application/pdf' || filePath.toLowerCase().endsWith('.pdf')) {
+      try {
+        const attachmentPdfBuffer = fs.readFileSync(filePath);
+        const attachmentPdf = await PdfLibDocument.load(attachmentPdfBuffer);
+        const pages = await mergedPdf.copyPages(
+          attachmentPdf,
+          attachmentPdf.getPageIndices(),
+        );
+        pages.forEach((page) => mergedPdf.addPage(page));
+      } catch {
+        // ignora anexo com PDF invalido para nao quebrar a exportacao inteira
+      }
+      continue;
+    }
+
+    // Para imagens, converte para PNG para garantir compatibilidade e adiciona em pagina dedicada.
+    if (mime.startsWith('image/')) {
+      try {
+        const imageBuffer = fs.readFileSync(filePath);
+        const pngBuffer = await sharp(imageBuffer).png().toBuffer();
+        const embedded = await mergedPdf.embedPng(pngBuffer);
+        const page = mergedPdf.addPage();
+        const pageWidth = page.getWidth();
+        const pageHeight = page.getHeight();
+        const maxWidth = pageWidth - 56;
+        const maxHeight = pageHeight - 56;
+        const scale = Math.min(
+          maxWidth / embedded.width,
+          maxHeight / embedded.height,
+          1,
+        );
+        const drawWidth = embedded.width * scale;
+        const drawHeight = embedded.height * scale;
+        const x = (pageWidth - drawWidth) / 2;
+        const y = (pageHeight - drawHeight) / 2;
+        page.drawImage(embedded, {
+          x,
+          y,
+          width: drawWidth,
+          height: drawHeight,
+        });
+      } catch {
+        // ignora imagem invalida para nao quebrar a exportacao inteira
+      }
+    }
+  }
+
+  return Buffer.from(await mergedPdf.save());
+}
+
+async function generateConsultationPDF(consultation, res, options = {}) {
   const doc = new PDFDocument({
     size: 'A4',
     margin: 50,
@@ -765,13 +831,29 @@ function generateConsultationPDF(consultation, res, options = {}) {
   const vet = consultation.user || {};
   const sanitizedNotes = sanitizeNotesForPdf(consultation.notes);
 
-  res.setHeader('Content-Type', 'application/pdf');
-  res.setHeader(
-    'Content-Disposition',
-    `attachment; filename=prontuario-${consultation.numeroProntuario}.pdf`,
-  );
+  const chunks = [];
+  const mainPdfPromise = new Promise((resolve, reject) => {
+    doc.on('data', (chunk) => chunks.push(chunk));
+    doc.on('end', () => resolve(Buffer.concat(chunks)));
+    doc.on('error', reject);
+  });
 
-  doc.pipe(res);
+  const finalizeAndSend = async () => {
+    doc.end();
+    const mainPdfBuffer = await mainPdfPromise;
+    const finalPdfBuffer = await mergeConsultationWithAttachments(
+      mainPdfBuffer,
+      options.files || [],
+    );
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename=prontuario-${consultation.numeroProntuario}.pdf`,
+    );
+    res.setHeader('Content-Length', String(finalPdfBuffer.length));
+    return res.send(finalPdfBuffer);
+  };
 
   const logoPath = resolveClinicLogoPath(clinic);
   if (logoPath) {
@@ -855,8 +937,7 @@ function generateConsultationPDF(consultation, res, options = {}) {
       .text(safe(consultation.veterinarianName, vet.name || 'Veterinario(a)'))
       .font('Helvetica')
       .text(`CRMV: ${safe(consultation.veterinarianCrmv || vet.crmv, '-')}`);
-    doc.end();
-    return;
+    return finalizeAndSend();
   }
 
   if (consultation.customFormData) {
@@ -902,8 +983,7 @@ function generateConsultationPDF(consultation, res, options = {}) {
         .text(safe(consultation.veterinarianName, vet.name || 'Veterinario(a)'))
         .font('Helvetica')
         .text(`CRMV: ${safe(consultation.veterinarianCrmv || vet.crmv, '-')}`);
-      doc.end();
-      return;
+      return finalizeAndSend();
     }
   }
 
@@ -1038,9 +1118,7 @@ function generateConsultationPDF(consultation, res, options = {}) {
     drawReturnRegistryPage(doc, consultation);
   }
 
-  renderAttachmentsPdf(doc, options.files || [], accent);
-
-  doc.end();
+  return finalizeAndSend();
 }
 
 module.exports = { generateConsultationPDF };

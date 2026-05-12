@@ -26,6 +26,7 @@ function buildAccessTokenPayload(user, extras = {}) {
     userId: user.id,
     email: user.email,
     clinicId: user.clinicId,
+    role: user.role || 'user',
     tokenVersion: Number(user.tokenVersion || 0),
     twoFactorVerified: Boolean(extras.twoFactorVerified),
     fingerprintHash: extras.fingerprintHash || null,

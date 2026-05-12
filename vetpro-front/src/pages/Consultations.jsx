@@ -160,7 +160,7 @@ const Consultations = ({
   const hasError = Boolean(String(errorMessage || "").trim());
 
   return (
-    <div className="w-full max-w-7xl mx-auto space-y-3 sm:space-y-4 subtle-enter">
+    <div className="vp-page subtle-enter">
       {onBack && (
         <div className="flex justify-end">
           <VpButton

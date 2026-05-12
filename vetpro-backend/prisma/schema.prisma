@@ -20,6 +20,7 @@ model User {
   name             String
   email            String  @unique
   password         String
+  role             String  @default("user")
   googleId         String? // ID do Google OAuth
   crmv             String?
   phone            String?

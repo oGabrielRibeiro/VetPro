@@ -427,7 +427,7 @@ async function downloadPDF(req, res) {
         .filter(Boolean);
     }
 
-    return pdfService.generateConsultationPDF(consultation, res, {
+    return await pdfService.generateConsultationPDF(consultation, res, {
       files: selectedFiles,
     });
   } catch (error) {

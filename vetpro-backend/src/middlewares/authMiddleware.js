@@ -10,6 +10,10 @@ async function authMiddleware(req, res, next) {
   if (authHeader && typeof authHeader === 'string') {
     [, token] = authHeader.split(' ');
   }
+  const allowQueryToken = String(req.path || '').includes('/clinic/logo');
+  if (!token && allowQueryToken) {
+    token = String(req.query?.access_token || req.query?.token || '').trim();
+  }
 
   if (!token) {
     return res.status(401).json({
@@ -61,6 +65,7 @@ async function authMiddleware(req, res, next) {
       clinicId: user.clinicId,
       email: user.email,
       name: user.name,
+      role: user.role || 'user',
       twoFactorEnabled: Boolean(user.twoFactorEnabled),
     };
 

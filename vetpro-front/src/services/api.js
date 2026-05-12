@@ -1,7 +1,9 @@
 import axios from "axios";
 import { toUserFriendlyError } from "../utils/errorMessages";
+import { runtimeConfig } from "../config/runtimeConfig";
 
 function emitUxMetric(metric) {
+  if (!runtimeConfig.enableUxTelemetry) return;
   if (typeof window === "undefined") return;
   window.dispatchEvent(new CustomEvent("vetpro:ux-metric", { detail: metric }));
   if (import.meta.env.DEV) {
@@ -41,8 +43,7 @@ function normalizeEnvBaseUrl(envBase) {
 }
 
 function resolveApiBaseUrl() {
-  const envBase =
-    import.meta.env.VITE_API_BASE_URL || import.meta.env.REACT_APP_API_BASE_URL;
+  const envBase = runtimeConfig.apiBaseUrl;
   if (envBase && String(envBase).trim()) {
     return normalizeEnvBaseUrl(envBase);
   }
@@ -181,6 +182,33 @@ api.interceptors.response.use(
     return response;
   },
   async (error) => {
+    const route = String(error?.config?.url || "");
+    const method = String(error?.config?.method || "get");
+    const statusCode = Number(error?.response?.status || 0);
+    if (route) {
+      emitUxMetric({
+        type: "api_error",
+        route,
+        method,
+        status: statusCode || "network_error",
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    if (!error?.response) {
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(
+          new CustomEvent("vetpro:api-unavailable", {
+            detail: {
+              message:
+                "Servidor indisponivel no momento. Tentaremos reconectar automaticamente.",
+            },
+          }),
+        );
+      }
+      return Promise.reject(error);
+    }
+
     const status = error?.response?.status;
     const originalRequest = error?.config || {};
 

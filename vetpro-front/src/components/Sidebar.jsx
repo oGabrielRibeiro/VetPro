@@ -7,6 +7,7 @@ const Sidebar = ({
   setCurrentView,
   onLogout,
   showUiLab = false,
+  isMaster = false,
 }) => {
   const navItems = [
     { id: "dashboard", icon: "dashboard", label: "Inicio" },
@@ -15,6 +16,7 @@ const Sidebar = ({
     { id: "consultations", icon: "consultations", label: "Prontuarios" },
     { id: "reports", icon: "reports", label: "Relatorios" },
     { id: "system-status", icon: "info", label: "Status do Sistema" },
+    ...(isMaster ? [{ id: "master-admin", icon: "settings", label: "Master Admin" }] : []),
     { id: "about", icon: "info", label: "Sobre" },
     ...(showUiLab ? [{ id: "ui-playground", icon: "reports", label: "Laboratorio UI" }] : []),
   ];

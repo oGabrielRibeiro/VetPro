@@ -70,7 +70,14 @@ function buildInitialForm(profile = {}) {
   };
 }
 
-const Profile = ({ profile, onSave, onCancel, onDeleteAccount, onBack }) => {
+const Profile = ({
+  profile,
+  onSave,
+  onCancel,
+  onDeleteAccount,
+  onBack,
+  forceCompletion = false,
+}) => {
   const [form, setForm] = useState(buildInitialForm(profile));
   const [clinicLogoFileName, setClinicLogoFileName] = useState("");
   const [formError, setFormError] = useState("");
@@ -213,8 +220,8 @@ const Profile = ({ profile, onSave, onCancel, onDeleteAccount, onBack }) => {
   };
 
   return (
-    <div className="w-full max-w-7xl mx-auto space-y-3 sm:space-y-4 subtle-enter">
-      {onBack && (
+    <div className="vp-page subtle-enter">
+      {onBack && !forceCompletion && (
         <div className="flex justify-end">
           <VpButton
             onClick={onBack}
@@ -244,7 +251,7 @@ const Profile = ({ profile, onSave, onCancel, onDeleteAccount, onBack }) => {
           <div className="grid grid-cols-2 gap-2 sm:flex sm:space-x-3 sm:gap-0 w-full sm:w-auto">
           <VpButton
             onClick={onCancel}
-            disabled={saveLoading}
+            disabled={saveLoading || forceCompletion}
             variant="danger"
             icon={<AppIcon name="cancel" className="h-4 w-4" />}
           >
@@ -262,6 +269,14 @@ const Profile = ({ profile, onSave, onCancel, onDeleteAccount, onBack }) => {
           </div>
         </div>
       </section>
+
+      {forceCompletion && (
+        <FeedbackBanner
+          className="mb-4"
+          type="error"
+          message="Cadastro incompleto. Preencha os campos obrigatorios para liberar o uso do sistema."
+        />
+      )}
 
       <FeedbackBanner
         className="mb-4"
